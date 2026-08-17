@@ -60,7 +60,12 @@ ViT-L encoder shared across the three orifices. A causal residual Transformer
 forecasts short-horizon dynamics, a coarse predictor covers mid-horizon
 anatomy, and a block-causal branch conditions on measured continuous SE(3)
 camera increments with probabilistic uncertainty, calibrated risk and a hard
-safety gate. The design is validated on a leakage-free video-level protocol
+safety gate. Four technical contributions support the grounding claim: a
+block-causal action-attention path with executable input-sensitivity tests, a
+metric SE(3) camera-motion interface with fractional tubelet alignment,
+continuous planning constrained to the normalised action support with hard
+rejection, and a reprojection gate that verifies pose conventions against
+ground-truth depth before training. The design is validated on a leakage-free video-level protocol
 over 19 datasets and 1,707 sequences: the causal forecaster reaches 0.978
 cosine at horizon four versus 0.916 for persistence, 0.974 for a GRU and 0.971
 for Mamba (Holm-corrected Wilcoxon $p<10^{-80}$), improves from 500 to 6,000
@@ -199,7 +204,7 @@ flow; block dimensions encode relative tensor rank. No pixels are decoded.}
   \item \textbf{A causal-autoregressive latent forecaster.}
   The \emph{form} of the latent forecaster matters more than its size: a GPT-style causal Transformer surpasses a strong GRU and a Mamba/SSM baseline, whereas a parallel query-token Transformer of the same capacity does not.
   \item \textbf{An audited path from prediction to physical safety.}
-  We show that unsupervised latent actions are not control variables, exclude the invalid discrete-MPC evidence, and build a corrected continuous SE(3) branch that passes its prespecified action-sensitivity gate on held-out SCARED cases (83.1\%) after four audit-identified data defects are fixed; behaviour-constrained continuous CEM then passes all offline navigation gates (200 trials, 51.5\% reach). External C3VD generalisation and calibrated near-wall risk remain below gate and are reported as characterised limits.
+  We show that unsupervised latent actions are not control variables, exclude the invalid discrete-MPC evidence, and build a corrected continuous SE(3) branch that passes its prespecified action-sensitivity gate on held-out SCARED cases (83.1\%) after four audit-identified data defects are fixed; behaviour-constrained continuous CEM then passes all offline navigation gates (200 trials, 51.5\% reach). The audit itself is a method contribution: executable input-sensitivity tests, a depth-reprojection pose gate, matched counterfactual negative banks, and grouped cross-validation with a frozen test set (Section~\ref{sec:audit}). External C3VD generalisation and calibrated near-wall risk remain below gate and are reported as characterised limits.
   \item \textbf{A leakage-free, per-dataset protocol.}
   Video-level splits, domain-balanced sampling, per-dataset forecast decomposition, reproducible external baselines, grouped cross-validation with a frozen test set, and paired Wilcoxon tests with Holm correction, released as executable code.
 \end{enumerate}
@@ -476,9 +481,42 @@ $\bar\mu=M_e^{-1}\sum_m\mu_m$.
 
 \paragraph{Continuous MPC and safety gate.}
 CEM or MPPI optimises bounded six-dimensional actions under~\eqref{eq:mpc}.
-The hard gate replaces every rejected sequence by a zero-motion fallback.
+Candidates are sampled in the model's \emph{normalised} action space (zero
+mean, unit variance per axis), so proposals stay within the training support;
+raw-space sampling would place rotation candidates 100--380 standard
+deviations out of distribution. The hard gate replaces every rejected sequence
+by a zero-motion fallback.
 Evaluation is receding-horizon and offline; no candidate is described as
 clinically executable without device telemetry and prospective validation.
+
+\subsection{Correctness auditing and evaluation gates}
+\label{sec:audit}
+World-model claims are only as strong as the code that computes them. We
+therefore treat verification as part of the method, not as post-hoc
+debugging. Four executable gates accompany the model.
+\paragraph{(i) Input-sensitivity unit tests.}
+Every action-conditioned predictor must pass executable tests before its
+metrics are read: perturbing history, domain or candidate action must change
+the output; future actions must not affect earlier predictions; gradients must
+reach the action projection and the Transformer encoder. These tests caught a
+fatal defect in which the L2/L3 encoder was constructed but never executed
+(Section~\ref{sec:rq3}).
+\paragraph{(ii) Reprojection-gated pose conventions.}
+Before any pose-conditioned training, candidate camera-frame conventions are
+verified by reprojecting ground-truth depth between frames under the dataset's
+official intrinsics; the convention must achieve sub-pixel median error. This
+gate revealed that C3VD poses require a transpose plus an OpenGL$\to$OpenCV
+axis flip (Section~\ref{sec:rq3}).
+\paragraph{(iii) Counterfactual negative matching.}
+Action sensitivity is measured by whether the real action beats a
+\emph{matched} wrong action. Training and evaluation use the same negative
+distribution (same-sequence, temporally adjacent hard negatives), and
+evaluation uses a fixed negative bank so the metric does not depend on batch
+order.
+\paragraph{(iv) Grouped development with a frozen test set.}
+Model and loss choices are made by leave-one-case-out cross-validation over
+training cases; the test case is evaluated at most once per locked variant,
+and the audit history of every test-set contact is recorded.
 
 \subsection{Objective}
 \label{sec:objective}
@@ -845,8 +883,9 @@ A post-hoc audit found that the original L2/L3 predictor constructed, but
 never executed, its Transformer encoder in the forward pass. Its outputs were
 therefore not functions of history or candidate action. The earlier 98.0\% latent-reach and 92.8\% energy-ranking
 values are retained only for provenance, marked invalid, and removed from all
-claims. The corrected implementation executes block-causal attention; unit
-tests verify history, action and domain sensitivity, future-action
+claims. The corrected implementation executes block-causal attention; the
+executable input-sensitivity tests of Section~\ref{sec:audit} verify history,
+action and domain sensitivity, future-action
 non-leakage, and gradients to the action projection and encoder.
 
 On SCARED depth, energy flags near-wall transitions above chance (AUC $0.682$, Spearman $-0.471$, $n{=}132$; Figure~\ref{fig:aux}b).
@@ -891,12 +930,14 @@ camera), bidirectional 64-frame encoding (history latents could attend to
 future frames), 64-frame chunk resets, and a train/evaluation mismatch in
 counterfactual negatives (global shuffles in training versus local ones at
 test time). The corrected v2 cache and protocol (single-eye crop, past-only
-eight-tubelet look-back, window-end pose alignment, local hard negatives,
+eight-tubelet look-back, window-end pose alignment, matched local hard
+negatives and the fixed evaluation bank of Section~\ref{sec:audit},
 leave-one-case-out development) lift the frozen-test real-action win fraction
 from 73.8\% to \textbf{83.1\%} (fixed-bank 88.2\%, inverse $R^2=0.482$),
 passing the 80\% gate; grouped CV over four SCARED cases gives 88.9\% macro
 pair-win with a worst fold of 84.1\%, and three training seeds give
-85.9--86.5\% fixed-bank pair-win (all gates passed). For C3VD, a depth-reprojection gate with
+85.9--86.5\% fixed-bank pair-win (all gates passed). For C3VD, the
+depth-reprojection gate of Section~\ref{sec:audit} with
 the dataset's Scaramuzza intrinsics revealed that \texttt{pose.txt} requires an
 OpenGL$\to$OpenCV axis flip in addition to the row/column transpose: the
 transpose-only convention leaves 10.2\,px median reprojection error at a
