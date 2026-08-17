@@ -1,0 +1,39 @@
+{
+  "task": "continuous camera-frame SE(3) action-conditioned prediction",
+  "pose_convention": "c2w_local_log_se3_v_then_w",
+  "data": "outputs/physical_actions_v2/sequences_slots.pt",
+  "negatives": "local",
+  "validation": {
+    "n": 1108,
+    "mse_real_actions": 0.22990250565945455,
+    "mse_shuffled_actions": 0.283219492076375,
+    "real_action_win_fraction": 0.8032490974729242,
+    "inverse_action_r2": 0.3469133973121643
+  },
+  "test": {
+    "skipped": "frozen test set withheld during development"
+  },
+  "validation_fixed_bank": {
+    "n": 1108,
+    "n_negatives": 10,
+    "mse_real_actions": 0.22990250626464612,
+    "mse_negative_actions": 0.2998559974860198,
+    "pair_win_fraction": 0.8648916967509025,
+    "all_negative_win_fraction": 0.5532490974729242
+  },
+  "test_fixed_bank": {
+    "skipped": "frozen test set withheld during development"
+  },
+  "success_thresholds": {
+    "real_action_win_fraction": 0.8,
+    "inverse_action_r2": 0.3
+  },
+  "loss_weights": {
+    "inverse": 0.25,
+    "cycle": 0.1,
+    "counterfactual": 0.5,
+    "counterfactual_margin": 0.02
+  },
+  "development_gate_passed": true,
+  "passed": false
+}

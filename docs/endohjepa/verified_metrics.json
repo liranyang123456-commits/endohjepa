@@ -204,6 +204,17 @@
           "per_trajectory_win": {"c1_cecum_t1_v4": 0.537, "c1_descending_t4_v4": 0.513, "c1_sigmoid1_t4_v4": 0.617, "c1_transverse1_t1_v4": 0.709, "cecum_t1_a": 0.636},
           "note": "Above chance on all five trajectories but below the 80% gate; external generalisation is directional, not gate-level."
         },
+        "C3VD_external_15traj": {
+          "source": "outputs/continuous_actions_v2/c3vd_external_15traj.json",
+          "protocol": "v2 model (SCARED-only training) on 15 downloaded C3VD/C3VDv2 trajectories, 10 with usable windows (798 windows), all pose-gate corrected",
+          "n": 798,
+          "n_trajectories_with_windows": 10,
+          "pooled_win_fraction": 0.5827,
+          "fixed_bank_pair_win_fraction": 0.6662,
+          "inverse_action_r2": 0.3382,
+          "per_trajectory_win_range": [0.455, 0.709],
+          "note": "Expanded external evaluation confirms the 5-trajectory result: above chance on 9/10 trajectories, below the 80% gate."
+        },
         "passed": true,
         "note": "80% action-sensitivity gate passed on SCARED after the v2 corrections; external C3VD remains below the gate and is reported separately."
       },
@@ -230,6 +241,32 @@
         "gate": {"auc": 0.75, "min_transitions": 500},
         "passed": false,
         "interpretation": "A trained, calibrated risk head on latent states does not predict held-out near-wall depth; the exploratory energy correlation (AUC 0.682, n=132) remains the strongest and still weak physical signal."
+      },
+      "risk_dense_v2": {
+        "source": "outputs/dense_risk_v2/metrics.json",
+        "protocol": "per-token risk head with attention pooling on dense past-only tokens (256x1024 per step), frame-level 5th-pct depth labels",
+        "val_auc": 0.629,
+        "test_auc": 0.470,
+        "n_test_frames": 986,
+        "passed": false,
+        "interpretation": "Dense spatial tokens do not fix near-wall generalisation either; val/test positive-rate shift (9.4% vs 43%) across cases dominates. Near-wall risk on held-out cases remains unreliable across all model classes tried (energy 0.682, pooled head 0.54, dense head 0.47)."
+      },
+      "past_only_forecast_audit": {
+        "source": "outputs/past_only_forecast/audit.json",
+        "protocol": "matched 2000-clip train subset + 250 val clips, same causal L1, 20 epochs",
+        "bidirectional_cos": 0.9709,
+        "past_only_cos": 0.9564,
+        "delta_cos": -0.0145,
+        "persistence_cos": 0.9125,
+        "interpretation": "Within-window future attention inflates the headline cosine by ~1.5 points; the forecast advantage over persistence (0.956 vs 0.912) survives strictly causal encoding."
+      },
+      "slot_space_ablation": {
+        "source": "outputs/continuous_actions_v2_slots/metrics.json + physical_navigation_v2_slots/report.json",
+        "adapter": "outputs/factorized_state_v2 (val fidelity 0.037, twist R2 0.183)",
+        "action_sensitivity_fixed_bank": 0.8649,
+        "navigation_reach": 0.055,
+        "navigation_error_reduction": 0.022,
+        "interpretation": "Planner-state slots preserve action sensitivity (86.5% pair win) but destroy goal-directed navigation (5.5% reach vs 51.5% pooled): factorisation into planner-safe slots discards goal-distance geometry. MPC therefore runs on the full pooled latent."
       },
       "c3vd_pose_gate": {
         "source": "docs/endohjepa/c3vd_pose_gate.json",
