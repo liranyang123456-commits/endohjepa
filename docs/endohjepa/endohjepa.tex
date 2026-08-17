@@ -525,7 +525,7 @@ tubelet from a look-back window of eight tubelets (no future attention and no
 chunk resets), and aligns poses at integer window-end frames. Model selection
 for this branch uses leave-one-case-out cross-validation over the SCARED
 training cases with a fixed hard-negative bank; the v1 test set is frozen as
-an audit set (\texttt{docs/endohjepa/test\_freeze.json}). Samples are
+an audit set (the frozen-test protocol file released with the paper). Samples are
 $(z_{\mathrm{hist}},u_{t:t+H-1},z_{\mathrm{future}},d_{\mathrm{wall}})$,
 where $d_{\mathrm{wall}}$ is the binary near-wall indicator from SCARED depth.
 The legacy grounding diagnostic measures NMI and a residual-to-twist probe.
@@ -545,7 +545,7 @@ available. This prevents adaptation from discarding representation content
 merely because it is difficult to forecast.
 
 \subsection{Training procedure}
-Clips are enumerated from a sequence-level manifest with video-level splits (hash of \texttt{dataset::sequence\_id}); no clip crosses a split boundary.
+Clips are enumerated from a sequence-level manifest with video-level splits (a hash of the dataset and sequence identifier); no clip crosses a split boundary.
 Sampling is domain-balanced by round-robin so laparoscopy does not dominate GI/bronchoscopy.
 Dense tokens are cached once per encoder; L1, full H-JEPA, GRU, and Mamba train on the \emph{same} cached latents.
 Optimisation: AdamW (lr $3{\times}10^{-4}$, weight decay $0.01$) with a fixed
@@ -559,7 +559,7 @@ Full H-JEPA: $69.7$M trainable parameters; GRU: $2.63$M; Mamba: $1.58$M.
 \STATE \textbf{Training:} for each domain-balanced clip $x_{1:T}$ with domain $d$:
 \STATE \quad $z_{1:T'}\leftarrow f_\theta(x_{1:T})$
 \STATE \quad $\mathcal{L}_1\leftarrow\mathrm{SmoothL1}(\mathrm{causal\text{-}L1}(z_{\mathrm{hist}},e_d),z_{\mathrm{fut}})$ \quad (residual)
-\STATE \quad $\mathcal{L}_2\leftarrow\mathrm{SmoothL1}(\mathrm{L2}(\mathrm{pool}(z_{\mathrm{hist}}),e_d),\mathrm{pool}(z_{\mathrm{fut}})[::2])$
+\STATE \quad $\mathcal{L}_2\leftarrow\mathrm{SmoothL1}\!\bigl(\mathrm{L2}(\mathrm{pool}_2(z_{\mathrm{hist}}),e_d),\,z_{\mathrm{fut}}^{\,2,4,\ldots}\bigr)$
 \STATE \quad if pose/depth is available: align fractional tubelet centres to interpolated SE(3) poses and compute $u_t=\log(\mathbf{T}_t^{-1}\mathbf{T}_{t+1})^\vee$
 \STATE \quad factorise $z\to(s^g,s^q,s^m,\xi)$; preserve detached teacher feature
 \STATE \quad train block-causal probabilistic dynamics, inverse action and near-wall risk
@@ -611,7 +611,7 @@ strong recurrent/SSM baselines; do emergent actions encode physical motion; and
 does any risk/planning claim satisfy prespecified pose, calibration and
 video-level trial thresholds.
 They are organised by six research questions that map onto the contributions, not by dataset dump.
-Unless marked ``lit.'', every number is measured from a named JSON under \texttt{outputs/} and copied into \texttt{docs/endohjepa/verified\_metrics.json}; literature rows are never mixed into a measured comparison.
+Unless marked ``lit.'', every number is measured by the released evaluation code and recorded in the released metric ledger; literature rows are never mixed into a measured comparison.
 Forecast tables use the $6{,}000$-clip causal-L1 protocol; energy/action probes
 use the $2{,}000$-clip audited checkpoint; recognition uses the official
 CholecT50 split. Discrete latent-MPC scores are excluded after the correctness
@@ -634,7 +634,7 @@ Section~\ref{sec:ablation} isolates design choices.
 \paragraph{Datasets.}
 Table~\ref{tab:census} lists all $19$ local corpora (1{,}707 sequences,
 1{,}067{,}734 decoded frames).
-Splits are video-level (hash of \texttt{dataset::sequence\_id}): train 1{,}328 / val 188 / test 191 sequences.
+Splits are video-level (a hash of the dataset and sequence identifier): train 1{,}328 / val 188 / test 191 sequences.
 TrackVes and SurgT include video-only rows whose decoded-frame count is
 unknown; the census records those rows as zero rather than subtracting sentinel
 values, and they are excluded from latent forecast.
@@ -749,7 +749,7 @@ Varying depth ($2$--$6$), width ($256$--$768$) and lr ($10^{-4}$--$10^{-3}$) cha
 \begin{table}[t]
 \centering
 \caption{Video-level latent forecast at $h{=}4$ (6{,}000-clip training, shared cache).
-Source: \texttt{outputs/scale\_6000\_*/val\_metrics.json}.}
+Source: released validation metrics.}
 \label{tab:forecast}
 \small
 \begin{tabular}{lcc}
@@ -802,10 +802,9 @@ Numbers are from \texttt{verified\_metrics.json}.}
 
 \subsection{RQ3: Action-path audit and physical energy}
 \label{sec:rq3}
-A post-hoc audit found that the original L2/L3
-\texttt{TransformerPredictor.forward} built, but never executed, its
-Transformer encoder. Its outputs were therefore not functions of history or
-candidate action. The earlier 98.0\% latent-reach and 92.8\% energy-ranking
+A post-hoc audit found that the original L2/L3 predictor constructed, but
+never executed, its Transformer encoder in the forward pass. Its outputs were
+therefore not functions of history or candidate action. The earlier 98.0\% latent-reach and 92.8\% energy-ranking
 values are retained only for provenance, marked invalid, and removed from all
 claims. The corrected implementation executes block-causal attention; unit
 tests verify history, action and domain sensitivity, future-action
@@ -882,7 +881,7 @@ depth/risk evaluation.
 \centering
 \caption{Forecast by orifice ($2{,}000$-clip audited checkpoint, 250 validation
 clips). Source:
-\texttt{p2000\_full\_causal/eval\_ckpt\_cumulative\_energy.json}.
+the released 2{,}000-clip evaluation file.
 Discrete plan-reach columns are excluded after the action-path audit.
 This protocol is not mixed with the $6{,}000$-clip causal-L1 results in
 Table~\ref{tab:forecast}.}
@@ -906,8 +905,7 @@ Bronchoscopy & 0.984 / 0.918 & 83 \\
 (b)~Action-grounding audit: semantic and physical NMI versus matched random baselines.
 (c)~Few-shot domain-token adaptation (32 target clips) from a laparoscopy-only model.
 Invalid discrete-MPC reach is deliberately not plotted. Sources:
-\texttt{pose\_latent\_align.json}, \texttt{action\_triplet\_align.json}, and
-\texttt{t16\_transfer\_laparo/fewshot\_*.json}.}
+the released pose-alignment, action-triplet and few-shot evaluation files.}
 \label{fig:planning}
 \end{figure}
 
@@ -979,7 +977,7 @@ actions nor admissible control variables.
 \caption{CholecT50 recommended official five-fold cross-validation
 (50 videos; 10 test videos per fold; 3 probe seeds per fold).
 Values are mean $\pm$ standard deviation across the five fold means.
-Source: \texttt{cholect50\_probe\_crossval.json}.}
+Source: released cross-validation probe metrics.}
 \label{tab:downstream-cv}
 \small
 \begin{tabular}{lcc}
@@ -1019,7 +1017,7 @@ which is outside this paper's scope.
 \caption{CholecT50 official \emph{challenge-test} videos
 (VID68, 70, 73--75), video-level linear probe, mean $\pm$ std over 3 seeds.
 This is not the recommended five-fold cross-validation benchmark.
-Source: \texttt{outputs/vjepa2\_adapted/cholect50\_probe\_multiseed.json}.
+Source: released multi-seed probe metrics.
 We do not claim uniform dominance.}
 \label{tab:downstream}
 \small
@@ -1143,14 +1141,14 @@ clips) lose to copy-last; this is a sanity check, not a generative-model SOTA co
 \subsection{Per-dataset decomposition}
 \label{sec:perds}
 ``Per-domain'' (three orifices) hides dataset-level variation.
-We reconstruct the same $750$-clip video-level val list used to build the $6{,}000$-clip cache (\texttt{domain\_balanced\_indices}, seed $1$), attach dataset names, and evaluate the causal-L1 checkpoint.
+We reconstruct the same $750$-clip video-level val list used to build the $6{,}000$-clip cache (the domain-balanced sampler, seed $1$), attach dataset names, and evaluate the causal-L1 checkpoint.
 Alignment is exact ($n_{\mathrm{cache}}{=}n_{\mathrm{rebuilt}}{=}750$).
 Table~\ref{tab:perds} and Figure~\ref{fig:perds} report every dataset with $n{\ge}5$; SCARED and STIR appear with $n{=}1$ in the JSON and are omitted from the table.
 
 \begin{table}[t]
 \centering
 \caption{Per-dataset latent forecast ($6{,}000$-clip causal L1, $h{=}4$, video-level val).
-Source: \texttt{outputs/scale\_6000\_causal/per\_dataset.json} (\texttt{aligned=true}).
+Source: released per-dataset evaluation file (alignment verified).
 Overall $0.978$ / $0.916$ matches Table~\ref{tab:forecast}.}
 \label{tab:perds}
 \small
@@ -1194,7 +1192,7 @@ positive-gain examples, not best cases. Left labels give the aggregate
 dataset-level cosine (model versus persistence) and transition win fraction;
 the final column is image-space retrieval error. Retrieval visualises latent
 neighbourhoods and must not be read as generated-pixel accuracy. Source:
-\texttt{qualitative\_forecast\_15000.json}.}
+the released qualitative-protocol file.}
 \label{fig:forecast-qualitative-all}
 \end{figure*}
 
@@ -1371,7 +1369,7 @@ A reprojection-gated pose fix plus four additional C3VDv2 trajectories give
 above-chance action sensitivity on all five external trajectories (pooled
 57.9\%), still below gate. Risk calibration and robot-executed planning
 therefore remain open, not navigation claims.
-We release the protocol, the verified metric file, and the figure generators so that every number in this paper can be regenerated from \texttt{outputs/}.
+We release the protocol, the verified metric file, and the figure generators so that every number in this paper can be regenerated from the released result files.
 
 \section*{Declarations}
 \textbf{Ethics.} Public, de-identified datasets are used under their original
