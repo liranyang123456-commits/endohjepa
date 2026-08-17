@@ -1,0 +1,18 @@
+{
+  "paper": "Endo-HJEPA",
+  "not_ablation_planning": true,
+  "task": "few-shot domain-token adaptation to gi",
+  "shots": 32,
+  "source_model": "outputs/t16_transfer_laparo/endohjepa.pt",
+  "zero_shot": {
+    "cos_model": 0.7930652499198914,
+    "cos_persist": 0.9108026623725891,
+    "n": 10
+  },
+  "few_shot": {
+    "cos_model": 0.8385125398635864,
+    "cos_persist": 0.9108026623725891,
+    "n": 10
+  },
+  "recovery": 0.04544728994369507
+}

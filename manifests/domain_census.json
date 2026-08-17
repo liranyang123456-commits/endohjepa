@@ -1,0 +1,302 @@
+{
+  "manifest": "E:\\World_Agent_Enoscopy\\manifests\\sequences.csv",
+  "n_sequences": 1707,
+  "n_frames": 1067734,
+  "missing_frames_dir": 0,
+  "by_dataset": {
+    "C3VD": {
+      "sequences": 1,
+      "frames": 1379,
+      "domain": "gi",
+      "splits": {
+        "train": 1
+      },
+      "modalities": [
+        "rgb"
+      ]
+    },
+    "Cholec80-Boxes": {
+      "sequences": 5,
+      "frames": 15691,
+      "domain": "laparo",
+      "splits": {
+        "train": 4,
+        "test": 1
+      },
+      "modalities": [
+        "rgb"
+      ]
+    },
+    "CholecSeg8k": {
+      "sequences": 1,
+      "frames": 8080,
+      "domain": "laparo",
+      "splits": {
+        "train": 1
+      },
+      "modalities": [
+        "rgb"
+      ]
+    },
+    "EndoNeRF": {
+      "sequences": 3,
+      "frames": 219,
+      "domain": "laparo",
+      "splits": {
+        "train": 2,
+        "val": 1
+      },
+      "modalities": [
+        "rgbd",
+        "video"
+      ]
+    },
+    "endoscapes": {
+      "sequences": 11,
+      "frames": 153899,
+      "domain": "laparo",
+      "splits": {
+        "train": 9,
+        "test": 1,
+        "val": 1
+      },
+      "modalities": [
+        "rgb"
+      ]
+    },
+    "endovis2017_full": {
+      "sequences": 11,
+      "frames": 2701,
+      "domain": "laparo",
+      "splits": {
+        "train": 1,
+        "val": 10
+      },
+      "modalities": [
+        "rgb"
+      ]
+    },
+    "endovis2018_full": {
+      "sequences": 2,
+      "frames": 3000,
+      "domain": "laparo",
+      "splits": {
+        "train": 1,
+        "val": 1
+      },
+      "modalities": [
+        "rgb"
+      ]
+    },
+    "Kvasir-Instrument": {
+      "sequences": 1,
+      "frames": 590,
+      "domain": "gi",
+      "splits": {
+        "train": 1
+      },
+      "modalities": [
+        "rgb"
+      ]
+    },
+    "Stereo_Lap": {
+      "sequences": 44,
+      "frames": 185344,
+      "domain": "laparo",
+      "splits": {
+        "val": 3,
+        "train": 36,
+        "test": 5
+      },
+      "modalities": [
+        "rgbd"
+      ]
+    },
+    "STIR": {
+      "sequences": 360,
+      "frames": 3640,
+      "domain": "laparo",
+      "splits": {
+        "train": 279,
+        "test": 45,
+        "val": 36
+      },
+      "modalities": [
+        "rgb",
+        "video"
+      ]
+    },
+    "TrackVes": {
+      "sequences": 10,
+      "frames": 1,
+      "domain": "laparo",
+      "splits": {
+        "val": 2,
+        "train": 8
+      },
+      "modalities": [
+        "rgb",
+        "video"
+      ]
+    },
+    "EndoVis_InstrumentTracking": {
+      "sequences": 9,
+      "frames": 4536,
+      "domain": "laparo",
+      "splits": {
+        "train": 9
+      },
+      "modalities": [
+        "rgb",
+        "video"
+      ]
+    },
+    "SurgT": {
+      "sequences": 32,
+      "frames": 0,
+      "domain": "laparo",
+      "splits": {
+        "test": 20,
+        "val": 12
+      },
+      "modalities": [
+        "video"
+      ]
+    },
+    "MIS_own": {
+      "sequences": 13,
+      "frames": 8177,
+      "domain": "laparo",
+      "splits": {
+        "train": 13
+      },
+      "modalities": [
+        "rgb"
+      ]
+    },
+    "HyperKvasir": {
+      "sequences": 768,
+      "frames": 96567,
+      "domain": "gi",
+      "splits": {
+        "train": 621,
+        "test": 78,
+        "val": 69
+      },
+      "modalities": [
+        "rgb",
+        "video"
+      ]
+    },
+    "ION_bronch": {
+      "sequences": 76,
+      "frames": 163443,
+      "domain": "bronch",
+      "splits": {
+        "train": 60,
+        "val": 8,
+        "test": 8
+      },
+      "modalities": [
+        "rgb",
+        "video"
+      ]
+    },
+    "SCARED": {
+      "sequences": 76,
+      "frames": 1878,
+      "domain": "laparo",
+      "splits": {
+        "train": 60,
+        "val": 9,
+        "test": 7
+      },
+      "modalities": [
+        "rgb",
+        "video"
+      ]
+    },
+    "Kvasir-Capsule": {
+      "sequences": 234,
+      "frames": 317726,
+      "domain": "gi",
+      "splits": {
+        "train": 181,
+        "val": 29,
+        "test": 24
+      },
+      "modalities": [
+        "rgb",
+        "video"
+      ]
+    },
+    "CholecT50": {
+      "sequences": 50,
+      "frames": 100863,
+      "domain": "laparo",
+      "splits": {
+        "train": 41,
+        "val": 7,
+        "test": 2
+      },
+      "modalities": [
+        "rgb"
+      ]
+    }
+  },
+  "by_domain": {
+    "gi": {
+      "sequences": 1004,
+      "frames": 416262,
+      "datasets": [
+        "C3VD",
+        "HyperKvasir",
+        "Kvasir-Capsule",
+        "Kvasir-Instrument"
+      ]
+    },
+    "laparo": {
+      "sequences": 627,
+      "frames": 488029,
+      "datasets": [
+        "Cholec80-Boxes",
+        "CholecSeg8k",
+        "CholecT50",
+        "EndoNeRF",
+        "EndoVis_InstrumentTracking",
+        "MIS_own",
+        "SCARED",
+        "STIR",
+        "Stereo_Lap",
+        "SurgT",
+        "TrackVes",
+        "endoscapes",
+        "endovis2017_full",
+        "endovis2018_full"
+      ]
+    },
+    "bronch": {
+      "sequences": 76,
+      "frames": 163443,
+      "datasets": [
+        "ION_bronch"
+      ]
+    }
+  },
+  "by_split": {
+    "train": 1328,
+    "test": 191,
+    "val": 188
+  },
+  "gaps": {
+    "Cholec80": "Local Cholec80-Boxes holds videos 41-45 only. Full 80 videos: CAMMA request (https://camma.u-strasbg.fr/datasets) then python -m endoworld.data.cholec80 --src <dir>.",
+    "Kvasir-Capsule": "Labeled/unlabeled videos are large HTTP dumps; census reports whatever frames exist after ingest.",
+    "C3VD": "Google Drive quota often blocks extra trajectories; pose-conditioned L3 uses whatever pose.txt files are present.",
+    "ION_bronch": "Private ION cases live under anonymized datasets/ION_bronch/case_XXX only (no patient names in manifests)."
+  },
+  "notes": [
+    "Sampling must be domain-balanced; laparoscopy otherwise dominates.",
+    "Splits are video-level (see endoworld.data.splits); clips from one sequence do not cross splits.",
+    "Endo-HJEPA paper is isolated from CT ablation planning (IBM/CBM/BMEO)."
+  ]
+}

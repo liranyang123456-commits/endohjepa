@@ -1,0 +1,18 @@
+{
+  "n_calibration": 4432,
+  "n_test": 3832,
+  "near_wall_threshold": 34.4,
+  "test": {
+    "auc": 0.5309365261949406,
+    "brier": 0.24708209931850433,
+    "ece": 0.09073019136591098,
+    "coverage": 0.7129436135292053,
+    "temperature": 9.635682106018066,
+    "conformal_radius": 0.5803616642951965
+  },
+  "thresholds": {
+    "auc": 0.75,
+    "min_transitions": 500
+  },
+  "passed": false
+}

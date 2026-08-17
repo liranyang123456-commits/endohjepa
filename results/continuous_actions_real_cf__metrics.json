@@ -1,0 +1,29 @@
+{
+  "task": "continuous camera-frame SE(3) action-conditioned prediction",
+  "pose_convention": "c2w_local_log_se3_v_then_w",
+  "validation": {
+    "n": 2299,
+    "mse_real_actions": 0.2598881447876521,
+    "mse_shuffled_actions": 0.3430272580009795,
+    "real_action_win_fraction": 0.7216180948238364,
+    "inverse_action_r2": 0.4039822816848755
+  },
+  "test": {
+    "n": 2130,
+    "mse_real_actions": 0.32615234904655827,
+    "mse_shuffled_actions": 0.4171715718759617,
+    "real_action_win_fraction": 0.7384976525821596,
+    "inverse_action_r2": 0.3937392830848694
+  },
+  "success_thresholds": {
+    "real_action_win_fraction": 0.8,
+    "inverse_action_r2": 0.3
+  },
+  "loss_weights": {
+    "inverse": 0.25,
+    "cycle": 0.1,
+    "counterfactual": 1.0,
+    "counterfactual_margin": 0.05
+  },
+  "passed": false
+}

@@ -1,0 +1,20 @@
+{
+  "protocol": "v2 model evaluated on C3VD with reprojection-gated pose convention (transpose + GL->CV flip); C3VD was never in training",
+  "pose_gate": "docs/endohjepa/c3vd_pose_gate_gap5.json",
+  "n": 55,
+  "canonical": {
+    "n": 55,
+    "mse_real_actions": 0.12958218692378565,
+    "mse_shuffled_actions": 0.1342134992507371,
+    "real_action_win_fraction": 0.6363636363636364,
+    "inverse_action_r2": -1.3772327899932861
+  },
+  "fixed_bank": {
+    "n": 55,
+    "n_negatives": 10,
+    "mse_real_actions": 0.12958218800750645,
+    "mse_negative_actions": 0.13520562241023237,
+    "pair_win_fraction": 0.5745454545454546,
+    "all_negative_win_fraction": 0.07272727272727272
+  }
+}

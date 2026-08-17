@@ -1,0 +1,56 @@
+{
+  "protocol": "CholecT50 official five-fold CV; frozen V-JEPA2 dense tokens; MIL max-pool instrument probe + attention-pool phase probe",
+  "n_clips": 1200,
+  "seeds": 3,
+  "phase_acc": 0.7191666642824808,
+  "phase_std_across_folds": 0.013333339823618425,
+  "instrument_mAP": 0.5864361765066443,
+  "instrument_mAP_std_across_folds": 0.04098709386350656,
+  "folds": [
+    {
+      "phase_acc": 0.7291666666666666,
+      "phase_std": 0.012266349834068888,
+      "instrument_mAP": 0.5862390408705678,
+      "instrument_mAP_std": 0.005324472296416626,
+      "n_train": 960,
+      "n_test": 240,
+      "fold": 1
+    },
+    {
+      "phase_acc": 0.7180555462837219,
+      "phase_std": 0.0085617037345823,
+      "instrument_mAP": 0.5474124005615181,
+      "instrument_mAP_std": 0.02400035541553622,
+      "n_train": 960,
+      "n_test": 240,
+      "fold": 2
+    },
+    {
+      "phase_acc": 0.7180555462837219,
+      "phase_std": 0.0051967679645429365,
+      "instrument_mAP": 0.5473611833090594,
+      "instrument_mAP_std": 0.006240775047391091,
+      "n_train": 960,
+      "n_test": 240,
+      "fold": 3
+    },
+    {
+      "phase_acc": 0.7347222367922465,
+      "phase_std": 0.01093611161773991,
+      "instrument_mAP": 0.6593838028548892,
+      "instrument_mAP_std": 0.012875685207026208,
+      "n_train": 960,
+      "n_test": 240,
+      "fold": 4
+    },
+    {
+      "phase_acc": 0.6958333253860474,
+      "phase_std": 0.01226632283847825,
+      "instrument_mAP": 0.5917844549371867,
+      "instrument_mAP_std": 0.015858041608935617,
+      "n_train": 960,
+      "n_test": 240,
+      "fold": 5
+    }
+  ]
+}

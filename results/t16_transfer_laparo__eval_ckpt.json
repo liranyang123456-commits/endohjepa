@@ -1,0 +1,51 @@
+{
+  "ckpt": "outputs/t16_transfer_laparo/endohjepa.pt",
+  "kind": "hjepa",
+  "split": "val",
+  "n_val": 125,
+  "horizons": [
+    {
+      "horizon": 1,
+      "cos_model": 0.9133143424987793,
+      "cos_persist": 0.9132857322692871,
+      "mse_model": 0.5896871089935303,
+      "mse_persist": 0.5953386425971985
+    },
+    {
+      "horizon": 4,
+      "cos_model": 0.8816947937011719,
+      "cos_persist": 0.900982141494751,
+      "mse_model": 0.8338556289672852,
+      "mse_persist": 0.6829596161842346
+    },
+    {
+      "horizon": 8,
+      "cos_model": 0.8298545479774475,
+      "cos_persist": 0.884989321231842,
+      "mse_model": 1.3466395139694214,
+      "mse_persist": 0.7943548560142517
+    }
+  ],
+  "cross_domain": [
+    {
+      "domain": "laparo",
+      "n": 42,
+      "cos_model": 0.9216039180755615,
+      "cos_persist": 0.8498210310935974
+    },
+    {
+      "domain": "gi",
+      "n": 42,
+      "cos_model": 0.7909181714057922,
+      "cos_persist": 0.9125778079032898
+    },
+    {
+      "domain": "bronch",
+      "n": 41,
+      "cos_model": 0.7757530212402344,
+      "cos_persist": 0.8927540183067322
+    }
+  ],
+  "paper": "Endo-HJEPA",
+  "not_ablation_planning": true
+}

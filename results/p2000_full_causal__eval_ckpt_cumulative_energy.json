@@ -1,0 +1,82 @@
+{
+  "ckpt": "outputs/p2000_full_causal/endohjepa.pt",
+  "kind": "hjepa",
+  "split": "val",
+  "n_val": 250,
+  "horizons": [
+    {
+      "horizon": 1,
+      "cos_model": 0.9750386476516724,
+      "cos_persist": 0.9418396353721619,
+      "mse_model": 0.15356826782226562,
+      "mse_persist": 0.3584447503089905
+    },
+    {
+      "horizon": 4,
+      "cos_model": 0.9713343977928162,
+      "cos_persist": 0.9160858392715454,
+      "mse_model": 0.17864137887954712,
+      "mse_persist": 0.5286405086517334
+    }
+  ],
+  "cross_domain": [
+    {
+      "domain": "laparo",
+      "n": 84,
+      "cos_model": 0.9599636793136597,
+      "cos_persist": 0.8949870467185974
+    },
+    {
+      "domain": "gi",
+      "n": 83,
+      "cos_model": 0.9696893692016602,
+      "cos_persist": 0.9354243874549866
+    },
+    {
+      "domain": "bronch",
+      "n": 83,
+      "cos_model": 0.9844869375228882,
+      "cos_persist": 0.9181001782417297
+    }
+  ],
+  "paper": "Endo-HJEPA",
+  "not_ablation_planning": true,
+  "planning": {
+    "cos_plan": 0.9202322363853455,
+    "cos_l1": 0.9701752066612244,
+    "cos_persist": 0.8743337988853455,
+    "plan_better_than_persist": 0.9800000190734863,
+    "mean_plan_energy": 102.24031829833984,
+    "energy_plan_vs_random": -34.29659652709961,
+    "energy_plan_lower_frac": 0.9280000329017639
+  },
+  "planning_by_domain": {
+    "laparo": {
+      "cos_plan": 0.8778946399688721,
+      "cos_l1": 0.9566938281059265,
+      "cos_persist": 0.8365089893341064,
+      "plan_better_than_persist": 0.9523809552192688,
+      "mean_plan_energy": 137.64065551757812,
+      "energy_plan_vs_random": -39.53803253173828,
+      "energy_plan_lower_frac": 0.9523809552192688
+    },
+    "gi": {
+      "cos_plan": 0.9383656978607178,
+      "cos_l1": 0.9711953997612,
+      "cos_persist": 0.9040607213973999,
+      "plan_better_than_persist": 0.9879517555236816,
+      "mean_plan_energy": 66.0429458618164,
+      "energy_plan_vs_random": -36.408653259277344,
+      "energy_plan_lower_frac": 0.9759035706520081
+    },
+    "bronch": {
+      "cos_plan": 0.9449462294578552,
+      "cos_l1": 0.9827984571456909,
+      "cos_persist": 0.8828871250152588,
+      "plan_better_than_persist": 0.9999999403953552,
+      "mean_plan_energy": 102.0963134765625,
+      "energy_plan_vs_random": -36.600154876708984,
+      "energy_plan_lower_frac": 0.9879517555236816
+    }
+  }
+}
