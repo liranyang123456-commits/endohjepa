@@ -985,6 +985,7 @@ Encoder & Phase accuracy & Instrument mAP \\
 \midrule
 V-JEPA 2 (frozen) & $0.683\pm0.040$ & $0.531\pm0.046$ \\
 V-JEPA 2 (domain-adapted) & $0.679\pm0.038$ & $0.489\pm0.048$ \\
+V-JEPA 2 (fine-tuned, dense MIL heads) & $0.711\pm0.031$ & $0.463\pm0.041$ \\
 V-JEPA 2 (frozen, dense MIL probe) & $\mathbf{0.719\pm0.013}$ & $\mathbf{0.586\pm0.041}$ \\
 \bottomrule
 \end{tabular}
@@ -1001,8 +1002,14 @@ head and an attention-pooled phase head lifts phase to $0.719{\pm}0.013$ and
 instrument mAP to $0.586{\pm}0.041$ on the identical five-fold protocol.
 Small instruments are spatially local, so mean-pooling discards exactly the
 signal presence detection needs; the dense probe recovers part of it without
-any encoder supervision. The remaining gap to task-specific RDV
-($0.894$ mAP) is a supervision gap, not a representation ceiling.
+any encoder supervision. End-to-end fine-tuning of the last two blocks on the
+same folds does not close the gap either---it degrades instrument mAP to
+$0.463$, consistent with the domain-adaptation row: at 40 training videos per
+fold, supervised adaptation overwrites more transferable structure than it
+gains. The remaining gap to task-specific RDV
+($0.894$ mAP) is therefore a label-scale and architecture gap, not a
+representation ceiling; closing it requires full task-specific supervision,
+which is outside this paper's scope.
 
 \begin{table}[t]
 \centering

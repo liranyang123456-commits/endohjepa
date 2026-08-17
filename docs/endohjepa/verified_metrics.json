@@ -100,6 +100,15 @@
       "phase_std_across_folds": 0.0133,
       "instr": 0.5864,
       "instr_std_across_folds": 0.0410
+    },
+    "vjepa2_finetune_mil": {
+      "source": "outputs/vjepa2_adapted/cholect50_finetune_mil_crossval.json",
+      "probe": "last-2-block end-to-end fine-tune + dense MIL/attention heads, 3 epochs per fold",
+      "phase": 0.7108,
+      "phase_std_across_folds": 0.0312,
+      "instr": 0.4629,
+      "instr_std_across_folds": 0.0411,
+      "note": "Supervised fine-tuning at this label scale degrades the frozen features; frozen + dense probe remains best."
     }
   },
   "per_class_frozen": {
