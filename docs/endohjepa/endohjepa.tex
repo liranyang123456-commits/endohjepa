@@ -27,7 +27,7 @@
 
 \begin{frontmatter}
 
-\title{Endo-HJEPA: Predictive Foundations and Physical-Grounding Limits of a Cross-Orifice Endoscopic World Model}
+\title{Endo-HJEPA: A Hierarchical Latent World Model for Cross-Orifice Endoscopic Video Prediction with Audited Physical Grounding}
 
 \author[haut]{Ranyang Li\corref{cor1}}
 \ead{lry@haut.edu.cn}
@@ -44,39 +44,40 @@
 \address[buaa]{School of Computer Science and Engineering, Beihang University, Beijing 100191, China}
 
 \begin{abstract}
-Endoscopic artificial intelligence is predominantly reactive, whereas
-collision warning requires anticipating scene evolution and distinguishing
-controllable camera motion from nuisance variation. Pixel prediction is poorly
-matched to endoscopy because highlights, fluid and smoke dominate an
-intrinsically uncertain image residual. We present Endo-HJEPA, a
-cross-orifice joint-embedding world model that predicts representations rather
-than pixels and explicitly audit the boundary between predictive video
-features and physically grounded control. A frozen V-JEPA~2 ViT-L encoder is
-coupled to causal residual and temporally coarse predictors; a corrected
-block-causal branch accepts continuous camera-frame SE(3) increments, while
-geometry, tool, semantic and nuisance slots separate planner-visible state.
-On a video-level held-out evaluation over a corpus of 1,707 sequences across
-19 datasets, the validated causal forecaster reaches 0.978 cosine at horizon
-four, compared with 0.916 for persistence, 0.974 for a GRU and 0.971 for
-Mamba (Holm-corrected Wilcoxon $p<10^{-80}$). Performance improves from 500 to
-6,000 training clips and plateaus at 13,552 clips. An exploratory transition
-energy correlates with SCARED camera-to-tissue proximity (AUC 0.682,
-$n=132$), but unsupervised latent actions underperform matched random
-grounding baselines. The first continuous SE(3) branch failed its
-action-sensitivity gate (73.8\% real-action win versus an 80\% threshold);
-a correctness audit traced this to stereo-mixed inputs, non-causal encoding,
-chunk boundaries and negative-sampling mismatch, and the corrected pipeline
-passes the gate at 83.1\% on held-out SCARED cases (grouped-CV macro 88.9\%).
-A reprojection-gated pose-convention fix plus fourteen additional C3VDv2
-trajectories give above-chance action sensitivity on nine of ten usable
-external trajectories (pooled 58.3\%, $n=798$), still below the 80\% gate.
-With the corrected dynamics and behaviour-constrained continuous CEM, offline
-goal-directed navigation on the frozen test case passes all prespecified gates
-(200 trials, 51.5\% reach, 29.0\% pose-error reduction versus persistence)---a
-model-based result, not robot execution. A post-hoc correctness audit excludes the original
-discrete latent-MPC scores from evidence. These results establish a
-reproducible predictive foundation and a geometry-grounded evaluation
-protocol, but do not support autonomous-control claims.
+Minimally invasive diagnosis and therapy are increasingly performed through
+endoscopes, where safety depends on anticipating how the scene will evolve;
+yet endoscopic AI remains reactive, recognising the present frame without
+forecasting the next. Two problems follow. First, existing surgical video
+models are built per orifice and at a single temporal scale, although
+laparoscopy, gastrointestinal endoscopy and bronchoscopy share the same
+physics of a camera advancing through a deformable lumen. Second, world-model
+research assumes---without testing---that predictive video features are
+physically grounded enough to score or plan camera motion; we show this
+assumption fails unless the action path is explicitly measured and audited.
+We present Endo-HJEPA, a hierarchical joint-embedding world model that
+predicts future \emph{representations}---not pixels---from a frozen V-JEPA~2
+ViT-L encoder shared across the three orifices. A causal residual Transformer
+forecasts short-horizon dynamics, a coarse predictor covers mid-horizon
+anatomy, and a block-causal branch conditions on measured continuous SE(3)
+camera increments with probabilistic uncertainty, calibrated risk and a hard
+safety gate. The design is validated on a leakage-free video-level protocol
+over 19 datasets and 1,707 sequences: the causal forecaster reaches 0.978
+cosine at horizon four versus 0.916 for persistence, 0.974 for a GRU and 0.971
+for Mamba (Holm-corrected Wilcoxon $p<10^{-80}$), improves from 500 to 6,000
+training clips, and plateaus at 13,552. For physical grounding, an initial
+action branch failed its prespecified sensitivity gate (73.8\% versus 80\%);
+a correctness audit traced the failure to stereo-mixed inputs, non-causal
+encoding, chunk boundaries and negative-sampling mismatch, and the corrected
+pipeline passes the gate on held-out SCARED cases (83.1\%; grouped
+cross-validation 88.9\%; three seeds 85.9--86.5\%). Behaviour-constrained
+continuous model-predictive control then passes all offline navigation gates
+(200 trials, 51.5\% reach, 29.0\% pose-error reduction versus persistence).
+External C3VD trajectories remain above chance but below gate (pooled 58.3\%,
+$n=798$), and calibrated near-wall risk does not generalise across cases
+(AUC $\le0.54$)---we report both as characterised limits. Endo-HJEPA thus
+delivers a reproducible cross-orifice predictive foundation and an audited
+geometry-grounding protocol, while defining precisely where physically
+grounded control does and does not follow from passive video features.
 \end{abstract}
 
 \begin{keyword}
@@ -116,14 +117,27 @@ A representation that is sufficient for structure and invariant to appearance ha
 Endoscopy is an unusually clean instance of this split: the camera moves through a deformable lumen under clinician control (predictable), while highlights and fluid dominate the pixel residual (unpredictable).
 The design consequence is that a world model should (i)~forecast in encoder space, (ii)~separate fast dynamics from slow anatomy, (iii)~score which futures are plausible, and (iv)~plan by rolling those futures---without ever decoding pixels.
 
-\subsection{Gap}
-Despite rapid progress in surgical video understanding, two gaps remain.
+\subsection{Gap: three missing pieces and one untested assumption}
+Despite rapid progress in surgical video understanding, three gaps remain.
 \textbf{(i) Single scale.}
 Existing surgical JEPA and video-pretraining systems (SurgRec-JEPA, JHU-VPT, VideoMAE) learn a single temporal predictor and do not separate fast tissue/tool/camera dynamics from slow anatomical and procedural structure.
 LeCun's hierarchical JEPA (H-JEPA) argues such separation is essential for long-horizon prediction and planning, but it has not been instantiated for endoscopy.
 \textbf{(ii) Per-orifice fragmentation.}
 Endoscopic models are built per orifice---laparoscopy, GI endoscopy, and bronchoscopy are treated as separate foundation-model problems---even though all three share the same underlying physics of a camera advancing through a deformable lumen under clinician control.
 A single domain-conditioned world model is both a stronger scientific claim and a more data-efficient one, but it requires evidence that such sharing is beneficial, or necessary.
+\textbf{(iii) Pixel-generation mismatch.}
+World models tailored to surgery are predominantly pixel-generative, spending
+capacity on the appearance residual that endoscopy makes unpredictable.
+\textbf{(iv) The untested grounding assumption---the new problem we target.}
+Recent endoscopic world models report latent reach or energy scores and imply
+physical utility, but none verifies that the predicted quantities are actually
+sensitive to measured camera motion, nor that their evaluation code computes
+what it claims. We show that both failure modes occur in practice: an
+unexecuted encoder can produce perfect-looking planning scores, and a
+state-of-the-art video encoder can pass a forecast benchmark while its history
+tokens carry future content. Physical grounding must be measured against
+metric SE(3) motion and depth, under leakage-free splits, with correctness
+audits---not inferred from forecast accuracy.
 
 \subsection{Our approach}
 We instantiate this idea in \textbf{Endo-HJEPA} (Figure~\ref{fig:pipeline}).
@@ -139,12 +153,10 @@ CEM/MPPI interface.
 The encoder is frozen by default so that every dynamics ablation shares identical latents; an optional last-block adaptation is evaluated only on recognition probes.
 No decoder is trained.
 The evidence is scoped as follows: forecast and scale are measured on a
-6{,}000-clip causal-L1 protocol; energy and physical probes use the audited
-2{,}000-clip checkpoint but discrete planning scores are excluded; recognition
-uses frozen versus adapted V-JEPA~2 on the official CholecT50 split. The new
-continuous geometry-action path is reported as an implemented protocol until
-the externally located SCARED RGB--pose--depth assets are rerun under the
-corrected case-level split and common geometry gate.
+6{,}000-clip causal-L1 protocol; the physical branch is trained and selected
+under a case-level split with grouped cross-validation, and reported on a
+frozen test case; recognition uses frozen versus adapted V-JEPA~2 on the
+official CholecT50 split.
 These protocols are never mixed in a single table.
 
 \begin{figure}[t]
@@ -176,14 +188,23 @@ flow; block dimensions encode relative tensor rank. No pixels are decoded.}
   \item \textbf{A causal-autoregressive latent forecaster.}
   The \emph{form} of the latent forecaster matters more than its size: a GPT-style causal Transformer surpasses a strong GRU and a Mamba/SSM baseline, whereas a parallel query-token Transformer of the same capacity does not.
   \item \textbf{An audited path from prediction to physical safety.}
-  We identify that unsupervised latent actions are not control variables, exclude the invalid discrete-MPC evidence, and specify a leakage-free continuous SE(3), depth/risk and hard-gated CEM/MPPI protocol. The exploratory energy signal correlates with SCARED camera-to-tissue distance (AUC 0.682), but remains below the prespecified calibrated-risk target.
+  We show that unsupervised latent actions are not control variables, exclude the invalid discrete-MPC evidence, and build a corrected continuous SE(3) branch that passes its prespecified action-sensitivity gate on held-out SCARED cases (83.1\%) after four audit-identified data defects are fixed; behaviour-constrained continuous CEM then passes all offline navigation gates (200 trials, 51.5\% reach). External C3VD generalisation and calibrated near-wall risk remain below gate and are reported as characterised limits.
   \item \textbf{A leakage-free, per-dataset protocol.}
-  Video-level splits, domain-balanced sampling, per-dataset forecast decomposition, reproducible external baselines, and paired Wilcoxon tests with Holm correction, released as executable code.
+  Video-level splits, domain-balanced sampling, per-dataset forecast decomposition, reproducible external baselines, grouped cross-validation with a frozen test set, and paired Wilcoxon tests with Holm correction, released as executable code.
 \end{enumerate}
 
-We also report two characterised negative results: self-supervised latent actions are not semantically or physically grounded without encoder-level supervision, and zero-shot cross-orifice transfer fails but is recoverable with a 32-shot domain token.
-Together these provide evidence that unified multi-orifice training is necessary, not merely convenient.
-We do \emph{not} claim the first surgical world model, pixel-level video generation, validated physical planning, uniform recognition SOTA, or any clinical efficacy endpoint.
+\paragraph{Findings preview.}
+On 19 datasets and 1{,}707 sequences the causal forecaster reaches 0.978
+cosine at horizon four against 0.916 persistence, 0.974 GRU and 0.971 Mamba
+(Holm-corrected $p<10^{-80}$), with monotone data-scaling to 6{,}000 clips and
+a plateau at 13{,}552. Two characterised negative results complete the
+picture: self-supervised latent actions are not semantically or physically
+grounded without encoder-level supervision, and zero-shot cross-orifice
+transfer fails but is recoverable with a 32-shot domain token---evidence that
+unified multi-orifice training is necessary, not merely convenient.
+We do \emph{not} claim the first surgical world model, pixel-level video
+generation, robot-executed planning, uniform recognition SOTA, or any clinical
+efficacy endpoint.
 
 \paragraph{Significance.}
 Endo-HJEPA reframes endoscopic AI from reactive recognition to anticipatory world modelling.
@@ -1232,6 +1253,8 @@ from the decoded-frame cache. Their images appear in
 Figure~\ref{fig:dataset-atlas}, but fabricating forecast outputs for them
 would be invalid. C3VD contributes training-side pose supervision only, since
 the single available trajectory cannot support a held-out C3VD claim.
+
+\FloatBarrier
 
 \subsection{Ablations}
 \label{sec:ablation}
