@@ -226,6 +226,7 @@
         },
         "passed": true,
         "note": "80% action-sensitivity gate passed on SCARED after the v2 corrections; external C3VD remains below the gate and is reported separately."
+      }
       },
       "navigation_v2": {
         "source": "outputs/physical_navigation_v2/report.json",
@@ -297,8 +298,7 @@
         "rotation_only_median_px": 0.208,
         "winner": "transpose + GL->CV flip",
         "note": "Rotation-only ties because rotation dominates pixel error at these depths; the flip is the convention that keeps translation correct."
-      }
-    },
+      },
     "risk_smoke": {
       "source": "outputs/probabilistic_risk_smoke/metrics.json",
       "synthetic": true,

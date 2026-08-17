@@ -51,11 +51,11 @@ forecasting the next. Two problems follow. First, existing surgical video
 models are built per orifice and at a single temporal scale, although
 laparoscopy, gastrointestinal endoscopy and bronchoscopy share the same
 physics of a camera advancing through a deformable lumen. Second, world-model
-research assumes---without testing---that predictive video features are
+research assumes, without testing, that predictive video features are
 physically grounded enough to score or plan camera motion; we show this
 assumption fails unless the action path is explicitly measured and audited.
 We present Endo-HJEPA, a hierarchical joint-embedding world model that
-predicts future \emph{representations}---not pixels---from a frozen V-JEPA~2
+predicts future \emph{representations}, not pixels, from a frozen V-JEPA~2
 ViT-L encoder shared across the three orifices. A causal residual Transformer
 forecasts short-horizon dynamics, a coarse predictor covers mid-horizon
 anatomy, and a block-causal branch conditions on measured continuous SE(3)
@@ -79,11 +79,11 @@ continuous model-predictive control then passes all offline navigation gates
 (200 trials, 51.5\% reach, 29.0\% pose-error reduction versus persistence).
 External C3VD trajectories remain above chance but below gate (pooled 58.3\%,
 $n=798$), and calibrated near-wall risk does not generalise across cases
-(AUC $\le0.54$)---we report both as characterised limits. The three validated
-capabilities---forecasting scene evolution, evaluating the visual consequence
-of a measured camera motion, and model-based navigation planning---map
+(AUC $\le0.54$); we report both as characterised limits. The three validated
+capabilities (forecasting scene evolution, evaluating the visual consequence
+of a measured camera motion, and model-based navigation planning) map
 directly onto loss-of-view warning, camera-handling training, and
-navigation-assistance prototypes; robot-executed control and clinical
+navigation-assistance prototypes. Robot-executed control and clinical
 collision warning remain outside the validated boundary. Endo-HJEPA thus
 delivers a reproducible cross-orifice predictive foundation and an audited
 geometry-grounding protocol, while defining precisely where physically
@@ -102,15 +102,15 @@ world model \sep joint-embedding predictive architecture \sep endoscopy \sep rep
 \label{sec:intro}
 
 \subsection{Clinical context: endoscopy needs anticipation, not only recognition}
-Minimally invasive diagnosis and therapy are increasingly delivered through an endoscope---laparoscopes in the abdomen, flexible scopes in the gastrointestinal tract, and bronchoscopes in the airway.
+Minimally invasive diagnosis and therapy are increasingly delivered through an endoscope: laparoscopes in the abdomen, flexible scopes in the gastrointestinal tract, and bronchoscopes in the airway.
 Across all three orifices, safe operation depends on a clinician's ability to \emph{anticipate}: how tissue will deform under contact, how a lumen will open as the scope advances, where an instrument will move, and when the camera is about to collide with a wall or lose the view.
 Current endoscopic AI is almost entirely \emph{reactive}.
-It recognises the present frame---surgical phase, instrument presence, anatomy---but cannot forecast what comes next, nor what a candidate camera adjustment would produce.
+It recognises the present frame (surgical phase, instrument presence, anatomy) but cannot forecast what comes next, nor what a candidate camera adjustment would produce.
 A model that predicts how an endoscopic scene will evolve is a prerequisite for
 anticipatory guidance and collision warning. Querying counterfactual camera
 motion additionally requires metric action supervision; predictive video
-features alone are insufficient. That distinction---forecast first, then
-physical grounding under explicit SE(3) and depth signals---is the clinical and
+features alone are insufficient. That distinction, forecast first and then
+physical grounding under explicit SE(3) and depth signals, is the clinical and
 technical target of this paper.
 Three application pathways motivate the design: \emph{loss-of-view warning}
 (predict how the view will evolve before it is lost), \emph{camera-handling
@@ -121,8 +121,8 @@ or refute.
 
 \subsection{The technical problem: structure is predictable, appearance is not}
 A world model for endoscopy faces a specific asymmetry.
-The \emph{structure} of endoscopic video---lumen geometry, camera advance, instrument trajectories---follows smooth physical dynamics and is strongly predictable.
-The \emph{appearance}---specular highlights, fluid, smoke, mucosal micro-texture, peristalsis---is high-entropy and largely unpredictable.
+The \emph{structure} of endoscopic video (lumen geometry, camera advance, instrument trajectories) follows smooth physical dynamics and is strongly predictable.
+The \emph{appearance} (specular highlights, fluid, smoke, mucosal micro-texture, peristalsis) is high-entropy and largely unpredictable.
 The dominant world-model paradigm, pixel generation (diffusion world-action models, Genie-style token video), must spend capacity forecasting this unpredictable appearance.
 That both wastes capacity and ties the model to a pixel metric that is dominated by glare and fluid rather than by the quantities that matter for planning.
 Joint-embedding predictive architectures (JEPA) offer the alternative we adopt: predict in a learned representation space, where unpredictable appearance residual can be ignored by design, and where the predicted quantities are exactly the plannable ones.
@@ -131,7 +131,7 @@ Joint-embedding predictive architectures (JEPA) offer the alternative we adopt: 
 If a frame is written as structure plus appearance, any pixel predictor is lower-bounded by the appearance dispersion, regardless of how well structure is modelled (Section~\ref{sec:theory}).
 A representation that is sufficient for structure and invariant to appearance has no such bound.
 Endoscopy is an unusually clean instance of this split: the camera moves through a deformable lumen under clinician control (predictable), while highlights and fluid dominate the pixel residual (unpredictable).
-The design consequence is that a world model should (i)~forecast in encoder space, (ii)~separate fast dynamics from slow anatomy, (iii)~score which futures are plausible, and (iv)~plan by rolling those futures---without ever decoding pixels.
+The design consequence is that a world model should (i)~forecast in encoder space, (ii)~separate fast dynamics from slow anatomy, (iii)~score which futures are plausible, and (iv)~plan by rolling those futures, without ever decoding pixels.
 
 \subsection{Gap: three missing pieces and one untested assumption}
 Despite rapid progress in surgical video understanding, three gaps remain.
@@ -139,12 +139,12 @@ Despite rapid progress in surgical video understanding, three gaps remain.
 Existing surgical JEPA and video-pretraining systems (SurgRec-JEPA, JHU-VPT, VideoMAE) learn a single temporal predictor and do not separate fast tissue/tool/camera dynamics from slow anatomical and procedural structure.
 LeCun's hierarchical JEPA (H-JEPA) argues such separation is essential for long-horizon prediction and planning, but it has not been instantiated for endoscopy.
 \textbf{(ii) Per-orifice fragmentation.}
-Endoscopic models are built per orifice---laparoscopy, GI endoscopy, and bronchoscopy are treated as separate foundation-model problems---even though all three share the same underlying physics of a camera advancing through a deformable lumen under clinician control.
+Endoscopic models are built per orifice: laparoscopy, GI endoscopy, and bronchoscopy are treated as separate foundation-model problems, even though all three share the same underlying physics of a camera advancing through a deformable lumen under clinician control.
 A single domain-conditioned world model is both a stronger scientific claim and a more data-efficient one, but it requires evidence that such sharing is beneficial, or necessary.
 \textbf{(iii) Pixel-generation mismatch.}
 World models tailored to surgery are predominantly pixel-generative, spending
 capacity on the appearance residual that endoscopy makes unpredictable.
-\textbf{(iv) The untested grounding assumption---the new problem we target.}
+\textbf{(iv) The untested grounding assumption: the new problem we target.}
 Recent endoscopic world models report latent reach or energy scores and imply
 physical utility, but none verifies that the predicted quantities are actually
 sensitive to measured camera motion, nor that their evaluation code computes
@@ -153,7 +153,7 @@ unexecuted encoder can produce perfect-looking planning scores, and a
 state-of-the-art video encoder can pass a forecast benchmark while its history
 tokens carry future content. Physical grounding must be measured against
 metric SE(3) motion and depth, under leakage-free splits, with correctness
-audits---not inferred from forecast accuracy.
+audits, not inferred from forecast accuracy.
 
 \subsection{Our approach}
 We instantiate this idea in \textbf{Endo-HJEPA} (Figure~\ref{fig:pipeline}).
@@ -216,7 +216,7 @@ cosine at horizon four against 0.916 persistence, 0.974 GRU and 0.971 Mamba
 a plateau at 13{,}552. Two characterised negative results complete the
 picture: self-supervised latent actions are not semantically or physically
 grounded without encoder-level supervision, and zero-shot cross-orifice
-transfer fails but is recoverable with a 32-shot domain token---evidence that
+transfer fails but is recoverable with a 32-shot domain token, evidence that
 unified multi-orifice training is necessary, not merely convenient.
 We do \emph{not} claim the first surgical world model, pixel-level video
 generation, robot-executed planning, uniform recognition SOTA, or any clinical
@@ -234,7 +234,7 @@ pilot for the second.
 We position Endo-HJEPA along five axes: the world-model lineage it builds on, the surgical/endoscopic representation learning it extends, the surgical world models it differs from, the general video/image backbones we benchmark against, and the endoscopic datasets that anchor our evaluation.
 
 \subsection{World models and joint-embedding prediction}
-The idea of a learned world model for prediction and planning originates with Ha and Schmidhuber's World Models~\cite{ha2018worldmodels} and the PlaNet latent-dynamics planner~\cite{hafner2019planet}, and was scaled to diverse control domains by Dreamer~\cite{hafner2023dreamer}. These models predict a learned latent state and plan by rolling it forward, but they are trained with a reconstruction or reward signal and target control, not video understanding. Energy-based formulations~\cite{lecun2006ebm} provide the formal basis for scoring state compatibility without a generative decoder. The joint-embedding predictive architecture (JEPA) of LeCun's position paper~\cite{lecun2022path} argues that predicting in representation space---rather than pixels---is the key to capturing predictable structure while ignoring unpredictable appearance; I-JEPA~\cite{assran2023ijepa} realised this for images, V-JEPA~\cite{bardes2024vjepa} for video, and V-JEPA~2~\cite{assran2025vjepa2} added scale and the action-conditioned (V-JEPA 2-AC) planning variant. Generative interactive environments such as Genie~\cite{genie2024} take the opposite, pixel-generative route. A common limitation of these works, for our purpose, is that they are either single-scale (no temporal hierarchy), pixel-generative (capacity spent on unpredictable appearance), or evaluated on generic/control video rather than endoscopic dynamics. Endo-HJEPA adopts the JEPA principle and adds the hierarchy and energy prior that the surgical setting lacks.
+The idea of a learned world model for prediction and planning originates with Ha and Schmidhuber's World Models~\cite{ha2018worldmodels} and the PlaNet latent-dynamics planner~\cite{hafner2019planet}, and was scaled to diverse control domains by Dreamer~\cite{hafner2023dreamer}. These models predict a learned latent state and plan by rolling it forward, but they are trained with a reconstruction or reward signal and target control, not video understanding. Energy-based formulations~\cite{lecun2006ebm} provide the formal basis for scoring state compatibility without a generative decoder. The joint-embedding predictive architecture (JEPA) of LeCun's position paper~\cite{lecun2022path} argues that predicting in representation space, rather than pixels, is the key to capturing predictable structure while ignoring unpredictable appearance; I-JEPA~\cite{assran2023ijepa} realised this for images, V-JEPA~\cite{bardes2024vjepa} for video, and V-JEPA~2~\cite{assran2025vjepa2} added scale and the action-conditioned (V-JEPA 2-AC) planning variant. Generative interactive environments such as Genie~\cite{genie2024} take the opposite, pixel-generative route. A common limitation of these works, for our purpose, is that they are either single-scale (no temporal hierarchy), pixel-generative (capacity spent on unpredictable appearance), or evaluated on generic/control video rather than endoscopic dynamics. Endo-HJEPA adopts the JEPA principle and adds the hierarchy and energy prior that the surgical setting lacks.
 
 \subsection{Self-supervised surgical and endoscopic video representation}
 Self-supervised pretraining has become the default for surgical video. SurgRec-JEPA~\cite{surgrecjepa} and JHU-VPT~\cite{jhuvpt} apply JEPA-style and video pretraining to surgical data and report strong downstream transfer, and endoscopic foundation models such as Endo-FM~\cite{endofoundation} scale self-supervised pretraining to large endoscopic corpora. These methods produce a single-scale representation for \emph{recognition} (phase, tools, segmentation); none of them build a dynamics model that can forecast or plan. Endo-HJEPA shares their self-supervised, frozen-encoder efficiency but adds a temporal hierarchy and an explicitly supervised geometry-action interface.
@@ -246,9 +246,9 @@ World models tailored to surgery are emerging. The Surgical Vision World Model~\
 For the representation evaluation we benchmark against the strongest \emph{reproducible} general-purpose encoders. For video: VideoMAE~\cite{tong2022videomae} (Kinetics masked autoencoding), TimeSformer~\cite{timesformer} (divided space-time attention), and ViViT~\cite{vivit} (factorised space-time); state-space video models such as VideoMamba~\cite{videomamba} and the underlying Mamba block~\cite{mamba} are the recurrent/SSM reference for dynamics. For images: the ImageNet-supervised ViT~\cite{dosovitskiy2021vit} and DINOv2 self-supervised features~\cite{dinov2}, pooled over time. None of these provide a world-model predictor or a planning/energy capability, which is the gap Endo-HJEPA fills; \S\ref{sec:results} measures them on the same CholecT50 protocol.
 
 \subsection{Endoscopic datasets and physical supervision signals}
-Our evaluation spans the standard endoscopic corpora: Cholec80 (phase + tool presence)~\cite{twinanda2017endonet}, CholecT50 (action triplets + phase)~\cite{nwoye2022rendezvous,nwoye2022cholectsplit}, EndoVis 2017/2018 (instrument segmentation)~\cite{endovis2017}, CholecSeg8k (semantic segmentation)~\cite{hong2020cholecseg8k}, endoscapes (segmentation + critical view of safety)~\cite{endoscapes}, the GI corpora HyperKvasir~\cite{borgli2020hyperkvasir} and Kvasir-Capsule~\cite{kvasircapsule}, and the pose/depth corpora SCARED~\cite{allan2021scared} and C3VD~\cite{bobrow2023c3vd}, with STIR~\cite{stir2024} for deformable point tracks. To our knowledge, using SCARED/C3VD camera poses and STIR point tracks as \emph{physical anchors} for latent actions, energy, and deformation---rather than as reconstruction targets---is a novel use of these supervision signals within a JEPA world model.
+Our evaluation spans the standard endoscopic corpora: Cholec80 (phase + tool presence)~\cite{twinanda2017endonet}, CholecT50 (action triplets + phase)~\cite{nwoye2022rendezvous,nwoye2022cholectsplit}, EndoVis 2017/2018 (instrument segmentation)~\cite{endovis2017}, CholecSeg8k (semantic segmentation)~\cite{hong2020cholecseg8k}, endoscapes (segmentation + critical view of safety)~\cite{endoscapes}, the GI corpora HyperKvasir~\cite{borgli2020hyperkvasir} and Kvasir-Capsule~\cite{kvasircapsule}, and the pose/depth corpora SCARED~\cite{allan2021scared} and C3VD~\cite{bobrow2023c3vd}, with STIR~\cite{stir2024} for deformable point tracks. To our knowledge, using SCARED/C3VD camera poses and STIR point tracks as \emph{physical anchors} for latent actions, energy, and deformation, rather than as reconstruction targets, is a novel use of these supervision signals within a JEPA world model.
 
-\paragraph{Summary.} Across the five axes, the field offers strong single-scale SSL representations, pixel-generative surgical world models, and general video/image backbones---but no hierarchical, energy-based JEPA world model trained and evaluated as a unified cross-orifice endoscopic system with a physically grounded uncertainty signal. That is the gap Endo-HJEPA occupies.
+\paragraph{Summary.} Across the five axes, the field offers strong single-scale SSL representations, pixel-generative surgical world models, and general video/image backbones, but no hierarchical, energy-based JEPA world model trained and evaluated as a unified cross-orifice endoscopic system with a physically grounded uncertainty signal. That is the gap Endo-HJEPA occupies.
 
 \section{Method}
 \label{sec:method}
@@ -589,8 +589,8 @@ SCARED stores a $4{\times}4$ camera pose per frame; C3VD provides \texttt{pose.t
 All matrices are normalised to camera-to-world convention; the relative pose
 $\mathbf{T}_t^{-1}\mathbf{T}_{t+1}$ is mapped to a $6$D twist using one
 SE(3) logarithm. Fractional tubelet centres use translation interpolation and
-SO(3) interpolation before differencing; complete videos---not
-transitions---are assigned to train, calibration and test splits.
+SO(3) interpolation before differencing; complete videos, not
+transitions, are assigned to train, calibration and test splits.
 The first (v1) physical cache encoded stacked stereo frames with a
 bidirectional 64-frame encoder, which mixed both camera views and let latent
 history carry future-frame content. The corrected v2 cache crops SCARED
@@ -909,8 +909,8 @@ space (candidates constrained to the behaviour support), offline
 receding-horizon navigation on the frozen test case passes all prespecified
 gates: 200 trials, reach $51.5\%$ (95\% CI $[44.5, 58.5]$), translation-error
 reduction $29.0\%$ versus persistence, 100\% gate acceptance. This is a
-model-based offline metric---reach means the planned rollout retrieves a pose
-closer to the goal than persistence---not a robot execution claim.
+model-based offline metric (reach means the planned rollout retrieves a pose
+closer to the goal than persistence), not a robot execution claim.
 Case-level retraining on 23 SCARED sequences (20,927 aligned RGB--pose frames)
 and one external C3VD trajectory yields inverse-action $R^2=0.394$ and lower
 mean test MSE for real than shuffled actions (0.326 vs 0.417, $n=2,130$).
@@ -918,7 +918,7 @@ However, real actions win on only 73.8\% of transitions, below the prespecified
 80\% gate. The aggregate is uneven across datasets: evaluated per dataset
 under the identical protocol, SCARED reaches 75.5\% (inverse $R^2=0.474$,
 $n=1{,}999$) whereas the single held-out C3VD trajectory is near chance at
-51.9\% (inverse $R^2=-8.7$, $n=131$)---the external trajectory does not
+51.9\% (inverse $R^2=-8.7$, $n=131$). The external trajectory does not
 generalise, and the pooled number overstates robustness. Because three model
 variants were compared on this test set during the audit, we report the
 best-scoring variant's metrics as an audit result rather than as confirmation
@@ -947,7 +947,7 @@ the frozen v2 model's C3VD win fraction rises from 49.1\% (chance) to 63.6\%
 ($n=55$). Extending to fourteen additional C3VDv2 trajectories (ten with
 usable windows after warm-up) gives above-chance action sensitivity on nine of
 ten external trajectories (45.5--70.9\% per trajectory; pooled 58.3\%,
-fixed-bank 66.6\%, inverse $R^2=0.338$, $n=798$)---directional
+fixed-bank 66.6\%, inverse $R^2=0.338$, $n=798$). This is directional
 generalisation, but still below the 80\% gate, so cross-dataset physical
 generalisation remains an open limitation.
 A slot-space ablation isolates the planner interface: factorised
@@ -1045,7 +1045,7 @@ baseline on only two of six keyframes; residual$\to$twist $R^2$ is negative.
 They are also not semantically grounded (CholecT50 verb NMI $0.044$ versus
 random $0.056$; probe accuracy $0.306$ versus majority-class $0.390$).
 A codebook-level verb loss does not help.
-Encoder-level verb supervision lifts residual$\to$verb NMI from chance $0.026$ to $0.056$---above chance, still weak.
+Encoder-level verb supervision lifts residual$\to$verb NMI from chance $0.026$ to $0.056$: above chance, still weak.
 Latent actions index visual change; they are neither discovered surgical
 actions nor admissible control variables.
 
@@ -1084,7 +1084,7 @@ instrument mAP to $0.586{\pm}0.041$ on the identical five-fold protocol.
 Small instruments are spatially local, so mean-pooling discards exactly the
 signal presence detection needs; the dense probe recovers part of it without
 any encoder supervision. End-to-end fine-tuning of the last two blocks on the
-same folds does not close the gap either---it degrades instrument mAP to
+same folds does not close the gap either. It degrades instrument mAP to
 $0.463$, consistent with the domain-adaptation row: at 40 training videos per
 fold, supervised adaptation overwrites more transferable structure than it
 gains. The remaining gap to task-specific RDV
@@ -1288,7 +1288,7 @@ video-level validation split.}
 
 The unified model beats persistence on every listed dataset.
 The largest margins are Stereo\_Lap ($+0.093$) and ION bronchoscopy ($+0.071$), consistent with those videos being camera-motion-dominated and therefore the most predictable in latent space.
-Kvasir-Capsule has the strongest persistence ($0.941$) and the smallest---but still positive---margin ($+0.037$): capsule motion is slower, so copying the last token is already a good forecast.
+Kvasir-Capsule has the strongest persistence ($0.941$) and the smallest, but still positive, margin ($+0.037$): capsule motion is slower, so copying the last token is already a good forecast.
 This is the dataset-level reading of the paper's claim: unification helps, and it does not secretly rely on one easy corpus.
 
 \paragraph{Cross-dataset qualitative conclusion.}
@@ -1386,8 +1386,8 @@ endpoint.
 \subsection{What the method actually contributes}
 The validated innovations that move forecast numbers are residual anchoring,
 causal L1 and domain tokens. The physical contribution is a
-correctness-audited pipeline---continuous SE(3), normalised-action CEM,
-calibration and hard rejection---that now passes its offline gates on SCARED,
+correctness-audited pipeline (continuous SE(3), normalised-action CEM,
+calibration and hard rejection) that now passes its offline gates on SCARED,
 while remaining model-based evidence rather than robot execution. This
 distinction prevents a high latent similarity score from being misrepresented
 as control.

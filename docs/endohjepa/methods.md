@@ -1,4 +1,4 @@
-# Endo-HJEPA: Predictive Foundations and Physical-Grounding Limits
+# Endo-HJEPA: A Hierarchical Latent World Model for Cross-Orifice Endoscopic Video Prediction with Audited Physical Grounding
 
 > **Status:** legacy explanatory notes. The submission source of truth is
 > `endohjepa.tex`; numerical source of truth is `verified_metrics.json`.
