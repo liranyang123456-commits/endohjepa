@@ -74,7 +74,12 @@ continuous model-predictive control then passes all offline navigation gates
 (200 trials, 51.5\% reach, 29.0\% pose-error reduction versus persistence).
 External C3VD trajectories remain above chance but below gate (pooled 58.3\%,
 $n=798$), and calibrated near-wall risk does not generalise across cases
-(AUC $\le0.54$)---we report both as characterised limits. Endo-HJEPA thus
+(AUC $\le0.54$)---we report both as characterised limits. The three validated
+capabilities---forecasting scene evolution, evaluating the visual consequence
+of a measured camera motion, and model-based navigation planning---map
+directly onto loss-of-view warning, camera-handling training, and
+navigation-assistance prototypes; robot-executed control and clinical
+collision warning remain outside the validated boundary. Endo-HJEPA thus
 delivers a reproducible cross-orifice predictive foundation and an audited
 geometry-grounding protocol, while defining precisely where physically
 grounded control does and does not follow from passive video features.
@@ -102,6 +107,12 @@ motion additionally requires metric action supervision; predictive video
 features alone are insufficient. That distinction---forecast first, then
 physical grounding under explicit SE(3) and depth signals---is the clinical and
 technical target of this paper.
+Three application pathways motivate the design: \emph{loss-of-view warning}
+(predict how the view will evolve before it is lost), \emph{camera-handling
+training and assessment} (evaluate what a candidate camera motion would show,
+without executing it), and \emph{navigation assistance} (plan camera motion
+toward a target view). Each pathway corresponds to one capability we validate
+or refute.
 
 \subsection{The technical problem: structure is predictable, appearance is not}
 A world model for endoscopy faces a specific asymmetry.
@@ -244,6 +255,10 @@ representation; and (ii)~given a \emph{measured camera motion}, what is the
 distribution of physically plausible futures and their near-wall risk.
 L1/L2 answer the validated forecast query. The second query is deliberately
 conditioned on continuous SE(3), not on an emergent residual code.
+The two queries support the three capabilities evaluated in
+Section~\ref{sec:results}: forecasting scene evolution (query i),
+action-conditioned consequence evaluation (query ii), and model-based
+navigation planning (query ii rolled forward under CEM).
 Residual anchoring and uncertainty weighting belong to the core pooled model.
 Dense VICReg, appearance weighting and STIR supervision are explicitly
 separated below as optional spatial or encoder-adaptation extensions; they are
@@ -631,7 +646,8 @@ Endo-HJEPA forecast endoscopic representations better than persistence and
 strong recurrent/SSM baselines; do emergent actions encode physical motion; and
 does any risk/planning claim satisfy prespecified pose, calibration and
 video-level trial thresholds.
-They are organised by six research questions that map onto the contributions, not by dataset dump.
+They are organised by the three validated capabilities and two characterised
+limits, not by dataset dump.
 Unless marked ``lit.'', every number is measured by the released evaluation code and recorded in the released metric ledger; literature rows are never mixed into a measured comparison.
 Forecast tables use the $6{,}000$-clip causal-L1 protocol; energy/action probes
 use the $2{,}000$-clip audited checkpoint; recognition uses the official
@@ -641,10 +657,12 @@ These protocols are labelled in every caption.
 
 \paragraph{Organization.}
 Section~\ref{sec:setup} states data, metrics, baselines, and implementation.
-Section~\ref{sec:rq1}--\ref{sec:rq2} report forecast and scale (C1).
-Section~\ref{sec:rq3} reports the action-path audit and physical energy pilot (C2).
-Section~\ref{sec:rq4} reports cross-orifice transfer (C3).
-Section~\ref{sec:rq5} reports action grounding (negative).
+Section~\ref{sec:rq1}--\ref{sec:rq2} validate Capability 1 (forecasting scene
+evolution) and its data scaling.
+Section~\ref{sec:rq3} validates Capability 2 (action-conditioned prediction)
+and Capability 3 (model-based navigation), including the correctness audit.
+Section~\ref{sec:rq4} reports Limit A (cross-orifice transfer).
+Section~\ref{sec:rq5} reports Limit B (unsupervised action grounding, negative).
 Section~\ref{sec:rq6} reports recognition probes (encoder quality, not the headline claim).
 Section~\ref{sec:perds} is the per-dataset decomposition.
 Section~\ref{sec:ablation} isolates design choices.
@@ -763,7 +781,7 @@ $K{=}16$, history/horizon $4/4$. The optional dense path uses VICReg weight
 $0.1$; headline pooled checkpoints do not activate it.
 Varying depth ($2$--$6$), width ($256$--$768$) and lr ($10^{-4}$--$10^{-3}$) changes $6$k-clip cosine by ${<}0.002$.
 
-\subsection{RQ1--RQ2: Latent forecast and data scale}
+\subsection{Capability 1: forecasting scene evolution (latent forecast and data scale)}
 \label{sec:rq1}
 \label{sec:rq2}
 
@@ -821,7 +839,7 @@ Numbers are from \texttt{verified\_metrics.json}.}
 \label{fig:forecast}
 \end{figure}
 
-\subsection{RQ3: Action-path audit and physical energy}
+\subsection{Capabilities 2 and 3: action-conditioned prediction and model-based navigation}
 \label{sec:rq3}
 A post-hoc audit found that the original L2/L3 predictor constructed, but
 never executed, its Transformer encoder in the forward pass. Its outputs were
@@ -968,7 +986,7 @@ the faithful image-space view of a latent world model.}
 \label{fig:rollout}
 \end{figure*}
 
-\subsection{RQ4: Cross-orifice transfer}
+\subsection{Limit A: cross-orifice transfer}
 \label{sec:rq4}
 A laparoscopy-only model beats persistence in-domain ($0.922$ vs $0.850$) but falls \emph{below} persistence on zero-shot GI ($0.791$ vs $0.913$) and bronchoscopy ($0.776$ vs $0.893$).
 Fine-tuning only the domain embedding on $32$ target clips recovers $+0.045$
@@ -978,7 +996,7 @@ persistence. This is partial recovery, not successful zero-shot adaptation.
 The unified model beats persistence in every domain (Table~\ref{tab:perdomain}).
 Orifice domains are distinct enough that zero-shot transfer fails; unified training, or a cheap domain token, is necessary.
 
-\subsection{RQ5: Action grounding (negative result)}
+\subsection{Limit B: unsupervised latent actions are not grounded (negative result)}
 \label{sec:rq5}
 Emergent latent actions are not physically grounded: SCARED pose NMI is
 $0.41$--$0.52$ versus random $0.49$--$0.53$, and exceeds its matched random
@@ -990,7 +1008,7 @@ Encoder-level verb supervision lifts residual$\to$verb NMI from chance $0.026$ t
 Latent actions index visual change; they are neither discovered surgical
 actions nor admissible control variables.
 
-\subsection{RQ6: Downstream recognition}
+\subsection{Representation utility: downstream recognition probes}
 \label{sec:rq6}
 
 \begin{table}[t]
@@ -1306,9 +1324,16 @@ README.
 
 \subsection{Clinical significance}
 The target is anticipatory endoscopic intelligence, not another phase-recognition point.
-Forecast is the computational primitive behind collision warning and loss-of-view recovery.
-The energy head correlates weakly with camera-to-tissue distance, but does not
-meet the calibrated-risk gate.
+Each validated capability maps onto a concrete clinical pathway.
+\emph{Loss-of-view warning}: Capability 1 forecasts how the view will evolve
+before it is lost, the computational primitive behind collision and
+loss-of-sight alerts.
+\emph{Camera-handling training and assessment}: Capability 2 scores what a
+measured camera motion would show, enabling objective evaluation of trainee
+camera work without executing it.
+\emph{Navigation assistance}: Capability 3 plans camera motion toward a target
+view in the model, an algorithmic baseline for phantom or simulator
+validation.
 Unification is the data-efficient path for bronchoscopy, where labelled video is scarce.
 All of this remains in-silico.
 Clinical translation would require a pose/action-conditioned model, calibrated
