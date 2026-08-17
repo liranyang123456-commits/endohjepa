@@ -1,0 +1,21 @@
+{
+  "threshold": 34.4,
+  "label_mode": "relative",
+  "supervision": "frame-level 5th-pct depth labels on dense tokens",
+  "val": {
+    "n_frames": 1136,
+    "positive_fraction": 0.3547535240650177,
+    "auc": 0.591704778959983
+  },
+  "test": {
+    "n_frames": 986,
+    "positive_fraction": 0.2829614579677582,
+    "auc": 0.5151759415572894,
+    "ece_calibrated": 0.07147727867410826
+  },
+  "gate": {
+    "auc": 0.75,
+    "min_transitions": 500
+  },
+  "passed": false
+}

@@ -77,6 +77,8 @@ def main():
                         default="outputs/physical_actions_v2/sequences_risk.pt")
     parser.add_argument("--scared", default="E:/MIS_Datasets/SCARED")
     parser.add_argument("--threshold", type=float, default=34.4)
+    parser.add_argument("--label-mode", choices=["absolute", "relative"],
+                        default="absolute")
     parser.add_argument("--epochs", type=int, default=15)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--out", default="outputs/dense_risk_v2/metrics.json")
@@ -92,9 +94,23 @@ def main():
     risk_pack = torch.load(args.risk_cache, map_location="cpu", weights_only=False)
     label_by_seq = {}
     for row in risk_pack["sequences"]:
-        if row.get("depth_or_risk") is not None:
-            label_by_seq[row["sequence_id"]] = (
-                row["depth_or_risk"].flatten().float() < args.threshold).float()
+        if row.get("depth_or_risk") is None:
+            continue
+        depth = row["depth_or_risk"].flatten().float()
+        if args.label_mode == "absolute":
+            label_by_seq[row["sequence_id"]] = (depth < args.threshold).float()
+        else:
+            # Relative near-wall: depth below the sequence's own causal running
+            # quartile. Removes the cross-case base-rate shift (9.4% val vs 43%
+            # test) that made absolute labels untransferable.
+            values = []
+            for k in range(len(depth)):
+                if k < 8:
+                    values.append(0.0)
+                    continue
+                q = torch.quantile(depth[:k], 0.25)
+                values.append(float(depth[k] < q))
+            label_by_seq[row["sequence_id"]] = torch.tensor(values)
     data = {"train": [], "val": [], "test": []}
     for row in pack["rows"]:
         labels = label_by_seq.get(row["sequence_id"])
@@ -126,7 +142,7 @@ def main():
         print(f"[epoch {epoch + 1}] loss={loss.item():.4f}", flush=True)
 
     model.eval()
-    report = {"threshold": args.threshold,
+    report = {"threshold": args.threshold, "label_mode": args.label_mode,
               "supervision": "frame-level 5th-pct depth labels on dense tokens"}
     split_logits = {}
     for split in ("val", "test"):

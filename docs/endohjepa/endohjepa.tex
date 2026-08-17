@@ -821,8 +821,10 @@ validation split) reaches only AUC $0.54$; an input study selecting among
 current-state, future-rollout and combined features on validation does not
 help. A dense-token head with attention pooling over 256 spatial tokens fares
 no better on held-out cases (test AUC $0.47$), where the near-wall base rate
-shifts from 9.4\% (validation) to 43\% (test). Near-wall anticipation
-therefore remains an open limitation, not a calibrated capability.
+shifts from 9.4\% (validation) to 43\% (test). Normalising labels per case
+(causal running-quartile thresholds) removes the base-rate shift but not the
+failure (test AUC $0.52$). Near-wall anticipation therefore remains an open
+limitation, not a calibrated capability.
 
 Goal-directed navigation to an \emph{arbitrary} SCARED viewpoint is a harder task: the legacy discrete branch reached $10\%$ of $10$ pilot trials (invalidated with the L3 audit).
 With the corrected v2 dynamics and CEM in the model's \emph{normalised} action
@@ -855,7 +857,8 @@ eight-tubelet look-back, window-end pose alignment, local hard negatives,
 leave-one-case-out development) lift the frozen-test real-action win fraction
 from 73.8\% to \textbf{83.1\%} (fixed-bank 88.2\%, inverse $R^2=0.482$),
 passing the 80\% gate; grouped CV over four SCARED cases gives 88.9\% macro
-pair-win with a worst fold of 84.1\%. For C3VD, a depth-reprojection gate with
+pair-win with a worst fold of 84.1\%, and three training seeds give
+85.9--86.5\% fixed-bank pair-win (all gates passed). For C3VD, a depth-reprojection gate with
 the dataset's Scaramuzza intrinsics revealed that \texttt{pose.txt} requires an
 OpenGL$\to$OpenCV axis flip in addition to the row/column transpose: the
 transpose-only convention leaves 10.2\,px median reprojection error at a
@@ -1346,10 +1349,10 @@ private ION bronchoscopy, limiting independent reproduction; public-only and
 external-site validation remain necessary.
 (x)~The pooled forecast cache uses the encoder's bidirectional 16-frame
 windows, so history tokens may carry limited future context within a window.
-A matched 2{,}000-clip audit with strictly past-only encoding bounds this
-inflation at $0.015$ cosine (0.9564 vs 0.9709), and the causal model still
-beats persistence (0.9125) under causal encoding. The physical-action cache
-(v2) already uses past-only look-back encoding.
+Matched audits at 2{,}000 and 6{,}000 clips with strictly past-only encoding
+bound this inflation at $0.015$--$0.018$ cosine (0.9578 vs 0.9761 at 6k), and
+the causal model still beats persistence (0.9102) under causal encoding. The
+physical-action cache (v2) already uses past-only look-back encoding.
 
 \section{Conclusion}
 Endo-HJEPA brings hierarchical joint-embedding prediction to unified

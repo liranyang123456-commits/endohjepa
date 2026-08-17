@@ -104,7 +104,7 @@ def main():
     cache_dir = Path(args.out).parent
     cache_dir.mkdir(parents=True, exist_ok=True)
     for mode in ("bidirectional", "past_only"):
-        cache_path = cache_dir / f"cache_{mode}.pt"
+        cache_path = cache_dir / f"cache_{mode}_{args.max_clips}.pt"
         if cache_path.is_file():
             pack = torch.load(cache_path, map_location="cpu", weights_only=False)
             z_tr, d_tr, z_va, d_va = pack["z_tr"], pack["d_tr"], pack["z_va"], pack["d_va"]

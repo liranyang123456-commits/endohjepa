@@ -252,22 +252,34 @@
         "interpretation": "A trained, calibrated risk head on latent states does not predict held-out near-wall depth; the exploratory energy correlation (AUC 0.682, n=132) remains the strongest and still weak physical signal."
       },
       "risk_dense_v2": {
-        "source": "outputs/dense_risk_v2/metrics.json",
+        "source": "outputs/dense_risk_v2/metrics.json + metrics_relative.json",
         "protocol": "per-token risk head with attention pooling on dense past-only tokens (256x1024 per step), frame-level 5th-pct depth labels",
         "val_auc": 0.629,
         "test_auc": 0.470,
         "n_test_frames": 986,
+        "relative_labels": {"val_auc": 0.592, "test_auc": 0.515, "note": "per-case causal-quartile labels remove the base-rate shift (35% vs 28%) but do not improve AUC"},
         "passed": false,
-        "interpretation": "Dense spatial tokens do not fix near-wall generalisation either; val/test positive-rate shift (9.4% vs 43%) across cases dominates. Near-wall risk on held-out cases remains unreliable across all model classes tried (energy 0.682, pooled head 0.54, dense head 0.47)."
+        "interpretation": "Dense spatial tokens do not fix near-wall generalisation either, and label normalisation does not help. Near-wall risk on held-out cases remains unreliable across all model classes and label definitions tried (energy 0.682, pooled head 0.54, dense head 0.47-0.52)."
+      },
+      "multiseed_v2": {
+        "source": "outputs/continuous_actions_v2{,_seed1,_seed2}/metrics.json",
+        "protocol": "3 training seeds, development evaluation on validation split (frozen test untouched)",
+        "fixed_bank_pair_win": [0.8588, 0.8654, 0.8619],
+        "inverse_action_r2": [0.437, 0.447, 0.447],
+        "all_gates_passed": true,
+        "interpretation": "v2 physical branch is seed-robust: fixed-bank win 85.9-86.5% across seeds."
       },
       "past_only_forecast_audit": {
-        "source": "outputs/past_only_forecast/audit.json",
-        "protocol": "matched 2000-clip train subset + 250 val clips, same causal L1, 20 epochs",
-        "bidirectional_cos": 0.9709,
-        "past_only_cos": 0.9564,
-        "delta_cos": -0.0145,
-        "persistence_cos": 0.9125,
-        "interpretation": "Within-window future attention inflates the headline cosine by ~1.5 points; the forecast advantage over persistence (0.956 vs 0.912) survives strictly causal encoding."
+        "source": "outputs/past_only_forecast/audit.json + audit_6000.json",
+        "protocol": "matched train/val subsets, same causal L1, 20 epochs; 2000-clip and 6000-clip versions agree",
+        "bidirectional_cos_6000": 0.9761,
+        "past_only_cos_6000": 0.9578,
+        "delta_cos_6000": -0.0183,
+        "persistence_cos_6000": 0.9102,
+        "bidirectional_cos_2000": 0.9709,
+        "past_only_cos_2000": 0.9564,
+        "delta_cos_2000": -0.0145,
+        "interpretation": "Within-window future attention inflates the headline cosine by ~1.5-1.8 points; the forecast advantage over persistence survives strictly causal encoding at both scales."
       },
       "slot_space_ablation": {
         "source": "outputs/continuous_actions_v2_slots/metrics.json + physical_navigation_v2_slots/report.json",
