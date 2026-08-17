@@ -1261,14 +1261,15 @@ Hyperparameter sensitivity on the 6k val is ${<}0.002$.
 
 \subsection{Reproducibility}
 \label{sec:reproducibility}
-Forecast experiments use the \texttt{endoworld.world.train} and
-\texttt{endoworld.eval.per\_dataset} modules. Planning and energy use
-\texttt{endoworld.eval.eval\_ckpt} with the SCARED collision and navigation
-modules; recognition uses \texttt{endoworld.eval.cholect50\_probe}. Figure
-scripts under \texttt{docs/endohjepa} read \texttt{verified\_metrics.json} or
-the named qualitative protocol JSON. Encoder caches are shared across matched
-ablations, probe heads use fixed seeds, and every caption identifies its split
-and checkpoint.
+Every experiment maps to a single documented entry point in the released
+package: model training, per-dataset forecast evaluation, physical-action
+cache construction, continuous-dynamics training with grouped
+cross-validation, offline navigation, the pose-convention gate, recognition
+probes, and risk calibration. All figures are generated from the central
+metric ledger, and every caption identifies its split and checkpoint. Encoder
+caches are shared across matched ablations, and probe heads use fixed seeds.
+The exact commands for each table and figure are listed in the repository
+README.
 
 \section{Discussion}
 
