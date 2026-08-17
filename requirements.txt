@@ -1,0 +1,29 @@
+# ---- core (data / manifest / utilities) ----
+numpy>=1.26
+pandas>=2.2
+pillow>=10.3
+opencv-python>=4.10
+pyyaml>=6.0
+tqdm>=4.66
+
+# ---- training backbone (install torch matching your CUDA separately) ----
+# torch>=2.3
+# torchvision>=0.18
+timm>=1.0
+einops>=0.8
+
+# ---- captioning / VLM (real LLM: Qwen2.5) + official V-JEPA 2 weights ----
+transformers>=5.0
+accelerate>=0.33
+safetensors>=0.4
+huggingface_hub>=0.24
+sentencepiece>=0.2
+
+# ---- simulation / 3D reconstruction (heavy, optional) ----
+# 3D Gaussian Splatting / NeRF stacks are installed per-project:
+#   - nerfstudio  or  gsplat
+#   - open3d>=0.18   (point cloud / mesh)
+#   - trimesh>=4.4
+# Physics (soft-body / deformable), pick one:
+#   - warp-lang       (NVIDIA Warp, differentiable sim)
+#   - pytorch3d       (mesh / rendering)
