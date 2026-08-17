@@ -1,0 +1,38 @@
+DECLARATIONS
+
+Ethics approval and consent to participate
+Public datasets are used under their original licences. Private bronchoscopy
+cases (ION) are stored and processed only as anonymised case_XXX identifiers; no
+patient names appear in manifests, code, or this manuscript. An ethics approval
+number for the institutional bronchoscopy data will be added before publication.
+All planning evaluation is in-silico; no clinical-navigation claim is made.
+
+Consent for publication
+Not applicable (no identifiable individual data).
+
+Competing interests
+The authors declare no competing interests.
+
+Funding
+To be completed by the authors.
+
+Author contributions
+Ranyang Li: methodology, software, experiments, writing—original draft.
+Nan Wei: clinical data, validation, domain expertise.
+Zhipeng Lin: methodology, software.
+Wufeng Liu: data curation, resources.
+Chao Fan: investigation, visualisation.
+Junjun Pan: conceptualisation, supervision, writing—review & editing, funding.
+
+Availability of data and materials
+Public datasets are available from their respective sources; access conditions
+(CAMMA request form for Cholec80, Google Drive quota for C3VD) are documented in
+DATA_ACCESS.md. Private ION bronchoscopy data are not redistributable. The
+endoworld package and all evaluation protocols are released with this
+manuscript.
+
+Declaration of generative AI
+The authors used an AI coding assistant for code implementation and drafting
+support; all experiments, numbers, and scientific claims were produced, run, and
+verified by the authors' pipeline, and the authors take full responsibility for
+the content.

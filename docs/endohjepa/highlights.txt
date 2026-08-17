@@ -1,0 +1,5 @@
+- Unified JEPA forecasts laparoscopy, GI endoscopy, and bronchoscopy.
+- Causal latent forecasting outperforms GRU, Mamba, and persistence.
+- A correctness audit excludes the original discrete latent-MPC scores.
+- Continuous SE(3), calibrated risk, and hard-gated CEM/MPPI are implemented.
+- Unsupervised latent actions fail physical and semantic grounding.

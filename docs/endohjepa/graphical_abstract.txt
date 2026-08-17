@@ -1,0 +1,22 @@
+GRAPHICAL ABSTRACT (design brief + caption)
+
+Caption:
+"Endo-HJEPA learns a unified world model across laparoscopy, GI endoscopy, and
+bronchoscopy by predicting plannable latent representations—not pixels. A frozen
+V-JEPA 2 encoder produces dense spatio-temporal tokens; hierarchical L1/L2/L3
+predictors forecast future latents; a contrastive energy head scores transition
+plausibility and drives latent-space model-predictive control, flagging
+collision-risk (near-wall) transitions."
+
+Layout (single column, left-to-right pipeline):
+[3 scope icons: laparoscope / GI scope / bronchoscope]
+   -> [frozen V-JEPA 2 ViT-L encoder] -> dense tokens
+   -> [L1 dense/causal -> L2 coarse -> L3 action-conditioned]
+   -> [energy head + latent MPC]
+   -> outputs: forecast | plan-to-goal | energy (collision-risk) gauge
+
+Colour coding: inputs (orange), encoder (blue), hierarchy (green/yellow/red),
+energy (purple), planning (indigo). Footer: "predict representations, not pixels."
+
+Source figure: figure1_architecture.pdf (already vector); this text is the
+design brief for the journal graphical-abstract render.

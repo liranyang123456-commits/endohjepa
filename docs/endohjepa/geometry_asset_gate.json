@@ -1,0 +1,74 @@
+{
+  "audit_date": "2026-08-16",
+  "dataset": "SCARED",
+  "status": "assets_found_standardized_gate_pending",
+  "evidence": {
+    "scared_root": "E:/MIS_Datasets/SCARED",
+    "pose_video_audit": {
+      "sequences": 23,
+      "aligned_frames": 20927,
+      "frame_pose_mismatches": 0,
+      "case_split": {
+        "train": "dataset_1, dataset_2, dataset_3, dataset_5",
+        "validation": "dataset_6",
+        "test": "dataset_7"
+      }
+    },
+    "available": [
+      "endoscope_calibration.yaml",
+      "rgb.mp4",
+      "frame_data.tar.gz",
+      "scene_points.tar.gz",
+      "point_cloud.obj",
+      "left_point_cloud.obj",
+      "right_point_cloud.obj"
+    ]
+  },
+  "assets": {
+    "vggt": {
+      "source": "D:/vggt-main/vggt-main",
+      "code_available": true,
+      "checkpoint_available": true,
+      "checkpoint": "C:/Users/lry/.cache/huggingface/hub/models--facebook--VGGT-1B/snapshots/860abec7937da0a4c03c41d3c269c366e82abdf9/model.safetensors",
+      "cached_predictions_available": false,
+      "accepted_as_teacher": false,
+      "reason": "Model and paired SCARED assets exist, but no SCARED-specific VGGT depth/pose/reprojection report has yet passed the common gate."
+    },
+    "freereg": {
+      "source": "E:/Free_coordinate_MR_Registration/src/nonrigid_rtw.py",
+      "accepted_modules": [
+        "Laplacian-style smoothness",
+        "SVD observability penalty"
+      ],
+      "accepted_as_teacher": false,
+      "reason": "Reusable regularizers, not a video geometry teacher."
+    },
+    "pseudo3d": {
+      "source": "E:/MIS_TMI_Re_3D/e2e_pseudo3d/losses.py",
+      "checkpoint_available": false,
+      "existing_results": [
+        "E:/MIS_TMI_Re_3D/benchmark_scared/scared_results.json",
+        "E:/MIS_TMI_Re_3D/benchmark_results/scared_cross_eval_v2v3v4/scared_summary.json"
+      ],
+      "accepted_modules": [
+        "scale-invariant depth loss",
+        "edge-aware depth smoothness",
+        "pose twist loss",
+        "temporal geometry consistency"
+      ],
+      "accepted_as_teacher": false,
+      "reason": "Loss design and historical benchmark JSON are reusable; no E2E checkpoint is present, and historical depth conventions are inconsistent, so it is not accepted as a teacher."
+    }
+  },
+  "minimal_combination": [
+    "SCARED ground-truth pose/depth from E:/MIS_Datasets/SCARED",
+    "src/endoworld/world/geometry.py regularizers",
+    "frozen V-JEPA2 semantic teacher"
+  ],
+  "rejected_until_gate_passes": [
+    "VGGT pseudo-labels",
+    "pseudo3D model pseudo-labels"
+  ],
+  "evaluation_entrypoint": "python -m endoworld.eval.geometry_gate --baseline BASELINE.npz --candidate TEACHER.npz",
+  "paper_rule": "Do not report VGGT or pseudo3D gains and do not call either a validated teacher until both are rerun under the same SCARED split, depth convention and metric gate."
+}

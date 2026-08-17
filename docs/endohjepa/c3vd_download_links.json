@@ -1,0 +1,47 @@
+{
+  "note": "C3VD download links extracted from durrlab.github.io/C3VD on 2026-08-17. Google Drive quota was exceeded for all files on that date. RESOLVED via the JHU Dataverse mirror (doi:10.7281/T1/JC64MK): the API is Cloudflare-protected, but a real browser passes verification and reveals signed S3 URLs (1h expiry) that curl can download directly. Downloaded 2026-08-17: c1_sigmoid1_t4_v4, c1_transverse1_t1_v4, c1_descending_t4_v4, c1_cecum_t1_v4 (C3VDv2, rgb/ + pose.txt layout).",
+  "dataverse": {
+    "doi": "10.7281/T1/JC64MK",
+    "api": "https://archive.data.jhu.edu/api/datasets/:persistentId?persistentId=doi:10.7281/T1/JC64MK",
+    "file_url_template": "https://archive.data.jhu.edu/api/access/datafile/<FILE_ID>",
+    "recipe": "open the API URL in a real browser (passes Cloudflare), fetch the file URL, read response.url for the signed S3 link, then curl it within 1 hour"
+  },
+  "priority_targets": {
+    "trans_t1_a": {"id": "1urFuVo8ZalwPmsXEZg3xzhuqhpgWV8hw", "size_gb": 0.59, "frames": 61},
+    "trans_t2_b": {"id": "1vru228_TEgxT3aS90CmvOWsMB0RLnAxn", "size_gb": 0.97, "frames": 103},
+    "desc_t4_a": {"id": "1d9HDNg4-Og1cTWM-eIU5SWM2BMrMWhwQ", "size_gb": 1.24, "frames": 148},
+    "trans_t2_a": {"id": "1ylZWWtVlXfDx9dhPIeWJ1HqDHJZ3QKdH", "size_gb": 1.58, "frames": 194}
+  },
+  "all_registered_videos": {
+    "cecum_t1_b": "1z3AHdnBH_YoCMnnTfDa8SNPQYIsvaBO3",
+    "cecum_t2_a": "13XhJIev9memFtwUf_dnjJ7o8z6O_c-xW",
+    "cecum_t2_b": "1ykYtQGiFesev5QLfz_avYuQ5a7Zs8kgF",
+    "cecum_t2_c": "1tNoBLpPbrQexKlnOKMK2peERn9Rj_9Dp",
+    "cecum_t3_a": "1Uw8uCRRDm_RrgkccGbiBXZHf9P-THM2Q",
+    "cecum_t4_a": "1FC-dR__0LVb7WH02KpUx9TZVvvvN-Gyx",
+    "cecum_t4_b": "11SbH2AZsuciTu3iGxdXCdQZky6uDTyS5",
+    "desc_t4_a": "1d9HDNg4-Og1cTWM-eIU5SWM2BMrMWhwQ",
+    "sigmoid_t1_a": "19VGDuZ73OWNwM8eIgDkkZYBPJPQ5BD91",
+    "sigmoid_t2_a": "16epAys428g9vBQgm611TElMyAXORo7rH",
+    "sigmoid_t3_a": "1ZRU2KuHoc2XCbKSY_A1S-7BxEfKf9xPr",
+    "sigmoid_t3_b": "1XfZFAQ5_Wxle8d5wSlOCumKSg4IP8wTv",
+    "trans_t1_a": "1urFuVo8ZalwPmsXEZg3xzhuqhpgWV8hw",
+    "trans_t1_b": "1hyjmd7vn86McE1nUnYCzvOm8LlyHLYwt",
+    "trans_t2_a": "1ylZWWtVlXfDx9dhPIeWJ1HqDHJZ3QKdH",
+    "trans_t2_b": "1vru228_TEgxT3aS90CmvOWsMB0RLnAxn",
+    "trans_t2_c": "12YpowbP6zhoO_Qx9UBwhfRLXNJN1EAu4",
+    "trans_t3_a": "1B4aeZfAqmUJgWr8e-2YAibUe4er30ncr",
+    "trans_t3_b": "1ZpbYcDVP-sCTjjQrDc303olFgsr2nA5J",
+    "trans_t4_a": "18qzXMifS54jAx29yROKXXxxZg0qo-iTz",
+    "trans_t4_b": "1C-nw6MR7sxssw3LS-GpiPmwBzEYhUCHN"
+  },
+  "screening_videos": {
+    "screening_t1": "18m3Z5zJtljor_AGmPW8OgO9fRuactuNk",
+    "screening_t2": "1kn_qevX7lLh3gWkiKAt3hgWFpy0P68s6",
+    "screening_t3": "1RmOnnjJBzCMwO5gPY4h3e4MpcDDOvOb6",
+    "screening_t4": "1sYps79WjJ0ETRtuWtHd_1zeuyPLtoMM7"
+  },
+  "download_command_template": "curl.exe -L --ssl-no-revoke -o datasets/C3VD/<name>.zip \"https://drive.usercontent.google.com/download?id=<ID>&export=download&confirm=t\"",
+  "depth_scale_note": "C3VD depth is 0-100 mm linearly scaled into uint16: depth_mm = raw * 100 / 65535.",
+  "pose_note": "pose.txt = camera-to-world, column-major after reshape (translation in last row); camera frame is OpenGL-style, apply transpose + diag(1,-1,-1,1) conjugation (validated by docs/endohjepa/c3vd_pose_gate.json)."
+}

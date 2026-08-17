@@ -1,0 +1,41 @@
+{
+  "sequence": "datasets\\C3VD\\cecum_t1_a\\cecum_t1_a",
+  "n_pairs": 12,
+  "gap": 5,
+  "depth_scale": 655.35,
+  "intrinsics": "Scaramuzza, Olympus CF-HQ190L (C3VD paper Table 3)",
+  "candidates": {
+    "transpose, column-vector (current)": {
+      "median_px": 9.87579548473351,
+      "p90_px": 17.829470468197115,
+      "in_frame": 0.946875,
+      "median_depth_err": 9.222671545685303
+    },
+    "transpose, column-vector, rotation only": {
+      "median_px": 0.1891483316593765,
+      "p90_px": 0.2742484258724594,
+      "in_frame": 0.9194791666666666,
+      "median_depth_err": 8.936552526916552
+    },
+    "raw, row-vector": {
+      "median_px": 11.275051997747344,
+      "p90_px": 23.518286495085267,
+      "in_frame": 0.9457291666666667,
+      "median_depth_err": 9.164787765404895
+    },
+    "transpose + GL->CV flip, column-vector": {
+      "median_px": 0.18745264945677148,
+      "p90_px": 0.27304144921670387,
+      "in_frame": 0.9190625,
+      "median_depth_err": 8.941095658493435
+    },
+    "inverse transpose, column-vector": {
+      "median_px": 9.354409766030841,
+      "p90_px": 16.142084104294756,
+      "in_frame": 0.8898958333333334,
+      "median_depth_err": 8.764802922342438
+    }
+  },
+  "winner": "transpose + GL->CV flip, column-vector",
+  "gate_passed": true
+}

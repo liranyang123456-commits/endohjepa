@@ -1,0 +1,1369 @@
+% Endo-HJEPA manuscript — Medical Image Analysis (Elsevier elsarticle).
+% Compile: pdflatex endohjepa && bibtex endohjepa && pdflatex endohjepa (x2)
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{lineno}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{placeins}
+\graphicspath{{figures/}{./}}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.80}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.76}
+\setcounter{topnumber}{4}
+\setcounter{totalnumber}{6}
+
+\journal{Medical Image Analysis}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Endo-HJEPA: Predictive Foundations and Physical-Grounding Limits of a Cross-Orifice Endoscopic World Model}
+
+\author[haut]{Ranyang Li\corref{cor1}}
+\ead{lry@haut.edu.cn}
+\author[hpp]{Nan Wei}
+\author[buaa]{Zhipeng Lin}
+\author[haut]{Wufeng Liu}
+\author[haut]{Chao Fan}
+\author[buaa]{Junjun Pan\corref{cor1}}
+\ead{pan\_junjun@buaa.edu.cn}
+\cortext[cor1]{Corresponding authors.}
+
+\address[haut]{School of Artificial Intelligence and Big Data, Henan University of Technology, Zhengzhou 450001, China}
+\address[hpp]{Henan Provincial People's Hospital, Zhengzhou 450003, China}
+\address[buaa]{School of Computer Science and Engineering, Beihang University, Beijing 100191, China}
+
+\begin{abstract}
+Endoscopic artificial intelligence is predominantly reactive, whereas
+collision warning requires anticipating scene evolution and distinguishing
+controllable camera motion from nuisance variation. Pixel prediction is poorly
+matched to endoscopy because highlights, fluid and smoke dominate an
+intrinsically uncertain image residual. We present Endo-HJEPA, a
+cross-orifice joint-embedding world model that predicts representations rather
+than pixels and explicitly audit the boundary between predictive video
+features and physically grounded control. A frozen V-JEPA~2 ViT-L encoder is
+coupled to causal residual and temporally coarse predictors; a corrected
+block-causal branch accepts continuous camera-frame SE(3) increments, while
+geometry, tool, semantic and nuisance slots separate planner-visible state.
+On a video-level held-out evaluation over a corpus of 1,707 sequences across
+19 datasets, the validated causal forecaster reaches 0.978 cosine at horizon
+four, compared with 0.916 for persistence, 0.974 for a GRU and 0.971 for
+Mamba (Holm-corrected Wilcoxon $p<10^{-80}$). Performance improves from 500 to
+6,000 training clips and plateaus at 13,552 clips. An exploratory transition
+energy correlates with SCARED camera-to-tissue proximity (AUC 0.682,
+$n=132$), but unsupervised latent actions underperform matched random
+grounding baselines. The first continuous SE(3) branch failed its
+action-sensitivity gate (73.8\% real-action win versus an 80\% threshold);
+a correctness audit traced this to stereo-mixed inputs, non-causal encoding,
+chunk boundaries and negative-sampling mismatch, and the corrected pipeline
+passes the gate at 83.1\% on held-out SCARED cases (grouped-CV macro 88.9\%).
+A reprojection-gated pose-convention fix plus four additional external C3VDv2
+trajectories give above-chance action sensitivity on all five external
+trajectories (pooled 57.9\%, $n=468$), still below the 80\% gate.
+With the corrected dynamics and behaviour-constrained continuous CEM, offline
+goal-directed navigation on the frozen test case passes all prespecified gates
+(200 trials, 51.5\% reach, 29.0\% pose-error reduction versus persistence)---a
+model-based result, not robot execution. A post-hoc correctness audit excludes the original
+discrete latent-MPC scores from evidence. These results establish a
+reproducible predictive foundation and a geometry-grounded evaluation
+protocol, but do not support autonomous-control claims.
+\end{abstract}
+
+\begin{keyword}
+world model \sep joint-embedding predictive architecture \sep endoscopy \sep representation learning \sep physical grounding \sep uncertainty calibration
+\end{keyword}
+
+\end{frontmatter}
+
+\linenumbers
+
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{Clinical context: endoscopy needs anticipation, not only recognition}
+Minimally invasive diagnosis and therapy are increasingly delivered through an endoscope---laparoscopes in the abdomen, flexible scopes in the gastrointestinal tract, and bronchoscopes in the airway.
+Across all three orifices, safe operation depends on a clinician's ability to \emph{anticipate}: how tissue will deform under contact, how a lumen will open as the scope advances, where an instrument will move, and when the camera is about to collide with a wall or lose the view.
+Current endoscopic AI is almost entirely \emph{reactive}.
+It recognises the present frame---surgical phase, instrument presence, anatomy---but cannot forecast what comes next, nor what a candidate camera adjustment would produce.
+A model that predicts how an endoscopic scene will evolve is a prerequisite for
+anticipatory guidance and collision warning. Querying counterfactual camera
+motion additionally requires metric action supervision; predictive video
+features alone are insufficient. That distinction---forecast first, then
+physical grounding under explicit SE(3) and depth signals---is the clinical and
+technical target of this paper.
+
+\subsection{The technical problem: structure is predictable, appearance is not}
+A world model for endoscopy faces a specific asymmetry.
+The \emph{structure} of endoscopic video---lumen geometry, camera advance, instrument trajectories---follows smooth physical dynamics and is strongly predictable.
+The \emph{appearance}---specular highlights, fluid, smoke, mucosal micro-texture, peristalsis---is high-entropy and largely unpredictable.
+The dominant world-model paradigm, pixel generation (diffusion world-action models, Genie-style token video), must spend capacity forecasting this unpredictable appearance.
+That both wastes capacity and ties the model to a pixel metric that is dominated by glare and fluid rather than by the quantities that matter for planning.
+Joint-embedding predictive architectures (JEPA) offer the alternative we adopt: predict in a learned representation space, where unpredictable appearance residual can be ignored by design, and where the predicted quantities are exactly the plannable ones.
+
+\paragraph{Key insight: predict plannable representations, not the next frame.}
+If a frame is written as structure plus appearance, any pixel predictor is lower-bounded by the appearance dispersion, regardless of how well structure is modelled (Section~\ref{sec:theory}).
+A representation that is sufficient for structure and invariant to appearance has no such bound.
+Endoscopy is an unusually clean instance of this split: the camera moves through a deformable lumen under clinician control (predictable), while highlights and fluid dominate the pixel residual (unpredictable).
+The design consequence is that a world model should (i)~forecast in encoder space, (ii)~separate fast dynamics from slow anatomy, (iii)~score which futures are plausible, and (iv)~plan by rolling those futures---without ever decoding pixels.
+
+\subsection{Gap}
+Despite rapid progress in surgical video understanding, two gaps remain.
+\textbf{(i) Single scale.}
+Existing surgical JEPA and video-pretraining systems (SurgRec-JEPA, JHU-VPT, VideoMAE) learn a single temporal predictor and do not separate fast tissue/tool/camera dynamics from slow anatomical and procedural structure.
+LeCun's hierarchical JEPA (H-JEPA) argues such separation is essential for long-horizon prediction and planning, but it has not been instantiated for endoscopy.
+\textbf{(ii) Per-orifice fragmentation.}
+Endoscopic models are built per orifice---laparoscopy, GI endoscopy, and bronchoscopy are treated as separate foundation-model problems---even though all three share the same underlying physics of a camera advancing through a deformable lumen under clinician control.
+A single domain-conditioned world model is both a stronger scientific claim and a more data-efficient one, but it requires evidence that such sharing is beneficial, or necessary.
+
+\subsection{Our approach}
+We instantiate this idea in \textbf{Endo-HJEPA} (Figure~\ref{fig:pipeline}).
+A shared frozen V-JEPA~2 ViT-L encoder maps clips from all three orifices to dense tokens.
+Two validated domain-conditioned predictors operate at increasing temporal
+abstraction: L1 is causal, residual and short-horizon; L2 is temporally pooled.
+For physical grounding, a separate block-causal branch consumes continuous
+camera-frame SE(3) increments aligned to SCARED/C3VD tubelets. A factorised
+adapter exposes geometry, tool and slow semantic state to the planner while
+isolating nuisance variation. Probabilistic ensemble dynamics, calibrated
+near-wall risk and a hard safety gate define the prospective continuous
+CEM/MPPI interface.
+The encoder is frozen by default so that every dynamics ablation shares identical latents; an optional last-block adaptation is evaluated only on recognition probes.
+No decoder is trained.
+The evidence is scoped as follows: forecast and scale are measured on a
+6{,}000-clip causal-L1 protocol; energy and physical probes use the audited
+2{,}000-clip checkpoint but discrete planning scores are excluded; recognition
+uses frozen versus adapted V-JEPA~2 on the official CholecT50 split. The new
+continuous geometry-action path is reported as an implemented protocol until
+the externally located SCARED RGB--pose--depth assets are rerun under the
+corrected case-level split and common geometry gate.
+These protocols are never mixed in a single table.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figure1_pipeline.pdf}
+\caption{Overall Endo-HJEPA study framework. Three endoscopic domains share one
+visual encoder and split into a validated passive-video forecast path and a
+separately gated physical path. Only aligned pose/depth enters SE(3) dynamics
+and safe continuous MPC; no control conclusion is inferred from forecast alone.}
+\label{fig:pipeline}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figure1_network.pdf}
+\caption{Detailed network model rendered with PlotNeuralNet.
+A frozen V-JEPA~2 ViT-L encoder supplies dense tokens to the validated L1/L2
+forecast heads and to a factorised physical branch. The latter combines
+continuous SE(3) actions, block-causal ensemble dynamics, calibrated risk,
+continuous CEM/MPPI and a hard safety gate. Orthogonal arrows denote tensor
+flow; block dimensions encode relative tensor rank. No pixels are decoded.}
+\label{fig:network}
+\end{figure}
+
+\subsection{Contributions and significance}
+\begin{enumerate}
+  \item \textbf{A hierarchical JEPA predictive foundation for unified cross-orifice endoscopy.}
+  We instantiate short-horizon residual dynamics and mid-horizon context on the official V-JEPA~2 ViT-L encoder across laparoscopy, GI endoscopy, and bronchoscopy with one domain-conditioned model.
+  \item \textbf{A causal-autoregressive latent forecaster.}
+  The \emph{form} of the latent forecaster matters more than its size: a GPT-style causal Transformer surpasses a strong GRU and a Mamba/SSM baseline, whereas a parallel query-token Transformer of the same capacity does not.
+  \item \textbf{An audited path from prediction to physical safety.}
+  We identify that unsupervised latent actions are not control variables, exclude the invalid discrete-MPC evidence, and specify a leakage-free continuous SE(3), depth/risk and hard-gated CEM/MPPI protocol. The exploratory energy signal correlates with SCARED camera-to-tissue distance (AUC 0.682), but remains below the prespecified calibrated-risk target.
+  \item \textbf{A leakage-free, per-dataset protocol.}
+  Video-level splits, domain-balanced sampling, per-dataset forecast decomposition, reproducible external baselines, and paired Wilcoxon tests with Holm correction, released as executable code.
+\end{enumerate}
+
+We also report two characterised negative results: self-supervised latent actions are not semantically or physically grounded without encoder-level supervision, and zero-shot cross-orifice transfer fails but is recoverable with a 32-shot domain token.
+Together these provide evidence that unified multi-orifice training is necessary, not merely convenient.
+We do \emph{not} claim the first surgical world model, pixel-level video generation, validated physical planning, uniform recognition SOTA, or any clinical efficacy endpoint.
+
+\paragraph{Significance.}
+Endo-HJEPA reframes endoscopic AI from reactive recognition to anticipatory world modelling.
+Three properties matter clinically: anticipation (forecast is the primitive
+behind collision warning), calibrated physical risk rather than latent
+confidence, and unification across orifices where labelled video is scarce.
+The current real-data evidence establishes the first and provides only a weak
+pilot for the second.
+
+\section{Related work}
+We position Endo-HJEPA along five axes: the world-model lineage it builds on, the surgical/endoscopic representation learning it extends, the surgical world models it differs from, the general video/image backbones we benchmark against, and the endoscopic datasets that anchor our evaluation.
+
+\subsection{World models and joint-embedding prediction}
+The idea of a learned world model for prediction and planning originates with Ha and Schmidhuber's World Models~\cite{ha2018worldmodels} and the PlaNet latent-dynamics planner~\cite{hafner2019planet}, and was scaled to diverse control domains by Dreamer~\cite{hafner2023dreamer}. These models predict a learned latent state and plan by rolling it forward, but they are trained with a reconstruction or reward signal and target control, not video understanding. Energy-based formulations~\cite{lecun2006ebm} provide the formal basis for scoring state compatibility without a generative decoder. The joint-embedding predictive architecture (JEPA) of LeCun's position paper~\cite{lecun2022path} argues that predicting in representation space---rather than pixels---is the key to capturing predictable structure while ignoring unpredictable appearance; I-JEPA~\cite{assran2023ijepa} realised this for images, V-JEPA~\cite{bardes2024vjepa} for video, and V-JEPA~2~\cite{assran2025vjepa2} added scale and the action-conditioned (V-JEPA 2-AC) planning variant. Generative interactive environments such as Genie~\cite{genie2024} take the opposite, pixel-generative route. A common limitation of these works, for our purpose, is that they are either single-scale (no temporal hierarchy), pixel-generative (capacity spent on unpredictable appearance), or evaluated on generic/control video rather than endoscopic dynamics. Endo-HJEPA adopts the JEPA principle and adds the hierarchy and energy prior that the surgical setting lacks.
+
+\subsection{Self-supervised surgical and endoscopic video representation}
+Self-supervised pretraining has become the default for surgical video. SurgRec-JEPA~\cite{surgrecjepa} and JHU-VPT~\cite{jhuvpt} apply JEPA-style and video pretraining to surgical data and report strong downstream transfer, and endoscopic foundation models such as Endo-FM~\cite{endofoundation} scale self-supervised pretraining to large endoscopic corpora. These methods produce a single-scale representation for \emph{recognition} (phase, tools, segmentation); none of them build a dynamics model that can forecast or plan. Endo-HJEPA shares their self-supervised, frozen-encoder efficiency but adds a temporal hierarchy and an explicitly supervised geometry-action interface.
+
+\subsection{Surgical and endoscopic world models}
+World models tailored to surgery are emerging. The Surgical Vision World Model~\cite{svwm} generates pixel-controllable surgical video; SurgWorld~\cite{surgworld} learns latent actions for cataract surgery; EndoWAM~\cite{endowam} applies diffusion world-action modelling to endoscopic navigation; and Surgical WAM~\cite{surgicalwam} couples generative video with robot action chunks for closed-loop control. These are predominantly \emph{pixel-generative} or \emph{single-task}. Our contribution is orthogonal and complementary: hierarchical representation prediction together with an audit showing that metric action, calibrated uncertainty and hard safety constraints cannot be inferred from passive JEPA features alone.
+
+\subsection{General video and image representation backbones}
+For the representation evaluation we benchmark against the strongest \emph{reproducible} general-purpose encoders. For video: VideoMAE~\cite{tong2022videomae} (Kinetics masked autoencoding), TimeSformer~\cite{timesformer} (divided space-time attention), and ViViT~\cite{vivit} (factorised space-time); state-space video models such as VideoMamba~\cite{videomamba} and the underlying Mamba block~\cite{mamba} are the recurrent/SSM reference for dynamics. For images: the ImageNet-supervised ViT~\cite{dosovitskiy2021vit} and DINOv2 self-supervised features~\cite{dinov2}, pooled over time. None of these provide a world-model predictor or a planning/energy capability, which is the gap Endo-HJEPA fills; \S\ref{sec:results} measures them on the same CholecT50 protocol.
+
+\subsection{Endoscopic datasets and physical supervision signals}
+Our evaluation spans the standard endoscopic corpora: Cholec80 (phase + tool presence)~\cite{twinanda2017endonet}, CholecT50 (action triplets + phase)~\cite{nwoye2022rendezvous,nwoye2022cholectsplit}, EndoVis 2017/2018 (instrument segmentation)~\cite{endovis2017}, CholecSeg8k (semantic segmentation)~\cite{hong2020cholecseg8k}, endoscapes (segmentation + critical view of safety)~\cite{endoscapes}, the GI corpora HyperKvasir~\cite{borgli2020hyperkvasir} and Kvasir-Capsule~\cite{kvasircapsule}, and the pose/depth corpora SCARED~\cite{allan2021scared} and C3VD~\cite{bobrow2023c3vd}, with STIR~\cite{stir2024} for deformable point tracks. To our knowledge, using SCARED/C3VD camera poses and STIR point tracks as \emph{physical anchors} for latent actions, energy, and deformation---rather than as reconstruction targets---is a novel use of these supervision signals within a JEPA world model.
+
+\paragraph{Summary.} Across the five axes, the field offers strong single-scale SSL representations, pixel-generative surgical world models, and general video/image backbones---but no hierarchical, energy-based JEPA world model trained and evaluated as a unified cross-orifice endoscopic system with a physically grounded uncertainty signal. That is the gap Endo-HJEPA occupies.
+
+\section{Method}
+\label{sec:method}
+
+\paragraph{Core idea.}
+Endo-HJEPA separates two queries without generating pixels:
+(i)~given a history of endoscopic tokens, what is the likely future
+representation; and (ii)~given a \emph{measured camera motion}, what is the
+distribution of physically plausible futures and their near-wall risk.
+L1/L2 answer the validated forecast query. The second query is deliberately
+conditioned on continuous SE(3), not on an emergent residual code.
+Residual anchoring and uncertainty weighting belong to the core pooled model.
+Dense VICReg, appearance weighting and STIR supervision are explicitly
+separated below as optional spatial or encoder-adaptation extensions; they are
+not silently mixed into the pooled forecast numbers.
+Figure~\ref{fig:pipeline} gives the study-level data flow,
+Figure~\ref{fig:network} gives the tensor-level model, and
+Table~\ref{tab:notation} lists symbols.
+
+\begin{table}[t]
+\centering
+\caption{Principal notation (Section~\ref{sec:method}).}
+\label{tab:notation}
+\footnotesize
+\begin{tabular}{@{}lp{0.68\textwidth}@{}}
+\toprule
+Symbol & Meaning \\
+\midrule
+$x_{1:T}$, $d$ & Input clip of $T$ frames; orifice $d\in\{\mathrm{laparo},\mathrm{gi},\mathrm{bronch}\}$ \\
+$f_\theta$, $z_{1:T'}$ & Frozen encoder; dense tokens $z\in\mathbb{R}^{T'\times N\times D}$ \\
+$g_\phi$, $\hat z$ & Latent predictor and its predicted latent token \\
+$T',N,D$ & Tubelet steps ($T/2$), spatial tokens ($256$), width ($1024$) \\
+$\bar z_t$ & Spatially pooled token $\frac{1}{N}\sum_{n=1}^{N}z_{t,n}\in\mathbb{R}^{D}$ \\
+$e_d$ & Learnable domain embedding \\
+$H,H_{\mathrm{hist}}$ & Forecast horizon and history (default $4$) \\
+$\mathbf{T}_t\in\mathrm{SE}(3)$ & Camera-to-world pose at tubelet time $t$ \\
+$u_t=\log(\mathbf{T}_t^{-1}\mathbf{T}_{t+1})^\vee\in\mathbb{R}^6$ & Measured camera-frame twist $[v_t;\omega_t]$; $\vee$ vectorises $\mathfrak{se}(3)$ \\
+$s_t^{g},s_t^{q},s_t^{m},\xi_t$ & Geometry, tool, slow-semantic and nuisance slots (used by auxiliary losses, not inside the current CEM loop) \\
+$\bar z^\star$ & Goal pooled latent for MPC \\
+$r_t=z_{t+1}-z_t$ & Residual used by VQ and residual prediction \\
+$a_t,z^{-}$ & Legacy discrete residual code and rolled negative latent for the energy audit \\
+$p_{\mathrm{wall}},\Sigma_{\mathrm{ale}},\Sigma_{\mathrm{epi}}$ & Calibrated wall risk and aleatoric/epistemic uncertainty \\
+$M_e,\mu_m,\sigma_m^2$ & Number of ensemble members and member-$m$ Gaussian mean/diagonal variance \\
+$s_i$ & Learnable log-variance of loss term $i$ \\
+$\mathcal{A}_{\mathrm{pool}}$ & Active pooled losses, a subset of $\{\mathrm{L1},\mathrm{L2}\}$ \\
+$\lambda_r,\lambda_u,\lambda_s,\lambda_e$ & MPC risk, uncertainty, smoothness and path-energy weights \\
+$p_t,M$ & Temporal positional encoding and causal attention mask \\
+$w,w_{\min},\beta,m_{\mathrm{inst}}$ & Tubelet weight, floor, mask gain and instrument occupancy \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Problem formulation and assumptions}
+\label{sec:formulation}
+A clip $x_{1:T}$ from orifice $d$ is mapped by a frozen encoder $f_\theta$ to
+\begin{equation}
+z_{1:T'}=f_\theta(x_{1:T})\in\mathbb{R}^{T'\times N\times D},\qquad T'=T/2,\; N=256,\; D=1024.
+\label{eq:encode}
+\end{equation}
+Headline pooled forecast operates on the spatially pooled token
+\begin{equation}
+\bar z_t=\frac{1}{N}\sum_{n=1}^{N}z_{t,n}\in\mathbb{R}^{D},
+\label{eq:pool}
+\end{equation}
+averaging over the $N$ spatial sites. The world model is a collection of
+predictors $g_\phi$ on $\bar z_t$ (pooled) or $z_{t,n}$ (dense extension) and
+never decodes pixels. The passive branch has two validated temporal scales:
+L1 forecasts $\hat z_{t+1:t+H}$ (tissue, tool, camera), whereas L2 forecasts a
+stride-$2$ pooled stream (anatomy / phase). For physical grounding, a low-rank
+adapter decomposes $z_t\mapsto(s_t^g,s_t^q,s_t^m,\xi_t)$ for downstream
+slot-level analysis and loss construction. The implemented planner rolls the
+full pooled latent $\bar z_t$ directly (the factorised adapter is not in the
+CEM/MPPI loop), so the continuous MPC objective is
+\begin{equation}
+\begin{aligned}
+\hat u_{t:t+H-1}
+={}&\arg\min_{u_{t:t+H-1}}\;
+\frac{1}{D}\bigl\|\hat{\bar z}_{t+H}(u_{t:t+H-1})-\bar z^\star\bigr\|_2^2
++\sum_{k=0}^{H-1}
+\bigl[
+\lambda_r p_{\mathrm{wall},t+k}\\
+&{}+\lambda_u\,
+(\overline{\operatorname{Var}}_{\mathrm{ale},t+k}
++\overline{\operatorname{Var}}_{\mathrm{epi},t+k})
+\bigr]
++\lambda_s\,\frac{1}{6(H-1)}\sum_{k=1}^{H-1}
+\|u_{t+k}-u_{t+k-1}\|_2^2
++\lambda_e\,\overline{E}_{\mathrm{path}} .
+\end{aligned}
+\label{eq:mpc}
+\end{equation}
+Here $\overline{\operatorname{Var}}$ denotes the mean over the $D$ latent
+dimensions (not the trace), and $\overline{E}_{\mathrm{path}}$ is the mean
+per-step prediction energy along the rollout; $\lambda_e$ is the optional
+energy weight ($0$ when the legacy discrete head is not used). We deliberately
+match the implementation, which averages rather than sums variances over
+dimensions.
+Candidates above collision-risk or uncertainty thresholds are rejected
+independently of the soft cost.
+
+\emph{Assumptions.}
+(i)~Endoscopic dynamics are approximately Markovian in the learned latent space at the tubelet timescale.
+(ii)~The frozen V-JEPA~2 encoder is more predictable for structure than for appearance (tested by the pixel-generation contrast in \S\ref{sec:rq1}).
+(iii)~Orifice domains share enough low-level dynamics that a domain-conditioned predictor can serve all three, while differing enough that naive zero-shot transfer fails (tested in \S\ref{sec:rq4}).
+
+\subsection{Shared encoder and optional endoscopic token weighting}
+We use \texttt{facebook/vjepa2-vitl-fpc64-256} (ViT-L, patch $16$, tubelet $2$, input $256^2$), frozen by default.
+An optional flag unfreezes the last $K$ blocks for recognition-oriented domain adaptation; that path is never mixed into the forecast tables.
+High-luminance, low-saturation tubelets (glare, fluid highlights) are weakly predictable and are down-weighted to a floor $w_{\min}{=}0.25$.
+When EndoVis instrument masks are available, instrument tubelets are up-weighted by $1+\beta\, m_{\mathrm{inst}}$.
+This mask-weighted loss is an optional scratch-JEPA/encoder-adaptation path,
+used for the mask analysis rather than the official frozen-V-JEPA~2 pooled
+forecast protocol. The main 6,000-clip and 13,552-clip forecast models
+therefore use uniform latent weights. Making that distinction avoids
+attributing their gains to supervision that they did not receive.
+
+\subsection{Hierarchical predictors}
+\label{sec:predictors}
+All predictors are Transformer-based.
+A shared domain embedding $e_d$ is added to the history so that one set of weights serves three orifices.
+
+\paragraph{L1, causal autoregressive (default pooled forecaster).}
+A GPT-style causal Transformer predicts the next pooled token from the causal context and feeds the prediction back for $H$ steps.
+Let $h_t=\mathrm{in}(z_t)+e_d+p_t$ be the projected history with positional encoding $p_t$, and let $M$ be the upper-triangular causal mask.
+One rollout step is
+\begin{equation}
+\hat z_{t+1}
+=
+z_t
++
+\mathrm{head}\bigl(
+\mathrm{Transformer}(h_{\le t};M)
+\bigr)_{t},
+\label{eq:causal}
+\end{equation}
+i.e.\ the network predicts a \emph{residual} from the last observed (or last predicted) token.
+This matches the near-Markov, smooth structure of endoscopic camera motion.
+Section~\ref{sec:rq1} shows that this inductive bias, not parameter count, is what lets the Transformer surpass a GRU: a parallel query-token Transformer of the same size does not.
+
+\paragraph{L1, dense spatio-temporal.}
+For spatially resolved prediction a factorised block applies temporal attention per spatial site, then spatial attention per tubelet step, over all $N{=}256$ tokens.
+Learned positional embeddings are added along both axes; $H$ query steps are appended along time.
+This captures global camera motion that independent per-site prediction cannot represent.
+In the optional dense configuration, dense L1 is trained jointly with the
+pooled head so that its pooled evaluation path is not an untrained leftover.
+The principal scale and recurrent-baseline experiments use the pooled causal
+configuration; dense prediction is a spatial extension, not the source of the
+reported 0.978 pooled score.
+
+\paragraph{Residual (delta) prediction.}
+Consecutive endoscopic latents are highly correlated.
+Every predictor therefore forecasts the change from the last token of the
+current sequence, which is the observed token at step 1 and the previously
+predicted token thereafter. In pooled space:
+\begin{equation}
+\hat z_{t+1}=\bar z_t+g_{\phi,1}(\bar z_{t-H_{\mathrm{hist}}+1:t},e_d),
+\qquad
+\hat z_{t+k}=\hat z_{t+k-1}+g_{\phi,k}(\cdot),
+\qquad k=2,\ldots,H .
+\label{eq:residual}
+\end{equation}
+The anchor is the running last token, not a fixed clip-final index.
+The parameterisation contains persistence as the zero-residual solution but
+does not guarantee improvement; without residual anchoring a $70$M predictor
+is high-variance and can fall below persistence
+(Section~\ref{sec:ablation}).
+
+\paragraph{L2, coarse mid-horizon.}
+History tokens are average-pooled along time with stride 2, i.e.
+$\bar z^{\mathrm{hist}}_t\leftarrow\mathrm{AvgPool}_2(\bar z^{\mathrm{hist}}_t)$.
+The future targets are subsampled at the same stride
+($\bar z^{\mathrm{fut}}_{2}, \bar z^{\mathrm{fut}}_{4}, \ldots$) and the
+predictor is trained to forecast this coarser stream from the pooled history.
+L2 adds little to short-horizon pooled cosine; its role is a seconds-scale handle for anatomy and phase.
+
+\paragraph{Block-causal continuous action branch.}
+SCARED/C3VD camera-to-world poses are interpolated on SE(3) to fractional
+encoder-tubelet centres before differencing. The local action is
+$u_t=\log(\mathbf{T}_t^{-1}\mathbf{T}_{t+1})^\vee=[v_t;\omega_t]$. Observed history tokens attend
+bidirectionally within the history block; future query $k$ attends to all
+history and action queries $1{:}k$, never to later actions. Changing history,
+domain or action must change the prediction, and gradients must reach both the
+action projection and Transformer; these properties are executable unit tests.
+The legacy $K{=}16$ residual codebook is retained only as a negative grounding
+baseline (Section~\ref{sec:rq5}).
+
+\paragraph{Energy and calibrated risk.}
+$E(z,a,z')$ is an MLP on $[z;\mathrm{emb}(a);z']$, where
+$a\in\{0,\ldots,K-1\}$ is a \emph{discrete} residual code (distinct from the
+continuous SE(3) twist $u_t$). It is trained contrastively with a rolled
+negative $z^{-}$:
+\begin{equation}
+\mathcal{L}_E
+=
+\mathrm{softplus}\bigl(
+E(z_t,a_t,z_{t+1})-E(z_t,a_t,z^{-})
+\bigr).
+\label{eq:energy}
+\end{equation}
+Low energy marks in-distribution, predictable futures, but energy is not
+labelled as collision probability. The grounded branch instead predicts
+heteroscedastic variance, uses ensemble disagreement for epistemic uncertainty,
+and trains a near-wall head from SCARED depth. Temperature scaling and
+split-conformal intervals are fitted only on a held-out calibration split.
+For ensemble member $m$, diagonal Gaussian dynamics minimise
+\begin{equation}
+\mathcal{L}_{\mathrm{NLL}}^{(m)}
+=
+\frac{1}{2BHD_s}
+\sum_{b=1}^{B}\sum_{k=1}^{H}\sum_{j=1}^{D_s}
+\left[
+\log \sigma_{m,bkj}^{2}
++
+\frac{(s_{bkj}^{\mathrm{plan}}-\mu_{m,bkj})^2}
+{\sigma_{m,bkj}^{2}}
+\right],
+\label{eq:nll}
+\end{equation}
+where $B$ is batch size and $j$ indexes planner-state dimensions. The reported
+diagonal uncertainties are
+$\Sigma_{\mathrm{ale}}=\operatorname{Diag}
+(M_e^{-1}\sum_m\sigma_m^2)$ and
+$\Sigma_{\mathrm{epi}}=\operatorname{Diag}
+(M_e^{-1}\sum_m(\mu_m-\bar\mu)^2)$, with
+$\bar\mu=M_e^{-1}\sum_m\mu_m$.
+
+\paragraph{Continuous MPC and safety gate.}
+CEM or MPPI optimises bounded six-dimensional actions under~\eqref{eq:mpc}.
+The hard gate replaces every rejected sequence by a zero-motion fallback.
+Evaluation is receding-horizon and offline; no candidate is described as
+clinically executable without device telemetry and prospective validation.
+
+\subsection{Objective}
+\label{sec:objective}
+Each active passive-prediction loss $\mathcal{L}_i$ carries a learnable
+log-variance $s_i$ (multi-task weighting), contributing
+$e^{-s_i}\mathcal{L}_i+s_i$. This quantity is not predictive uncertainty. The
+validated pooled objective is
+\begin{equation}
+\mathcal{L}_{\mathrm{pool}}
+=
+\sum_{i\in\mathcal{A}_{\mathrm{pool}}}
+\bigl(e^{-s_i}\mathcal{L}_i+s_i\bigr).
+\label{eq:obj}
+\end{equation}
+The causal-L1 scale experiment uses
+$\mathcal{A}_{\mathrm{pool}}=\{\mathrm{L1}\}$; the two-level pooled hierarchy
+uses $\{\mathrm{L1},\mathrm{L2}\}$.
+The grounded branch adds Gaussian rollout likelihood, forward--inverse action
+cycle, SE(3), depth, tool-mask, slot-separation, frozen-teacher fidelity and
+near-wall classification terms. Its predictive uncertainty is the
+heteroscedastic covariance plus ensemble disagreement, not $s_i$.
+The optional dense configuration adds a dense L1 term, a separately weighted
+pooled-L1 term and a VICReg-style anti-collapse regulariser on $\hat z$,
+\begin{equation}
+\mathcal{L}_{\mathrm{vr}}
+=
+\frac{1}{D}\sum_{j=1}^{D}\max\bigl(0,\,1-\mathrm{std}(\hat z_{\ldots,j})\bigr)
++
+\frac{1}{D}\sum_{\substack{a,b=1\\a\neq b}}^{D}
+\mathrm{Cov}(\hat z)_{ab}^{2}.
+\label{eq:vicreg}
+\end{equation}
+Here all non-feature axes of $\hat z$ are flattened before computing standard
+deviations and the $D{\times}D$ feature covariance, matching the implementation.
+so that
+$\mathcal{L}_{\mathrm{dense}}=
+\mathcal{L}_{\mathrm{pool}}+
+e^{-s_{\mathrm{L1d}}}\mathcal{L}_{\mathrm{L1d}}+
+s_{\mathrm{L1d}}+\lambda_{\mathrm{vr}}\mathcal{L}_{\mathrm{vr}}$.
+STIR fine-tuning is evaluated as a separate encoder-adaptation experiment
+rather than presented as part of the core pooled checkpoint.
+Persistence (copy last latent) is a mandatory baseline for every forecast table.
+
+\subsection{STIR point-track regulariser}
+STIR provides IR start/end segmentations rather than dense tracks.
+We sample up to $64$ points from each mask, map them onto the token grid, and apply a symmetric chamfer between tokens at those sites at the first and last timestep:
+\begin{equation}
+\mathcal{L}_{\mathrm{STIR}}
+=
+\mathrm{Chamfer}\bigl(z_{0}[p_{\mathrm{start}}],\, z_{T'-1}[p_{\mathrm{end}}]\bigr).
+\label{eq:stir}
+\end{equation}
+For feature sets $A$ and $B$, we use the symmetric mean
+\begin{equation*}
+\operatorname{Chamfer}(A,B)
+=
+\frac{1}{|A|}\sum_{a\in A}\min_{b\in B}\|a-b\|_2^2
++
+\frac{1}{|B|}\sum_{b\in B}\min_{a\in A}\|b-a\|_2^2 .
+\end{equation*}
+$p_{\mathrm{start}}$ and
+$p_{\mathrm{end}}$ denote the corresponding sampled token-grid indices.
+This optional loss adapts the unfrozen encoder in representation space, with
+no pixel regression. The reported before/after STIR result comes from this
+separate fine-tuning run; it is not evidence that the main full-H-JEPA
+checkpoint was jointly trained with STIR.
+
+\subsection{Physical alignment of latent actions}
+SCARED stores a $4{\times}4$ camera pose per frame; C3VD provides \texttt{pose.txt}.
+All matrices are normalised to camera-to-world convention; the relative pose
+$\mathbf{T}_t^{-1}\mathbf{T}_{t+1}$ is mapped to a $6$D twist using one
+SE(3) logarithm. Fractional tubelet centres use translation interpolation and
+SO(3) interpolation before differencing; complete videos---not
+transitions---are assigned to train, calibration and test splits.
+The first (v1) physical cache encoded stacked stereo frames with a
+bidirectional 64-frame encoder, which mixed both camera views and let latent
+history carry future-frame content. The corrected v2 cache crops SCARED
+rgb.mp4 to the single eye corresponding to the pose camera, encodes every
+tubelet from a look-back window of eight tubelets (no future attention and no
+chunk resets), and aligns poses at integer window-end frames. Model selection
+for this branch uses leave-one-case-out cross-validation over the SCARED
+training cases with a fixed hard-negative bank; the v1 test set is frozen as
+an audit set (\texttt{docs/endohjepa/test\_freeze.json}). Samples are
+$(z_{\mathrm{hist}},u_{t:t+H-1},z_{\mathrm{future}},d_{\mathrm{wall}})$,
+where $d_{\mathrm{wall}}$ is the binary near-wall indicator from SCARED depth.
+The legacy grounding diagnostic measures NMI and a residual-to-twist probe.
+The corrected criterion is stronger: real actions must reduce future error
+relative to within-batch shuffled actions, inverse-action $R^2$ must exceed
+$0.3$, and at least $80\%$ of transitions must favour the real action.
+
+\subsection{Factorised state and frozen-teacher fidelity}
+A zero-initialised low-rank residual adapter maps each frozen teacher latent to
+geometry $s^g$, tool $s^q$, slow semantic $s^m$ and nuisance $\xi$ slots. Only
+$[s^g;s^q;s^m]$ is the planner-visible interface for the factorised-state
+module (used by auxiliary losses and diagnostics; the implemented CEM/MPPI
+planner itself rolls the pooled latent). A decoder reconstructs the detached
+V-JEPA~2 teacher feature; cross-slot covariance is penalised. SCARED depth,
+EndoVis masks and slow labels supervise their corresponding slots when
+available. This prevents adaptation from discarding representation content
+merely because it is difficult to forecast.
+
+\subsection{Training procedure}
+Clips are enumerated from a sequence-level manifest with video-level splits (hash of \texttt{dataset::sequence\_id}); no clip crosses a split boundary.
+Sampling is domain-balanced by round-robin so laparoscopy does not dominate GI/bronchoscopy.
+Dense tokens are cached once per encoder; L1, full H-JEPA, GRU, and Mamba train on the \emph{same} cached latents.
+Optimisation: AdamW (lr $3{\times}10^{-4}$, weight decay $0.01$) with a fixed
+learning rate and gradient clip $1.0$.
+Full H-JEPA: $69.7$M trainable parameters; GRU: $2.63$M; Mamba: $1.58$M.
+
+\begin{algorithm}[t]
+\caption{Audited Endo-HJEPA training and grounded planning (no pixel loss).}
+\label{alg:train}
+\begin{algorithmic}[1]
+\STATE \textbf{Training:} for each domain-balanced clip $x_{1:T}$ with domain $d$:
+\STATE \quad $z_{1:T'}\leftarrow f_\theta(x_{1:T})$
+\STATE \quad $\mathcal{L}_1\leftarrow\mathrm{SmoothL1}(\mathrm{causal\text{-}L1}(z_{\mathrm{hist}},e_d),z_{\mathrm{fut}})$ \quad (residual)
+\STATE \quad $\mathcal{L}_2\leftarrow\mathrm{SmoothL1}(\mathrm{L2}(\mathrm{pool}(z_{\mathrm{hist}}),e_d),\mathrm{pool}(z_{\mathrm{fut}})[::2])$
+\STATE \quad if pose/depth is available: align fractional tubelet centres to interpolated SE(3) poses and compute $u_t=\log(\mathbf{T}_t^{-1}\mathbf{T}_{t+1})^\vee$
+\STATE \quad factorise $z\to(s^g,s^q,s^m,\xi)$; preserve detached teacher feature
+\STATE \quad train block-causal probabilistic dynamics, inverse action and near-wall risk
+\STATE \textbf{Planning (offline):} optimise continuous $u_{t:t+H-1}$ on the pooled latent rollout by CEM/MPPI (the slot adapter feeds auxiliary losses only)
+\STATE \quad reject high-risk/high-uncertainty candidates; otherwise execute first action in replay
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Why representations, not pixels}
+\label{sec:theory}
+Write a frame as $x=\rho(\mathsf{s},n)$ with idealised rendering map $\rho$:
+structure $\mathsf{s}$ (lumen, pose,
+instruments) evolves as
+$\mathsf{s}_{t+1}=g(\mathsf{s}_t)+\varepsilon$ with
+$\mathbb{E}\|\varepsilon\|_2^2=\sigma_s^2$, whereas appearance nuisance $n$
+(highlights, fluid) retains conditional randomness after the observable
+history $\mathcal H_t$. Define its irreducible image-space variance as
+$\sigma_x^2=\mathbb{E}\|x_{t+1}-
+\mathbb{E}[x_{t+1}\mid \mathsf{s}_{t+1},\mathcal H_t]\|_2^2$.
+These are idealised quantities; $\mathsf{s}$ is distinct from the planner slots
+$s^g,s^q,s^m$ and from the learnable log-variances $s_i$.
+
+\textbf{Proposition 1 (pixel prediction is appearance-limited).}
+Any next-frame predictor $\hat x_{t+1}=\hat r(x_{1:t})$ satisfies
+$\mathbb{E}\|x_{t+1}-\hat x_{t+1}\|_2^2\ge\sigma_x^2$.
+This is the conditional-variance decomposition of squared error: even an
+oracle structural forecast cannot recover nuisance variability that remains
+random given $\mathcal H_t$.
+
+\textbf{Proposition 2 (representation prediction is structure-limited).}
+If $\mathbb{E}[\rho(\mathsf{s},n)]=\phi(\mathsf{s})$ is appearance invariant and $\phi$ is
+$L_\phi$-Lipschitz, then the oracle structural predictor
+$\hat z_{t+1}=\phi(g(\mathsf{s}_t))$ satisfies
+$\mathbb{E}\|z_{t+1}-\hat z_{t+1}\|_2^2
+\le L_\phi^2\sigma_s^2$, with no additive $\sigma_x^2$ term.
+(Here $\rho$ is the idealised render map, $\phi$ the structure-sufficient
+encoder projection, and $\mathsf{s}$ the structure state defined above.)
+
+These statements formalise the design choice; they do not by themselves prove downstream superiority.
+That is tested in \S\ref{sec:rq1}, where a next-frame CNN (PSNR $17.9$\,dB) and a conditional DDPM ($4.9$\,dB) both lose to copy-last ($29.6$--$30.4$\,dB).
+
+\section{Experiments}
+\label{sec:results}
+
+\paragraph{Goal.}
+The experiments separate predictive validity from control validity: can
+Endo-HJEPA forecast endoscopic representations better than persistence and
+strong recurrent/SSM baselines; do emergent actions encode physical motion; and
+does any risk/planning claim satisfy prespecified pose, calibration and
+video-level trial thresholds.
+They are organised by six research questions that map onto the contributions, not by dataset dump.
+Unless marked ``lit.'', every number is measured from a named JSON under \texttt{outputs/} and copied into \texttt{docs/endohjepa/verified\_metrics.json}; literature rows are never mixed into a measured comparison.
+Forecast tables use the $6{,}000$-clip causal-L1 protocol; energy/action probes
+use the $2{,}000$-clip audited checkpoint; recognition uses the official
+CholecT50 split. Discrete latent-MPC scores are excluded after the correctness
+audit described in Section~\ref{sec:rq3}.
+These protocols are labelled in every caption.
+
+\paragraph{Organization.}
+Section~\ref{sec:setup} states data, metrics, baselines, and implementation.
+Section~\ref{sec:rq1}--\ref{sec:rq2} report forecast and scale (C1).
+Section~\ref{sec:rq3} reports the action-path audit and physical energy pilot (C2).
+Section~\ref{sec:rq4} reports cross-orifice transfer (C3).
+Section~\ref{sec:rq5} reports action grounding (negative).
+Section~\ref{sec:rq6} reports recognition probes (encoder quality, not the headline claim).
+Section~\ref{sec:perds} is the per-dataset decomposition.
+Section~\ref{sec:ablation} isolates design choices.
+
+\subsection{Datasets, metrics, baselines, implementation}
+\label{sec:setup}
+
+\paragraph{Datasets.}
+Table~\ref{tab:census} lists all $19$ local corpora (1{,}707 sequences,
+1{,}067{,}734 decoded frames).
+Splits are video-level (hash of \texttt{dataset::sequence\_id}): train 1{,}328 / val 188 / test 191 sequences.
+TrackVes and SurgT include video-only rows whose decoded-frame count is
+unknown; the census records those rows as zero rather than subtracting sentinel
+values, and they are excluded from latent forecast.
+Full Cholec80 is not local (CAMMA request; only videos 41--45 plus CholecT50).
+C3VD pose evaluation now spans five trajectories (\texttt{cecum\_t1\_a} plus
+four C3VDv2 segments: sigmoid, transverse, descending, cecum); the remaining
+18 registered videos are Drive-quota-limited.
+ION bronchoscopy is private and stored only as anonymised \texttt{case\_XXX}.
+
+\begin{table}[t]
+\centering
+\caption{Dataset census (video-level split).
+Forecast uses decoded RGB clips; pose/depth/mask columns mark physical probes, not the forecast loss.}
+\label{tab:census}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{llrrl}
+\toprule
+Domain & Dataset & Seq. & Frames & Role \\
+\midrule
+GI & HyperKvasir~\cite{borgli2020hyperkvasir} & 768 & 96{,}567 & forecast \\
+GI & Kvasir-Capsule~\cite{kvasircapsule} & 234 & 317{,}726 & forecast \\
+GI & Kvasir-Instrument & 1 & 590 & forecast \\
+GI & C3VD~\cite{bobrow2023c3vd} & 1 & 1{,}379 & pose probe \\
+Laparo & Stereo\_Lap & 44 & 185{,}344 & forecast \\
+Laparo & endoscapes~\cite{endoscapes} & 11 & 153{,}899 & forecast \\
+Laparo & CholecT50~\cite{nwoye2022rendezvous} & 50 & 100{,}863 & forecast + phase/tools \\
+Laparo & Cholec80-Boxes~\cite{twinanda2017endonet} & 5 & 15{,}691 & forecast (v41--45) \\
+Laparo & CholecSeg8k~\cite{hong2020cholecseg8k} & 1 & 8{,}080 & semantic (not main) \\
+Laparo & EndoVis 2017/2018~\cite{endovis2017} & 13 & 5{,}701 & forecast + masks \\
+Laparo & SCARED~\cite{allan2021scared} & 76 & 1{,}878 & pose + depth \\
+Laparo & STIR~\cite{stir2024} & 360 & 3{,}640 & deformation \\
+Laparo & tracking / own / EndoNeRF & 67 & 12{,}933 & forecast / tracking \\
+Bronch & ION\_bronch & 76 & 163{,}443 & forecast (private) \\
+\midrule
+ & Total & 1{,}707 & 1{,}067{,}734 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figure9_dataset_atlas.pdf}
+\caption{Complete visual atlas of the 19 local datasets in
+Table~\ref{tab:census}, with one real representative image per dataset.
+The twentieth grid cell is an explicit coverage summary, not a missing dataset.
+This figure documents corpus coverage rather than model output. It exposes the
+large appearance shift between flexible GI, rigid laparoscopy and private
+anonymised ION bronchoscopy, and the supervision shift from ordinary RGB to
+pose, depth, mask and tracking corpora. No patient identifier is displayed.}
+\label{fig:dataset-atlas}
+\end{figure*}
+
+\paragraph{Visual corpus audit.}
+Figure~\ref{fig:dataset-atlas} makes three properties hidden by aggregate frame
+counts explicit. First, GI data span conventional colonoscopy, capsule imagery
+and synthetic-pose C3VD, so ``GI'' is not a single appearance distribution.
+Second, laparoscopy ranges from standard cholecystectomy to stereo/RGB-D,
+deformation and instrument-tracking views; these datasets provide complementary
+supervision but are not interchangeable test sets. Third, ION bronchoscopy
+contains both navigation-interface context and endoluminal imagery, explaining
+why a domain token is necessary. The atlas is therefore evidence for domain
+heterogeneity, not evidence of forecast accuracy.
+
+\paragraph{Metrics.}
+Latent forecast is cosine similarity and MSE between predicted and target \emph{pooled} tokens at horizon $h$,
+\begin{equation}
+\mathrm{cos}_h
+=
+\frac{1}{|\mathcal{V}|}
+\sum_{v\in\mathcal{V}}
+\frac{
+\langle \hat z^{(v)}_{t+h},\, z^{(v)}_{t+h}\rangle
+}{
+\|\hat z^{(v)}_{t+h}\|_2\,\|z^{(v)}_{t+h}\|_2
+},
+\label{eq:cos}
+\end{equation}
+averaged over video-level val clips $\mathcal{V}$.
+Higher cosine / lower MSE is better.
+Physical planning requires at least 100 video-level trials; reach is the
+fraction with lower terminal pose error than persistence. We additionally
+report translation/rotation error, bootstrap confidence intervals, near-wall
+AUC, Brier score, ECE and conformal coverage. The prespecified gates are
+pose-delta $R^2>0.3$, real-action preference $>80\%$, near-wall AUC
+$\ge0.75$ on at least 500 transitions, reach $\ge50\%$, and pose-error
+reduction $\ge20\%$.
+Recognition uses video-level linear-probe phase accuracy and instrument mAP (mean $\pm$ std over 3 seeds).
+Action grounding uses NMI versus a random-id baseline.
+
+\paragraph{Baselines.}
+Dynamics: persistence, GRU, Mamba/SSM, query-token L1.
+Representation: ImageNet ViT, DINOv2, VideoMAE, TimeSformer, ViViT, all on the same official CholecT50 split.
+Pixel contrast: next-frame CNN and conditional DDPM.
+V-JEPA~2-AC and SurgRec-JEPA have no public endoscopic-planning checkpoints; we cite their papers and do not invent a numeric comparison.
+
+\paragraph{Statistics.}
+Paired bootstrap (1{,}000 resamples) and Wilcoxon signed-rank tests against GRU and Mamba, Holm-corrected across horizons, on 750 video-level clips.
+
+\paragraph{Implementation.}
+Single GPU; encoder cached once; AdamW as in Section~\ref{sec:method}.
+Hyperparameters: hidden $512$, $8$ heads, $4$ layers, dropout $0.1$,
+$K{=}16$, history/horizon $4/4$. The optional dense path uses VICReg weight
+$0.1$; headline pooled checkpoints do not activate it.
+Varying depth ($2$--$6$), width ($256$--$768$) and lr ($10^{-4}$--$10^{-3}$) changes $6$k-clip cosine by ${<}0.002$.
+
+\subsection{RQ1--RQ2: Latent forecast and data scale}
+\label{sec:rq1}
+\label{sec:rq2}
+
+\begin{table}[t]
+\centering
+\caption{Video-level latent forecast at $h{=}4$ (6{,}000-clip training, shared cache).
+Source: \texttt{outputs/scale\_6000\_*/val\_metrics.json}.}
+\label{tab:forecast}
+\small
+\begin{tabular}{lcc}
+\toprule
+Model & cos $h{=}4$ & MSE $h{=}4$ \\
+\midrule
+Persistence & 0.916 & 0.532 \\
+Endo-HJEPA (query-token L1) & 0.936 & 0.408 \\
+Mamba / SSM dynamics & 0.971 & 0.180 \\
+GRU dynamics & 0.974 & 0.161 \\
+\textbf{Endo-HJEPA (causal L1)} & \textbf{0.978} & \textbf{0.139} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:forecast} and Figure~\ref{fig:forecast} are the headline forecast result.
+Causal L1 exceeds persistence, query-token L1, Mamba, and GRU on the same 750-clip val set, with the lowest MSE.
+The margin over GRU is small in absolute cosine: at $h{=}1$, the paired
+difference is $0.00335$ (bootstrap 95\% CI
+$[0.00300,0.00371]$; Holm $p{=}1.24{\times}10^{-84}$); at $h{=}4$, it is
+$0.00360$ (95\% CI $[0.00321,0.00398]$;
+$p{=}4.06{\times}10^{-102}$). Statistical certainty therefore should not be
+confused with a large practical effect.
+Against Mamba the $h{=}4$ Holm $p$ is $1.23{\times}10^{-111}$.
+Predictor \emph{form} is the lever: query-token L1 ($70$M) loses to GRU ($2.6$M); switching the same Transformer to causal autoregression plus residual~\eqref{eq:residual} reverses the ranking.
+
+The scale curve (Figure~\ref{fig:forecast}a) is monotonic from $500$ to $6{,}000$ clips ($0.962\to0.968\to0.972\to0.976\to0.978$); it overtakes the $6$k GRU ($0.974$) only from $4{,}000$ clips onward, so the causal Transformer needs moderate data before its advantage materialises.
+Extending the same causal L1 to all $13{,}552$ pooled clips that the local corpus yields leaves cosine flat at $0.978$ and trims MSE from $0.139$ to $0.135$ (val $n{=}1{,}631$).
+The model is data-scalable up to a few thousand clips; beyond that, on this frozen encoder, forecast cosine has reached a plateau and further gains should come from method (dense spacetime L1, action supervision), not from stacking more of the same pooled tokens.
+
+As a lightweight sanity check rather than a generative-world-model SOTA
+comparison, a next-frame CNN evaluated on 200 clips reaches $17.9$\,dB PSNR
+against copy-last $29.6$\,dB; a conditional DDPM evaluated on 64 clips reaches
+$4.9$\,dB against copy-last $30.4$\,dB
+(Figure~\ref{fig:aux}a). These under-trained baselines are consistent with,
+but do not prove, the representation-prediction argument.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figure2_forecast.pdf}
+\caption{(a)~Forecast cosine versus training clips; the open 13,552-clip
+marker uses a different 1,631-clip validation cache and is connected with a
+dashed line, whereas 500--6,000 share 750 validation clips. GRU and
+persistence are $6$k-clip references.
+(b)~Horizon $h{=}1,4$ on the $750$-clip val set used for Wilcoxon tests (Table~\ref{tab:forecast} uses $h{=}4$ pooled cosine $0.978$).
+(c)~Same $6$k-clip protocol as Table~\ref{tab:forecast}.
+Numbers are from \texttt{verified\_metrics.json}.}
+\label{fig:forecast}
+\end{figure}
+
+\subsection{RQ3: Action-path audit and physical energy}
+\label{sec:rq3}
+A post-hoc audit found that the original L2/L3
+\texttt{TransformerPredictor.forward} built, but never executed, its
+Transformer encoder. Its outputs were therefore not functions of history or
+candidate action. The earlier 98.0\% latent-reach and 92.8\% energy-ranking
+values are retained only for provenance, marked invalid, and removed from all
+claims. The corrected implementation executes block-causal attention; unit
+tests verify history, action and domain sensitivity, future-action
+non-leakage, and gradients to the action projection and encoder.
+
+On SCARED depth, energy flags near-wall transitions above chance (AUC $0.682$, Spearman $-0.471$, $n{=}132$; Figure~\ref{fig:aux}b).
+This is a weak physical correlation, not a calibrated collision probability:
+it misses the prespecified AUC $0.75$ and 500-transition gates.
+A trained alternative does not close the gap: a three-member probabilistic
+ensemble plus a calibrated near-wall head on real 5th-percentile scene depth
+(3{,}832 test transitions, temperature and conformal calibration on the
+validation split) reaches only AUC $0.54$; an input study selecting among
+current-state, future-rollout and combined features on validation does not
+help. Near-wall anticipation therefore remains an open limitation, not a
+calibrated capability.
+
+Goal-directed navigation to an \emph{arbitrary} SCARED viewpoint is a harder task: the legacy discrete branch reached $10\%$ of $10$ pilot trials (invalidated with the L3 audit).
+With the corrected v2 dynamics and CEM in the model's \emph{normalised} action
+space (candidates constrained to the behaviour support), offline
+receding-horizon navigation on the frozen test case passes all prespecified
+gates: 200 trials, reach $51.5\%$ (95\% CI $[44.5, 58.5]$), translation-error
+reduction $29.0\%$ versus persistence, 100\% gate acceptance. This is a
+model-based offline metric---reach means the planned rollout retrieves a pose
+closer to the goal than persistence---not a robot execution claim.
+Case-level retraining on 23 SCARED sequences (20,927 aligned RGB--pose frames)
+and one external C3VD trajectory yields inverse-action $R^2=0.394$ and lower
+mean test MSE for real than shuffled actions (0.326 vs 0.417, $n=2,130$).
+However, real actions win on only 73.8\% of transitions, below the prespecified
+80\% gate. The aggregate is uneven across datasets: evaluated per dataset
+under the identical protocol, SCARED reaches 75.5\% (inverse $R^2=0.474$,
+$n=1{,}999$) whereas the single held-out C3VD trajectory is near chance at
+51.9\% (inverse $R^2=-8.7$, $n=131$)---the external trajectory does not
+generalise, and the pooled number overstates robustness. Because three model
+variants were compared on this test set during the audit, we report the
+best-scoring variant's metrics as an audit result rather than as confirmation
+of a frozen protocol.
+
+The audit traced the deficit to four correctable causes: stacked-stereo input
+(two camera views squashed into one frame while the pose belongs to a single
+camera), bidirectional 64-frame encoding (history latents could attend to
+future frames), 64-frame chunk resets, and a train/evaluation mismatch in
+counterfactual negatives (global shuffles in training versus local ones at
+test time). The corrected v2 cache and protocol (single-eye crop, past-only
+eight-tubelet look-back, window-end pose alignment, local hard negatives,
+leave-one-case-out development) lift the frozen-test real-action win fraction
+from 73.8\% to \textbf{83.1\%} (fixed-bank 88.2\%, inverse $R^2=0.482$),
+passing the 80\% gate; grouped CV over four SCARED cases gives 88.9\% macro
+pair-win with a worst fold of 84.1\%. For C3VD, a depth-reprojection gate with
+the dataset's Scaramuzza intrinsics revealed that \texttt{pose.txt} requires an
+OpenGL$\to$OpenCV axis flip in addition to the row/column transpose: the
+transpose-only convention leaves 10.2\,px median reprojection error at a
+five-frame gap with the official 0--100\,mm depth scale, versus 0.21\,px
+after the flip. With corrected action labels,
+the frozen v2 model's C3VD win fraction rises from 49.1\% (chance) to 63.6\%
+($n=55$). Extending to four additional C3VDv2 trajectories from distinct colon
+segments (sigmoid, transverse, descending, cecum) gives above-chance action
+sensitivity on all five external trajectories (51--71\% per trajectory; pooled
+57.9\%, fixed-bank 67.1\%, inverse $R^2=0.458$, $n=468$)---directional
+generalisation, but still below the 80\% gate, so cross-dataset physical
+generalisation remains an open limitation. The ensemble-risk and CEM/MPPI
+implementations retain only synthetic verification pending a common SCARED
+depth/risk evaluation.
+
+\begin{table}[t]
+\centering
+\caption{Forecast by orifice ($2{,}000$-clip audited checkpoint, 250 validation
+clips). Source:
+\texttt{p2000\_full\_causal/eval\_ckpt\_cumulative\_energy.json}.
+Discrete plan-reach columns are excluded after the action-path audit.
+This protocol is not mixed with the $6{,}000$-clip causal-L1 results in
+Table~\ref{tab:forecast}.}
+\label{tab:perdomain}
+\small
+\begin{tabular}{lcc}
+\toprule
+Domain & Forecast cosine (model / persistence) & $n$ \\
+\midrule
+Laparoscopy & 0.960 / 0.895 & 84 \\
+GI endoscopy & 0.970 / 0.935 & 83 \\
+Bronchoscopy & 0.984 / 0.918 & 83 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figure3_planning.pdf}
+\caption{(a)~Forecast by orifice on the $2{,}000$-clip full model (same protocol as Table~\ref{tab:perdomain}).
+(b)~Action-grounding audit: semantic and physical NMI versus matched random baselines.
+(c)~Few-shot domain-token adaptation (32 target clips) from a laparoscopy-only model.
+Invalid discrete-MPC reach is deliberately not plotted. Sources:
+\texttt{pose\_latent\_align.json}, \texttt{action\_triplet\_align.json}, and
+\texttt{t16\_transfer\_laparo/fewshot\_*.json}.}
+\label{fig:planning}
+\end{figure}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figure8_qualitative.pdf}
+\caption{Real-frame qualitative results on held-out SCARED sequences (v2
+past-only, single-eye cache and model).
+Because Endo-HJEPA predicts latent states and has no pixel decoder, visual
+outputs are local nearest-neighbour \emph{retrievals}, not generated frames.
+Each row shows the last observation, the true four-step future, retrieval from
+the SE(3)-conditioned prediction, retrieval after shuffling actions, and the
+shuffled-retrieval absolute error. We report deterministic 25th/50th/75th
+percentile examples among cases where the real-action prediction has both lower
+latent MSE and smaller temporal retrieval error. These examples illustrate
+per-transition action use; the aggregate evidence is the 83.1\% frozen-test
+win rate and the at-chance C3VD result, not these panels.}
+\label{fig:qualitative}
+\end{figure*}
+
+Figure~\ref{fig:qualitative} supplies image-level evidence while
+preserving the distinction between latent prediction and pixel generation.
+In the selected representative positive-action cases, the conditioned latent
+retrieves the exact four-step target, whereas shuffled actions retrieve an
+incorrect temporal neighbour. This is illustrative evidence; the gate-level
+claim rests on the frozen-test and grouped-CV numbers above.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figure11_rollout_strip.pdf}
+\caption{Four-step SE(3)-conditioned rollout on held-out SCARED (v2 model).
+Each predicted latent is visualised by its nearest real frame within the same
+sequence (retrieval, not generation). The rollout tracks the approaching fold
+and tool motion across all four steps. Endo-HJEPA deliberately has no pixel
+decoder: Section~\ref{sec:theory} shows pixel prediction is appearance-limited,
+and our pixel baselines confirm it (copy-last $29.6$\,dB versus $17.9$\,dB CNN
+and $4.9$\,dB conditional DDPM; Figure~\ref{fig:aux}a). Retrieval strips are
+the faithful image-space view of a latent world model.}
+\label{fig:rollout}
+\end{figure*}
+
+\subsection{RQ4: Cross-orifice transfer}
+\label{sec:rq4}
+A laparoscopy-only model beats persistence in-domain ($0.922$ vs $0.850$) but falls \emph{below} persistence on zero-shot GI ($0.791$ vs $0.913$) and bronchoscopy ($0.776$ vs $0.893$).
+Fine-tuning only the domain embedding on $32$ target clips recovers $+0.045$
+on GI (evaluation $n{=}10$) and $+0.049$ on bronchoscopy
+(evaluation $n{=}9$; Figure~\ref{fig:planning}c), but both remain below
+persistence. This is partial recovery, not successful zero-shot adaptation.
+The unified model beats persistence in every domain (Table~\ref{tab:perdomain}).
+Orifice domains are distinct enough that zero-shot transfer fails; unified training, or a cheap domain token, is necessary.
+
+\subsection{RQ5: Action grounding (negative result)}
+\label{sec:rq5}
+Emergent latent actions are not physically grounded: SCARED pose NMI is
+$0.41$--$0.52$ versus random $0.49$--$0.53$, and exceeds its matched random
+baseline on only two of six keyframes; residual$\to$twist $R^2$ is negative.
+They are also not semantically grounded (CholecT50 verb NMI $0.044$ versus
+random $0.056$; probe accuracy $0.306$ versus majority-class $0.390$).
+A codebook-level verb loss does not help.
+Encoder-level verb supervision lifts residual$\to$verb NMI from chance $0.026$ to $0.056$---above chance, still weak.
+Latent actions index visual change; they are neither discovered surgical
+actions nor admissible control variables.
+
+\subsection{RQ6: Downstream recognition}
+\label{sec:rq6}
+
+\begin{table}[t]
+\centering
+\caption{CholecT50 recommended official five-fold cross-validation
+(50 videos; 10 test videos per fold; 3 probe seeds per fold).
+Values are mean $\pm$ standard deviation across the five fold means.
+Source: \texttt{cholect50\_probe\_crossval.json}.}
+\label{tab:downstream-cv}
+\small
+\begin{tabular}{lcc}
+\toprule
+Encoder & Phase accuracy & Instrument mAP \\
+\midrule
+V-JEPA 2 (frozen) & $0.683\pm0.040$ & $0.531\pm0.046$ \\
+V-JEPA 2 (domain-adapted) & $0.679\pm0.038$ & $0.489\pm0.048$ \\
+V-JEPA 2 (frozen, dense MIL probe) & $\mathbf{0.719\pm0.013}$ & $\mathbf{0.586\pm0.041}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On the recommended research protocol, prediction-oriented adaptation improves
+neither task. Frozen V-JEPA~2 is higher by $0.004$ phase accuracy and $0.043$
+instrument mAP. This reverses the apparent instrument gain on the five-video
+challenge split and shows why that smaller split must not be used for a
+headline adaptation claim.
+Probe \emph{capacity}, by contrast, matters: keeping the same frozen features
+but replacing the pooled linear heads with a spatial MIL max-pool instrument
+head and an attention-pooled phase head lifts phase to $0.719{\pm}0.013$ and
+instrument mAP to $0.586{\pm}0.041$ on the identical five-fold protocol.
+Small instruments are spatially local, so mean-pooling discards exactly the
+signal presence detection needs; the dense probe recovers part of it without
+any encoder supervision. The remaining gap to task-specific RDV
+($0.894$ mAP) is a supervision gap, not a representation ceiling.
+
+\begin{table}[t]
+\centering
+\caption{CholecT50 official \emph{challenge-test} videos
+(VID68, 70, 73--75), video-level linear probe, mean $\pm$ std over 3 seeds.
+This is not the recommended five-fold cross-validation benchmark.
+Source: \texttt{outputs/vjepa2\_adapted/cholect50\_probe\_multiseed.json}.
+We do not claim uniform dominance.}
+\label{tab:downstream}
+\small
+\begin{tabular}{lcc}
+\toprule
+Encoder & Phase acc & Instrument mAP \\
+\midrule
+ImageNet ViT (supervised) & $0.592\pm0.016$ & $0.430\pm0.003$ \\
+DINOv2 (image SSL) & $0.658\pm0.016$ & $\mathbf{0.575\pm0.003}$ \\
+VideoMAE (Kinetics SSL) & $0.558\pm0.012$ & $0.497\pm0.004$ \\
+TimeSformer (video ViT) & $0.683\pm0.012$ & $0.490\pm0.010$ \\
+ViViT (video ViT) & $0.692\pm0.024$ & $0.443\pm0.004$ \\
+V-JEPA 2 (frozen) & $\mathbf{0.704\pm0.006}$ & $0.406\pm0.002$ \\
+V-JEPA 2 (domain-adapted) & $0.688\pm0.057$ & $0.485\pm0.005$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figure4_downstream.pdf}
+\caption{(a)~Recommended official five-fold CV matching
+Table~\ref{tab:downstream-cv}; error bars are standard deviations across fold
+means. (b)~Secondary challenge-test backbone comparison matching
+Table~\ref{tab:downstream}; error bars are 3-seed standard deviations.
+(c)~Challenge-test per-class phase accuracy of frozen V-JEPA~2.}
+\label{fig:down}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{Challenge-test per-class phase accuracy for frozen V-JEPA~2
+(official five-video split, three-seed mean). These class-level values
+correspond to Figure~\ref{fig:down}c and are not five-fold CV estimates.}
+\label{tab:perclass}
+\small
+\begin{tabular}{lc}
+\toprule
+Phase & Accuracy \\
+\midrule
+Preparation & 0.80 \\
+Calot triangle dissection & 0.69 \\
+Clipping \& cutting & 0.67 \\
+Gallbladder dissection & 0.74 \\
+Gallbladder packaging & 0.67 \\
+Cleaning \& coagulation & 0.50 \\
+Gallbladder retraction & 0.80 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On the secondary challenge-test analysis (VID68, 70, 73--75), frozen
+V-JEPA~2 is the strongest local video model for phase ($0.704$), while DINOv2
+leads instrument presence ($0.575$). Adaptation shows a split-specific
+instrument gain ($0.406\to0.485$), but Table~\ref{tab:downstream-cv} shows that
+it does not survive the recommended five-fold protocol. This is an
+encoder-quality analysis, not a recognition-SOTA claim.
+STIR fine-tuning reduces held-out deformation chamfer from $179.9$ to $168.2$ ($-6.5\%$; Figure~\ref{fig:aux}c).
+
+\paragraph{Published SOTA context and non-comparability.}
+Table~\ref{tab:sota-context} states the comparison boundary explicitly.
+The matched claim of this paper is limited to the baselines rerun on our
+identical latent or challenge-test protocols. Published task-specific systems
+use different labels, supervision and splits, and are included to identify the
+remaining gap rather than to manufacture a ranking.
+
+\begin{table}[t]
+\centering
+\caption{Position relative to published task-specific results.
+CV$=$cross-validation; SR$=$closed-loop success rate. Values in different
+protocol columns must not be ranked directly.}
+\label{tab:sota-context}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{p{0.22\textwidth}p{0.26\textwidth}p{0.20\textwidth}p{0.23\textwidth}}
+\toprule
+Task & Published reference & Endo-HJEPA evidence & Valid conclusion \\
+\midrule
+CholecT50 instrument presence
+& RDV $0.894{\pm}0.020$ mAP, official 5-fold CV~\cite{nwoye2022cholectsplit}
+& Frozen V-JEPA~2 $0.531{\pm}0.046$, same folds but sparse linear probe
+& Same folds, unequal supervision; far below task-specific result \\
+Cholec80 online phase
+& SurgicalMamba $94.6\%$ accuracy~\cite{surgicalmamba}
+& Full Cholec80 is unavailable locally
+& Required external benchmark remains open \\
+Physical endoscope navigation
+& EndoWAM $80.2\%$ SR on 96 phantom trials~\cite{endowam}
+& $51.5\%$ reach on 200 offline SCARED trials (model-based)
+& Offline gap closed; robot execution remains open \\
+Surgical video generation
+& SurgWM reports PSNR/SSIM/FVD~\cite{svwm}
+& No decoder; latent cosine and energy
+& Orthogonal objectives and metrics \\
+Latent endoscopic forecast
+& No standard public benchmark identified
+& $0.978$ cosine versus matched persistence/GRU/Mamba
+& Strong internal comparison, not external SOTA \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figure5_aux.pdf}
+\caption{(a)~Lightweight pixel baselines (CNN: 200 clips; DDPM: 64 evaluation
+clips) lose to copy-last; this is a sanity check, not a generative-model SOTA comparison.
+(b)~Energy versus SCARED wall proximity.
+(c)~STIR token chamfer before/after the regulariser~\eqref{eq:stir}.}
+\label{fig:aux}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figure6_latent.pdf}
+\caption{(a)~PCA of pooled val latents coloured by orifice: a partially shared space with unsupervised domain structure.
+(b)~One clip's latent trajectory is smooth and low-dimensional, which is why persistence is a strong short-horizon baseline.}
+\label{fig:latent}
+\end{figure}
+
+\subsection{Per-dataset decomposition}
+\label{sec:perds}
+``Per-domain'' (three orifices) hides dataset-level variation.
+We reconstruct the same $750$-clip video-level val list used to build the $6{,}000$-clip cache (\texttt{domain\_balanced\_indices}, seed $1$), attach dataset names, and evaluate the causal-L1 checkpoint.
+Alignment is exact ($n_{\mathrm{cache}}{=}n_{\mathrm{rebuilt}}{=}750$).
+Table~\ref{tab:perds} and Figure~\ref{fig:perds} report every dataset with $n{\ge}5$; SCARED and STIR appear with $n{=}1$ in the JSON and are omitted from the table.
+
+\begin{table}[t]
+\centering
+\caption{Per-dataset latent forecast ($6{,}000$-clip causal L1, $h{=}4$, video-level val).
+Source: \texttt{outputs/scale\_6000\_causal/per\_dataset.json} (\texttt{aligned=true}).
+Overall $0.978$ / $0.916$ matches Table~\ref{tab:forecast}.}
+\label{tab:perds}
+\small
+\begin{tabular}{llrccc}
+\toprule
+Dataset & Domain & $n$ & cos & persist & $\Delta$ \\
+\midrule
+ION\_bronch & bronch & 250 & 0.988 & 0.918 & $+0.071$ \\
+Kvasir-Capsule & gi & 206 & 0.978 & 0.941 & $+0.037$ \\
+CholecT50 & laparo & 89 & 0.963 & 0.894 & $+0.069$ \\
+Stereo\_Lap & laparo & 75 & 0.982 & 0.889 & $+0.093$ \\
+endoscapes & laparo & 72 & 0.961 & 0.893 & $+0.068$ \\
+HyperKvasir & gi & 44 & 0.970 & 0.924 & $+0.046$ \\
+endovis2018\_full & laparo & 7 & 0.961 & 0.882 & $+0.079$ \\
+endovis2017\_full & laparo & 5 & 0.965 & 0.909 & $+0.056$ \\
+\midrule
+All val clips & --- & 750 & 0.978 & 0.916 & $+0.062$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figure7_per_dataset.pdf}
+\caption{Per-dataset forecast corresponding to Table~\ref{tab:perds} (plus $n{=}1$ rows SCARED/STIR, not used in the table).
+The model beats persistence on every dataset; the largest margins are camera-motion-dominated corpora (Stereo\_Lap, ION).}
+\label{fig:perds}
+\end{figure}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figure10a_forecast_qualitative.pdf}
+\caption{Cross-dataset visualisation (part 1 of 2) of the 13,552-clip causal-L1 checkpoint
+on 1,631 video-level validation clips. All 11 datasets represented in that
+cache are shown across this figure and Figure~\ref{fig:forecast-qualitative-all-b}.
+Since the model has no pixel decoder, each predicted terminal
+latent retrieves the nearest terminal frame from a \emph{different} validation
+clip of the same dataset; EndoNeRF and STIR have $n=1$ and therefore use a
+within-clip retrieval explicitly marked as such. Rows are deterministic median
+positive-gain examples, not best cases. Left labels give the aggregate
+dataset-level cosine (model versus persistence) and transition win fraction;
+the final column is image-space retrieval error. Retrieval visualises latent
+neighbourhoods and must not be read as generated-pixel accuracy. Source:
+\texttt{qualitative\_forecast\_15000.json}.}
+\label{fig:forecast-qualitative-all}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figure10b_forecast_qualitative.pdf}
+\caption{Cross-dataset latent retrieval (part 2 of 2), under the identical
+protocol and column definitions of Figure~\ref{fig:forecast-qualitative-all}.
+Together the two panels cover every dataset represented in the cached
+video-level validation split.}
+\label{fig:forecast-qualitative-all-b}
+\end{figure*}
+
+The unified model beats persistence on every listed dataset.
+The largest margins are Stereo\_Lap ($+0.093$) and ION bronchoscopy ($+0.071$), consistent with those videos being camera-motion-dominated and therefore the most predictable in latent space.
+Kvasir-Capsule has the strongest persistence ($0.941$) and the smallest---but still positive---margin ($+0.037$): capsule motion is slower, so copying the last token is already a good forecast.
+This is the dataset-level reading of the paper's claim: unification helps, and it does not secretly rely on one easy corpus.
+
+\paragraph{Cross-dataset qualitative conclusion.}
+The larger 13,552-clip cache in Figure~\ref{fig:forecast-qualitative-all}
+contains 11 datasets. Aggregate cosine exceeds persistence for every row:
+the gains remain clear in ION (0.988 vs 0.918), Stereo\_Lap (0.987 vs 0.889),
+CholecT50 (0.969 vs 0.900), HyperKvasir (0.974 vs 0.919) and
+Kvasir-Capsule (0.980 vs 0.940). Per-transition MSE win fractions are 94.6\%
+for endoscapes, 98.7\% for CholecT50 and 100\% for the remaining rows.
+The latter must not be over-interpreted for EndoNeRF ($n=1$), STIR ($n=1$)
+or SCARED ($n=4$). Cross-clip retrievals preserve broad anatomy, viewpoint and
+tool context but can differ substantially in local tissue texture, as the error
+maps show. Thus the visual result supports predictable latent structure, not
+photorealistic future synthesis.
+
+Eight atlas datasets do not appear in this validation montage:
+C3VD, Cholec80-Boxes, CholecSeg8k, Kvasir-Instrument,
+EndoVis-InstrumentTracking and MIS\_own have no validation clips under the
+fixed manifest split; SurgT and TrackVes are video/tracking assets excluded
+from the decoded-frame cache. Their images appear in
+Figure~\ref{fig:dataset-atlas}, but fabricating forecast outputs for them
+would be invalid. C3VD contributes training-side pose supervision only, since
+the single available trajectory cannot support a held-out C3VD claim.
+
+\subsection{Ablations}
+\label{sec:ablation}
+
+\begin{table}[t]
+\centering
+\caption{Design ablations.
+The first five rows share the $6{,}000$-clip protocol of Table~\ref{tab:forecast}.
+Residual on/off uses a different val cache (persist $0.886$) and is not mixed into the $0.916$ persist row.}
+\label{tab:ablation}
+\small
+\begin{tabular}{lcl}
+\toprule
+Variant & cos $h{=}4$ & Protocol \\
+\midrule
+Persistence & 0.916 & 6k shared cache \\
+Query-token L1 & 0.936 & 6k \\
+Mamba / SSM & 0.971 & 6k \\
+GRU & 0.974 & 6k \\
+\textbf{Causal L1} & \textbf{0.978} & 6k \\
+Full H-JEPA (L1{+}L2{+}L3{+}E) & 0.971 & 2k full, forecast only \\
+\quad w/o residual (other cache) & 0.768 & persist $0.886$ on that cache \\
+\quad with residual (same cache) & 0.900 & persist $0.886$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three findings.
+(i)~Causal autoregression is the single largest forecaster improvement ($0.936\to0.978$).
+(ii)~Residual anchoring is essential at modest scale: without it the large predictor drops below persistence on its own cache ($0.768$ vs $0.886$).
+(iii)~L2 adds little to short-horizon \emph{forecast} (full hierarchy $0.971$
+at 2k); the legacy L3 planning interpretation is invalidated and is not an
+ablation benefit.
+Hyperparameter sensitivity on the 6k val is ${<}0.002$.
+
+\subsection{Reproducibility}
+\label{sec:reproducibility}
+Forecast experiments use the \texttt{endoworld.world.train} and
+\texttt{endoworld.eval.per\_dataset} modules. Planning and energy use
+\texttt{endoworld.eval.eval\_ckpt} with the SCARED collision and navigation
+modules; recognition uses \texttt{endoworld.eval.cholect50\_probe}. Figure
+scripts under \texttt{docs/endohjepa} read \texttt{verified\_metrics.json} or
+the named qualitative protocol JSON. Encoder caches are shared across matched
+ablations, probe heads use fixed seeds, and every caption identifies its split
+and checkpoint.
+
+\section{Discussion}
+
+\subsection{Clinical significance}
+The target is anticipatory endoscopic intelligence, not another phase-recognition point.
+Forecast is the computational primitive behind collision warning and loss-of-view recovery.
+The energy head correlates weakly with camera-to-tissue distance, but does not
+meet the calibrated-risk gate.
+Unification is the data-efficient path for bronchoscopy, where labelled video is scarce.
+All of this remains in-silico.
+Clinical translation would require a pose/action-conditioned model, calibrated
+time-to-contact or view-loss endpoints, prospective device-level testing, and
+a human-factors study showing that warnings improve clinician performance
+without increasing distraction. Latent cosine alone is not a clinical
+endpoint.
+
+\subsection{What the method actually contributes}
+The validated innovations that move forecast numbers are residual anchoring,
+causal L1 and domain tokens. The physical contribution is a
+correctness-audited pipeline---continuous SE(3), normalised-action CEM,
+calibration and hard rejection---that now passes its offline gates on SCARED,
+while remaining model-based evidence rather than robot execution. This
+distinction prevents a high latent similarity score from being misrepresented
+as control.
+
+\subsection{Failure analysis}
+A small GRU is nearly competitive at $h{=}1$.
+The original discrete action path failed an implementation sensitivity audit,
+and unsupervised residual codes encode visual change, not steer commands;
+only after metric SE(3) supervision, normalised-action CEM and the v2 data
+corrections does offline navigation pass its gates. Calibrated near-wall risk
+fails on real depth (AUC $0.54$), and C3VD external generalisation stays below
+gate even after the pose-convention fix.
+Zero-shot GI/bronch transfer fails because the domains are genuinely distinct at the dynamics level.
+Each failure points to a concrete remedy (action supervision, domain-token adaptation) rather than to an overclaim.
+
+\subsection{Comparison to published world models}
+Endo-HJEPA occupies a distinct design point: hierarchical representation
+prediction, unified across orifices, no pixel decoder, with physical control
+claims gated by pose/depth evidence.
+V-JEPA~2-AC and SurgRec release public checkpoints, but the former is
+action-conditioned for a Franka robot and the latter is a recognition
+encoder; neither is an endoscopic planner under our protocol. EndoWAM reports
+physical phantom navigation without a public checkpoint, while SVWM evaluates
+pixel generation. We therefore report their published task metrics in
+Table~\ref{tab:sota-context} as non-comparable context rather than fabricate a
+leaderboard.
+
+\subsection{Limitations}
+(i)~Training scale is far below SurgRec (${\sim}2{\times}10^8$ frames).
+(ii)~Full Cholec80 depends on CAMMA access; the remaining 17 C3VD/C3VDv2
+trajectories are Drive-quota-limited.
+(iii)~ION has no public telemetry.
+(iv)~Latent residual actions are not interpretable or controllable.
+(v)~All planning is in-silico. The corrected continuous branch passes its
+action-sensitivity gate on held-out SCARED cases but stays below the gate on
+five external C3VD trajectories even after the pose-convention fix (pooled
+57.9\%); ensemble risk and CEM/MPPI still have only synthetic verification.
+(vi)~Val forecast is domain-balanced, so per-dataset $n$ is not proportional to corpus size; $n{=}1$ rows are omitted.
+(vii)~Headline checkpoints use pooled latents; dense L1, VICReg,
+specular/instrument weighting and STIR are optional extensions, not activated
+together in those checkpoints.
+(viii)~The original discrete-MPC values are invalid after the action-path
+correctness audit and are excluded from evidence.
+(ix)~One third of the 750-clip balanced forecast validation set comes from
+private ION bronchoscopy, limiting independent reproduction; public-only and
+external-site validation remain necessary.
+(x)~The pooled forecast cache uses the encoder's bidirectional 64-frame
+windows, so history tokens may carry limited future context within a window;
+all baselines share the same cache, but absolute cosines could drop under
+strictly causal encoding. The physical-action cache (v2) already uses
+past-only look-back encoding.
+
+\section{Conclusion}
+Endo-HJEPA brings hierarchical joint-embedding prediction to unified
+cross-orifice endoscopic video and makes the boundary between prediction and
+physical control explicit.
+A causal residual forecaster surpasses persistence, GRU and Mamba on a
+leakage-free protocol, and a per-dataset decomposition shows the forecast win
+is not carried by a single corpus. Energy has a weak physical correlation, and
+a trained calibrated risk head on real depth does not improve on it.
+After the audit-driven corrections (single-eye input, past-only encoding,
+local hard negatives, grouped-CV development), the continuous SE(3) path
+passes its 80\% action-sensitivity gate on held-out SCARED cases (83.1\%),
+and behaviour-constrained continuous CEM passes the offline navigation gates
+(51.5\% reach, 200 trials).
+A reprojection-gated pose fix plus four additional C3VDv2 trajectories give
+above-chance action sensitivity on all five external trajectories (pooled
+57.9\%), still below gate. Risk calibration and robot-executed planning
+therefore remain open, not navigation claims.
+We release the protocol, the verified metric file, and the figure generators so that every number in this paper can be regenerated from \texttt{outputs/}.
+
+\section*{Declarations}
+\textbf{Ethics.} Public, de-identified datasets are used under their original
+licences. Private ION cases are anonymised (\texttt{case\_XXX}), but the
+corresponding institutional approval or exemption identifier must be supplied
+before submission; otherwise all ION-derived results must be removed. All
+planning evaluation is in-silico.
+\textbf{Competing interests.} None declared.
+\textbf{Data/code availability.} Public datasets from their sources; the \texttt{endoworld} package, \texttt{verified\_metrics.json}, and figure scripts are released with this manuscript.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

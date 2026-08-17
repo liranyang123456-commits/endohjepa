@@ -1,0 +1,262 @@
+{
+  "paper": "Endo-HJEPA",
+  "isolated_from": "outputs/ablation_* (CT planning, different paper)",
+  "sections": {
+    "forecast": {
+      "note": "video-level val; causal L1 beats GRU and persistence",
+      "causal_l1": {
+        "cos": 0.978,
+        "mse": 0.139
+      },
+      "query_l1": {
+        "cos": 0.936
+      },
+      "gru": {
+        "cos": 0.974
+      },
+      "mamba_ssm": {
+        "cos": 0.971
+      },
+      "persistence": {
+        "cos": 0.916
+      },
+      "stats_vs_gru": [
+        {
+          "horizon": 1,
+          "cos_A": 0.9811,
+          "cos_B": 0.9777,
+          "wilcoxon_p": 1.2437326584997329e-84,
+          "holm_p": 1.2437326584997329e-84,
+          "significant": true
+        },
+        {
+          "horizon": 4,
+          "cos_A": 0.9776,
+          "cos_B": 0.974,
+          "wilcoxon_p": 2.0312706775886236e-102,
+          "holm_p": 4.062541355177247e-102,
+          "significant": true
+        }
+      ]
+    },
+    "planning": {
+      "plan_better_than_persist": 0.98,
+      "cos_plan": 0.92,
+      "cos_l1": 0.97,
+      "cos_persist": 0.874,
+      "energy_plan_lower_frac": 0.928,
+      "note": "cumulative path energy; MPC beats persistence but not causal L1"
+    },
+    "cross_domain_zero_shot": {
+      "note": "train laparo only -> test GI/bronch; below persistence = transfer fails, motivates multi-domain training",
+      "rows": [
+        {
+          "domain": "laparo",
+          "cos_model": 0.922,
+          "cos_persist": 0.85
+        },
+        {
+          "domain": "gi",
+          "cos_model": 0.791,
+          "cos_persist": 0.913
+        },
+        {
+          "domain": "bronch",
+          "cos_model": 0.776,
+          "cos_persist": 0.893
+        }
+      ]
+    },
+    "action_grounding": {
+      "physical_scared_nmi_range": [
+        0.41,
+        0.52
+      ],
+      "physical_scared_random_range": [
+        0.49,
+        0.53
+      ],
+      "physical_keyframes_above_random": 2,
+      "physical_n_keyframes": 6,
+      "semantic_verb_nmi": 0.044,
+      "semantic_verb_nmi_random": 0.056,
+      "semantic_verb_probe_acc": 0.306,
+      "semantic_verb_chance": 0.39,
+      "note": "emergent latent actions are weakly/not grounded without supervision (honest negative)"
+    },
+    "downstream_recognition": {
+      "cholect50_official_five_fold_cv": {
+        "phase_acc_frozen": 0.6829,
+        "phase_std_frozen_across_folds": 0.04,
+        "phase_acc_adapted": 0.6792,
+        "phase_std_adapted_across_folds": 0.038,
+        "instrument_mAP_frozen": 0.5315,
+        "instrument_std_frozen_across_folds": 0.046,
+        "instrument_mAP_adapted": 0.4887,
+        "instrument_std_adapted_across_folds": 0.0481,
+        "n_folds": 5,
+        "n_probe_seeds_per_fold": 3
+      },
+      "cholect50_random_split": {
+        "phase_acc_frozen": 0.635,
+        "phase_acc_adapted": 0.625,
+        "instrument_mAP_frozen": 0.5,
+        "instrument_mAP_adapted": 0.42
+      },
+      "cholect50_challenge_test_multiseed": {
+        "phase_acc_frozen": 0.704,
+        "phase_std_frozen": 0.006,
+        "phase_acc_adapted": 0.688,
+        "phase_std_adapted": 0.057,
+        "instrument_mAP_frozen": 0.406,
+        "instrument_std_frozen": 0.002,
+        "instrument_mAP_adapted": 0.485,
+        "instrument_std_adapted": 0.005,
+        "test_videos": [
+          "VID68",
+          "VID70",
+          "VID73",
+          "VID74",
+          "VID75"
+        ]
+      },
+      "cholect50_finetune_phase_acc": 0.667,
+      "cholect50_linear_probe_phase_acc": 0.635,
+      "endovis_instrument_mAP": {
+        "frozen": 0.469,
+        "adapted": 0.463
+      },
+      "note": "challenge-test split is not official five-fold CV; adaptation helps instrument mAP but reduces phase mean"
+    },
+    "external_baselines": {
+      "vjepa2-frozen": {
+        "phase_acc": 0.704,
+        "phase_std": 0.006,
+        "instrument_mAP": 0.406,
+        "instrument_std": 0.002
+      },
+      "vjepa2-adapted": {
+        "phase_acc": 0.688,
+        "phase_std": 0.057,
+        "instrument_mAP": 0.485,
+        "instrument_std": 0.005
+      },
+      "imagenet": {
+        "phase_acc": 0.592,
+        "phase_std": 0.016,
+        "instrument_mAP": 0.43,
+        "instrument_std": 0.003
+      },
+      "videomae": {
+        "phase_acc": 0.558,
+        "phase_std": 0.012,
+        "instrument_mAP": 0.497,
+        "instrument_std": 0.004
+      },
+      "dinov2": {
+        "phase_acc": 0.658,
+        "phase_std": 0.016,
+        "instrument_mAP": 0.575,
+        "instrument_std": 0.003
+      },
+      "timesformer": {
+        "phase_acc": 0.683,
+        "phase_std": 0.012,
+        "instrument_mAP": 0.49,
+        "instrument_std": 0.01
+      },
+      "vivit": {
+        "phase_acc": 0.692,
+        "phase_std": 0.024,
+        "instrument_mAP": 0.443,
+        "instrument_std": 0.004
+      }
+    },
+    "data_scale_curve": [
+      {
+        "clips": 500,
+        "cos": 0.962,
+        "mse": 0.236
+      },
+      {
+        "clips": 1000,
+        "cos": 0.968,
+        "mse": 0.201
+      },
+      {
+        "clips": 2000,
+        "cos": 0.972,
+        "mse": 0.174
+      },
+      {
+        "clips": 4000,
+        "cos": 0.976,
+        "mse": 0.15
+      },
+      {
+        "clips": 6000,
+        "cos": 0.978,
+        "mse": 0.139
+      }
+    ],
+    "energy_physical_grounding": {
+      "nearwall_auc": 0.682,
+      "spearman_energy_vs_depth": -0.471,
+      "n_transitions": 132,
+      "note": "energy head flags near-wall (collision-risk) transitions above chance"
+    },
+    "fewshot_domain_adaptation": {
+      "gi": {
+        "zero_shot": 0.793,
+        "few_shot": 0.839,
+        "persistence": 0.911,
+        "recovery": 0.045
+      },
+      "bronch": {
+        "zero_shot": 0.781,
+        "few_shot": 0.83,
+        "persistence": 0.894,
+        "recovery": 0.049
+      }
+    },
+    "supervised_grounding_attempt": {
+      "before_nmi": 0.051,
+      "after_nmi": 0.051,
+      "note": "codebook-level verb supervision does NOT improve grounding; residuals don't encode action semantics"
+    },
+    "scared_navigation": {
+      "reach_latent_success_rate": 0.1,
+      "pose_err_model_mm": 10.18,
+      "pose_err_persist_mm": 10.18,
+      "note": "goal-directed navigation to arbitrary targets is hard (weak action grounding); honest boundary"
+    },
+    "stir_deformation": {
+      "chamfer_before": 179.9,
+      "chamfer_after": 168.2,
+      "note": "STIR point-track regulariser reduces held-out deformation chamfer (~6.5%)"
+    },
+    "encoder_action_grounding": {
+      "before_nmi": 0.049,
+      "after_nmi": 0.056,
+      "note": "encoder-level action supervision lifts grounding above chance (~2x random), still weak"
+    },
+    "census": {
+      "n_sequences": 1707,
+      "n_frames": 1067026,
+      "by_domain": {
+        "gi": {
+          "seq": 1004,
+          "frames": 415772
+        },
+        "laparo": {
+          "seq": 627,
+          "frames": 487840
+        },
+        "bronch": {
+          "seq": 76,
+          "frames": 163414
+        }
+      }
+    }
+  }
+}

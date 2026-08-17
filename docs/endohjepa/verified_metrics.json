@@ -1,0 +1,350 @@
+{
+  "paper": "Endo-HJEPA",
+  "note": "Single source of truth for tables and figures. Every number is from a named JSON under outputs/. Do not mix 2000-clip and 6000-clip rows in the same table without labelling the protocol.",
+  "forecast_6000": {
+    "source": "outputs/scale_6000_*/val_metrics.json",
+    "n_train": 6000,
+    "protocol": "video-level val, pooled latents, h=4",
+    "persistence": {"cos": 0.916, "mse": 0.532},
+    "query_l1": {"cos": 0.936, "mse": 0.408},
+    "mamba": {"cos": 0.971, "mse": 0.180},
+    "gru": {"cos": 0.974, "mse": 0.161},
+    "causal_l1": {"cos": 0.978, "mse": 0.139}
+  },
+  "wilcoxon_vs_gru": {
+    "source": "outputs/scale_6000_causal/stats_vs_gru.json",
+    "n_clips": 750,
+    "h1": {"ours": 0.9811, "gru": 0.9777, "persist": 0.9426, "delta": 0.00335, "ci95": [0.00300, 0.00371], "holm_p": 1.24e-84},
+    "h4": {"ours": 0.9776, "gru": 0.9740, "persist": 0.9157, "delta": 0.00360, "ci95": [0.00321, 0.00398], "holm_p": 4.06e-102}
+  },
+  "wilcoxon_vs_mamba": {
+    "source": "outputs/scale_6000_causal/stats_vs_mamba.json",
+    "h1": {"ours": 0.9811, "mamba": 0.9772, "holm_p": 3.40e-88},
+    "h4": {"ours": 0.9776, "mamba": 0.9715, "holm_p": 1.23e-111}
+  },
+  "scale_curve": {
+    "source": "outputs/scale_{500,1000,2000,4000,6000,15000_causal}/val_metrics.json",
+    "note": "500–6000 share a 750-clip val; 13552 uses the 15000-cache val (1631 clips). Cosine is flat; MSE still drops.",
+    "clips": [500, 1000, 2000, 4000, 6000, 13552],
+    "cos": [0.962, 0.968, 0.972, 0.976, 0.978, 0.978],
+    "mse": [0.236, 0.201, 0.174, 0.150, 0.139, 0.135]
+  },
+  "scale_13552": {
+    "source": "outputs/scale_15000_causal/val_metrics.json",
+    "n_train": 13552,
+    "n_val": 1631,
+    "cos": 0.978,
+    "mse": 0.135,
+    "persist_cos": 0.917,
+    "persist_mse": 0.529
+  },
+  "planning_2000": {
+    "source": "outputs/p2000_full_causal/eval_ckpt_cumulative_energy.json",
+    "valid": false,
+    "invalid_reason": "Post-hoc correctness audit found TransformerPredictor.forward did not execute its encoder, so L2/L3 outputs were not conditioned on history/actions. These values are retained only for provenance and must not appear as scientific evidence.",
+    "n_val": 250,
+    "plan_better_than_persist": 0.980,
+    "cos_plan": 0.920,
+    "cos_l1": 0.970,
+    "cos_persist": 0.874,
+    "energy_plan_lower_frac": 0.928,
+    "by_domain": {
+      "laparo": {"forecast": 0.960, "persist": 0.895, "plan_reach": 0.952, "n": 84},
+      "gi": {"forecast": 0.970, "persist": 0.935, "plan_reach": 0.988, "n": 83},
+      "bronch": {"forecast": 0.984, "persist": 0.918, "plan_reach": 1.000, "n": 83}
+    }
+  },
+  "cross_domain_zero_shot": {
+    "source": "outputs/t16_transfer_laparo/eval_ckpt.json",
+    "laparo": {"model": 0.922, "persist": 0.850, "n": 42},
+    "gi": {"model": 0.791, "persist": 0.913, "n": 42},
+    "bronch": {"model": 0.776, "persist": 0.893, "n": 41}
+  },
+  "fewshot": {
+    "source": "outputs/t16_transfer_laparo/fewshot_{gi,bronch}.json",
+    "gi": {"zero": 0.793, "few": 0.839, "persist": 0.911, "recovery": 0.045},
+    "bronch": {"zero": 0.781, "few": 0.830, "persist": 0.894, "recovery": 0.049}
+  },
+  "downstream_official": {
+    "source": "outputs/vjepa2_adapted/cholect50_probe_multiseed.json",
+    "split": "CholecT50 official challenge test (VID68,70,73,74,75), 3 seeds",
+    "imagenet": {"phase": 0.592, "phase_std": 0.016, "instr": 0.430, "instr_std": 0.003},
+    "dinov2": {"phase": 0.658, "phase_std": 0.016, "instr": 0.575, "instr_std": 0.003},
+    "videomae": {"phase": 0.558, "phase_std": 0.012, "instr": 0.497, "instr_std": 0.004},
+    "timesformer": {"phase": 0.683, "phase_std": 0.012, "instr": 0.490, "instr_std": 0.010},
+    "vivit": {"phase": 0.692, "phase_std": 0.024, "instr": 0.443, "instr_std": 0.004},
+    "vjepa2_frozen": {"phase": 0.704, "phase_std": 0.006, "instr": 0.406, "instr_std": 0.002},
+    "vjepa2_adapted": {"phase": 0.688, "phase_std": 0.057, "instr": 0.485, "instr_std": 0.005}
+  },
+  "downstream_crossval": {
+    "source": "outputs/vjepa2_adapted/cholect50_probe_crossval.json",
+    "split": "CholecT50 official recommended five-fold cross-validation, 10 test videos per fold, 3 probe seeds per fold",
+    "n_clips": 800,
+    "n_videos": 50,
+    "vjepa2_frozen": {
+      "phase": 0.6829,
+      "phase_std_across_folds": 0.0400,
+      "instr": 0.5315,
+      "instr_std_across_folds": 0.0460
+    },
+    "vjepa2_adapted": {
+      "phase": 0.6792,
+      "phase_std_across_folds": 0.0380,
+      "instr": 0.4887,
+      "instr_std_across_folds": 0.0481
+    },
+    "vjepa2_frozen_dense_mil": {
+      "source": "outputs/vjepa2_adapted/cholect50_dense_probe_crossval.json",
+      "probe": "dense tokens; MIL max-pool instrument head + attention-pool phase head",
+      "phase": 0.7192,
+      "phase_std_across_folds": 0.0133,
+      "instr": 0.5864,
+      "instr_std_across_folds": 0.0410
+    }
+  },
+  "per_class_frozen": {
+    "source": "outputs/vjepa2_adapted/cholect50_probe_multiseed.json",
+    "preparation": 0.80,
+    "calot_triangle_dissection": 0.69,
+    "clipping_cutting": 0.67,
+    "gallbladder_dissection": 0.74,
+    "gallbladder_packaging": 0.67,
+    "cleaning_coagulation": 0.50,
+    "gallbladder_retraction": 0.80
+  },
+  "collision": {
+    "source": "outputs/p2000_full_causal/scared_collision.json",
+    "auc": 0.682,
+    "spearman": -0.471,
+    "n_transitions": 132
+  },
+  "navigation": {
+    "source": "outputs/p2000_full_causal/scared_navigation.json",
+    "reach": 0.10,
+    "n_trials": 10,
+    "pose_err_reduction": 0.0
+  },
+  "grounded_upgrade": {
+    "evidence_class": "software verification only; not a paper result",
+    "action_path_unit_tests": {
+      "source": "tests/test_endohjepa_units.py",
+      "passed": true,
+      "checks": ["history sensitivity", "action sensitivity", "domain sensitivity", "future-action block causality", "action/encoder gradients"]
+    },
+    "continuous_action_smoke": {
+      "source": "outputs/continuous_actions_smoke/metrics.json",
+      "synthetic": true,
+      "real_action_win_fraction": 0.9841,
+      "inverse_action_r2": 0.7000,
+      "passed": true
+    },
+    "continuous_action_real": {
+      "source": "outputs/continuous_actions_real_cf/metrics.json",
+      "dataset": "SCARED case-level split plus C3VD external test",
+      "n_validation": 2299,
+      "n_test": 2130,
+      "mse_real_actions": 0.3262,
+      "mse_shuffled_actions": 0.4172,
+      "real_action_win_fraction": 0.7385,
+      "inverse_action_r2": 0.3937,
+      "thresholds": {
+        "real_action_win_fraction": 0.8,
+        "inverse_action_r2": 0.3
+      },
+      "passed": false,
+      "per_dataset_test": {
+        "SCARED": {"n": 1999, "win_fraction": 0.7554, "mse_real": 0.2852, "mse_shuffled": 0.3824, "inverse_action_r2": 0.4741},
+        "C3VD": {"n": 131, "win_fraction": 0.5191, "mse_real": 0.9508, "mse_shuffled": 0.9440, "inverse_action_r2": -8.7108},
+        "note": "Canonical evaluate() protocol (batch 32, permutation seed 0). Aggregate 73.8% is dominated by SCARED; the single held-out C3VD trajectory is near chance."
+      },
+      "audit_caveat": "Three variants (real, real_cf, real_skip) were compared on this test set during the audit; the reported variant has the highest test win, so treat as audit evidence, not a frozen-protocol confirmation.",
+      "interpretation": "Continuous SE(3) contains measurable physical signal and reduces mean error versus shuffled actions, but action sensitivity is not reliable enough for the planning branch."
+    },
+    "continuous_action_v2": {
+      "source": "outputs/continuous_actions_v2/metrics.json + frozen_test_eval.json + continuous_actions_v2_cv/grouped_cv_report.json",
+      "cache": "outputs/physical_actions_v2/sequences.pt (mono-cropped, past-only 8-tubelet lookback, window-end pose alignment)",
+      "protocol": "local hard negatives; grouped-CV model development; single frozen-test evaluation after gate passed",
+      "grouped_cv": {
+        "macro_pair_win_fraction": 0.8887,
+        "min_fold_pair_win_fraction": 0.8414,
+        "macro_inverse_action_r2": 0.4319,
+        "n_folds": 4,
+        "passed": true
+      },
+      "validation": {
+        "n": 1108,
+        "real_action_win_fraction": 0.7933,
+        "fixed_bank_pair_win_fraction": 0.8588,
+        "inverse_action_r2": 0.4373
+      },
+      "frozen_test": {
+        "n": 1013,
+        "real_action_win_fraction": 0.8312,
+        "fixed_bank_pair_win_fraction": 0.8815,
+        "inverse_action_r2": 0.4821,
+        "mse_real_actions": 0.1438,
+        "mse_shuffled_actions": 0.2259,
+        "SCARED": {"n": 958, "win_fraction": 0.8518, "inverse_action_r2": 0.5101},
+        "C3VD": {"n": 55, "win_fraction": 0.4909, "inverse_action_r2": -5.4137},
+        "C3VD_pose_corrected": {
+          "source": "outputs/continuous_actions_v2/c3vd_corrected_eval.json",
+          "n": 55,
+          "win_fraction": 0.6364,
+          "fixed_bank_pair_win_fraction": 0.5745,
+          "inverse_action_r2": -1.3772,
+          "note": "After the reprojection-gated pose fix (transpose + GL->CV flip), C3VD rises from chance to above-chance but stays below the 80% gate; single trajectory, n=55."
+        },
+        "C3VD_external_5traj": {
+          "source": "outputs/continuous_actions_v2/c3vd_external_5traj.json",
+          "protocol": "v2 model (SCARED-only training) on 5 external C3VD trajectories (4 C3VDv2 segments + cecum_t1_a), all pose-gate corrected",
+          "n": 468,
+          "pooled_win_fraction": 0.5791,
+          "fixed_bank_pair_win_fraction": 0.6714,
+          "inverse_action_r2": 0.4584,
+          "per_trajectory_win": {"c1_cecum_t1_v4": 0.537, "c1_descending_t4_v4": 0.513, "c1_sigmoid1_t4_v4": 0.617, "c1_transverse1_t1_v4": 0.709, "cecum_t1_a": 0.636},
+          "note": "Above chance on all five trajectories but below the 80% gate; external generalisation is directional, not gate-level."
+        },
+        "passed": true,
+        "note": "80% action-sensitivity gate passed on SCARED after the v2 corrections; external C3VD remains below the gate and is reported separately."
+      },
+      "navigation_v2": {
+        "source": "outputs/physical_navigation_v2/report.json",
+        "protocol": "offline continuous CEM in normalised action space (behaviour-support constrained), v2 model, frozen test case dataset_7",
+        "n_trials": 200,
+        "reach_rate": 0.515,
+        "reach_rate_ci95": [0.445, 0.585],
+        "translation_error_reduction_fraction": 0.2895,
+        "translation_reduction_ci95": [0.9133, 1.3171],
+        "command_translation_error_mean": 3.0,
+        "accepted_rate": 1.0,
+        "gates": {"trials": 100, "reach": 0.5, "error_reduction": 0.2},
+        "passed": true,
+        "note": "Model-based offline evaluation: reach = model-predicted terminal latent retrieves a pose closer to the goal than persistence. Not a robot execution claim."
+      },
+      "risk_real_v2": {
+        "source": "outputs/probabilistic_risk_v2/metrics.json + risk_input_study.json",
+        "protocol": "3-member probabilistic ensemble + near-wall head on real SCARED 5th-pct depth (34.4mm train-split quartile threshold), temperature+conformal calibration on val",
+        "n_test_transitions": 3832,
+        "first_head_test_auc": 0.531,
+        "input_study": {"future_val_auc": 0.489, "current_val_auc": 0.628, "both_val_auc": 0.564, "selected": "current", "final_test_auc": 0.536},
+        "gate": {"auc": 0.75, "min_transitions": 500},
+        "passed": false,
+        "interpretation": "A trained, calibrated risk head on latent states does not predict held-out near-wall depth; the exploratory energy correlation (AUC 0.682, n=132) remains the strongest and still weak physical signal."
+      },
+      "c3vd_pose_gate": {
+        "source": "docs/endohjepa/c3vd_pose_gate.json",
+        "method": "depth reprojection with Scaramuzza intrinsics (C3VD paper Table 3), 40 pairs, 5-frame gap, official 0-100mm uint16 depth scale",
+        "transpose_only_median_px": 10.16,
+        "transpose_plus_flip_median_px": 0.208,
+        "rotation_only_median_px": 0.208,
+        "winner": "transpose + GL->CV flip",
+        "note": "Rotation-only ties because rotation dominates pixel error at these depths; the flip is the convention that keeps translation correct."
+      }
+    },
+    "risk_smoke": {
+      "source": "outputs/probabilistic_risk_smoke/metrics.json",
+      "synthetic": true,
+      "n_test": 504,
+      "auc": 0.8789,
+      "brier": 0.1870,
+      "ece": 0.2007,
+      "coverage": 0.7520,
+      "passed": true
+    },
+    "navigation_smoke": {
+      "source": "outputs/physical_navigation_smoke/report.json",
+      "synthetic": true,
+      "n_trials": 100,
+      "reach": 0.89,
+      "translation_error_reduction_fraction": 0.6703,
+      "paper_eligible": false
+    },
+    "real_data_gate": {
+      "source": "docs/endohjepa/geometry_asset_gate.json",
+      "passed": false,
+      "reason": "External SCARED RGB/pose/depth and the cached VGGT-1B checkpoint are available, but no candidate has yet passed a common case-level split, depth convention and pose/reprojection gate; pseudo3D has historical JSON but no E2E checkpoint."
+    }
+  },
+  "action_grounding": {
+    "semantic": {"source": "outputs/p2000_full_causal/action_triplet_align.json", "nmi": 0.044, "nmi_random": 0.056, "probe": 0.306, "chance": 0.390},
+    "physical": {
+      "source": "outputs/p2000_full_causal/pose_latent_align.json",
+      "nmi_range": [0.41, 0.52],
+      "random_range": [0.49, 0.53],
+      "keyframes_above_random": 2,
+      "n_keyframes": 6
+    }
+  },
+  "pixel": {
+    "cnn": {"source": "outputs/vjepa2_adapted/pixel_baseline.json", "psnr": 17.91, "copy": 29.60},
+    "diffusion": {"source": "outputs/vjepa2_adapted/pixel_diffusion.json", "psnr": 4.88, "copy": 30.37}
+  },
+  "stir": {
+    "source": "outputs/vjepa2_adapted/stir_finetune.json",
+    "before": 179.9,
+    "after": 168.2
+  },
+  "ablation_residual": {
+    "note": "Different val cache than the 6000-clip table; persist=0.886. Do not mix into Table 2.",
+    "source": "outputs/v2res_full_{nores,}_h4/val_metrics.json",
+    "no_residual": 0.768,
+    "with_residual": 0.900,
+    "persist": 0.886
+  },
+  "hp_sensitivity": {
+    "source": "outputs/hp_*/val_metrics.json",
+    "range": [0.977, 0.978]
+  },
+  "per_dataset_6000": {
+    "source": "outputs/scale_6000_causal/per_dataset.json",
+    "aligned": true,
+    "n_val": 750,
+    "overall": {"cos": 0.978, "persist": 0.916},
+    "by_domain": {
+      "bronch": {"n": 250, "cos": 0.988, "persist": 0.918},
+      "gi": {"n": 250, "cos": 0.976, "persist": 0.938},
+      "laparo": {"n": 250, "cos": 0.968, "persist": 0.892}
+    },
+    "rows": [
+      {"dataset": "ION_bronch", "domain": "bronch", "n": 250, "cos": 0.988, "persist": 0.918},
+      {"dataset": "Kvasir-Capsule", "domain": "gi", "n": 206, "cos": 0.978, "persist": 0.941},
+      {"dataset": "CholecT50", "domain": "laparo", "n": 89, "cos": 0.963, "persist": 0.894},
+      {"dataset": "Stereo_Lap", "domain": "laparo", "n": 75, "cos": 0.982, "persist": 0.889},
+      {"dataset": "endoscapes", "domain": "laparo", "n": 72, "cos": 0.961, "persist": 0.893},
+      {"dataset": "HyperKvasir", "domain": "gi", "n": 44, "cos": 0.970, "persist": 0.924},
+      {"dataset": "endovis2018_full", "domain": "laparo", "n": 7, "cos": 0.961, "persist": 0.882},
+      {"dataset": "endovis2017_full", "domain": "laparo", "n": 5, "cos": 0.965, "persist": 0.909}
+    ],
+    "n1_omitted": ["SCARED", "STIR"]
+  },
+  "per_dataset_15000_qualitative": {
+    "source": "docs/endohjepa/qualitative_forecast_15000.json",
+    "checkpoint": "outputs/scale_15000_causal/endohjepa.pt",
+    "split": "video-level val",
+    "n_val": 1631,
+    "purpose": "aggregate labels and honest latent-retrieval visualisation; not pixel generation",
+    "rows": [
+      {"dataset": "CholecT50", "n": 231, "cos": 0.969, "persist": 0.900, "win_fraction": 0.987},
+      {"dataset": "EndoNeRF", "n": 1, "cos": 0.974, "persist": 0.931, "win_fraction": 1.000},
+      {"dataset": "HyperKvasir", "n": 147, "cos": 0.974, "persist": 0.919, "win_fraction": 1.000},
+      {"dataset": "ION_bronch", "n": 252, "cos": 0.988, "persist": 0.918, "win_fraction": 1.000},
+      {"dataset": "Kvasir-Capsule", "n": 560, "cos": 0.980, "persist": 0.940, "win_fraction": 1.000},
+      {"dataset": "SCARED", "n": 4, "cos": 0.946, "persist": 0.878, "win_fraction": 1.000},
+      {"dataset": "STIR", "n": 1, "cos": 0.979, "persist": 0.928, "win_fraction": 1.000},
+      {"dataset": "Stereo_Lap", "n": 202, "cos": 0.987, "persist": 0.889, "win_fraction": 1.000},
+      {"dataset": "endoscapes", "n": 202, "cos": 0.969, "persist": 0.898, "win_fraction": 0.946},
+      {"dataset": "endovis2017_full", "n": 12, "cos": 0.969, "persist": 0.910, "win_fraction": 1.000},
+      {"dataset": "endovis2018_full", "n": 19, "cos": 0.972, "persist": 0.909, "win_fraction": 1.000}
+    ],
+    "atlas_only_no_val_forecast": [
+      "C3VD",
+      "Cholec80-Boxes",
+      "CholecSeg8k",
+      "EndoVis_InstrumentTracking",
+      "Kvasir-Instrument",
+      "MIS_own",
+      "SurgT",
+      "TrackVes"
+    ]
+  }
+}
