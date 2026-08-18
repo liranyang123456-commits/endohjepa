@@ -1,8 +1,9 @@
-"""Figure 1: Endo-HJEPA overview — thumbnails, glyphs, result images.
+"""Figure 1: Endo-HJEPA overview — thumbnails + glyphs + text + result images.
 
-Columns: real orifice frames -> encoder -> module glyphs -> capabilities ->
-clinical pathways -> result images. All arrows are orthogonal (elbow
-connectors); boxes tightly wrap their text. Bottom strip: four audit gates.
+Each module box combines a vector glyph with its text description. All arrows
+are orthogonal elbow connectors that start and end exactly at box borders.
+Columns: orifice frames -> encoder -> module glyphs -> capabilities ->
+clinical pathways -> result images. Bottom strip: four audit gates.
 
     python docs/endohjepa/make_figure1_pipeline.py
 """
@@ -14,14 +15,14 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import FancyBboxPatch, Circle
+from matplotlib.patches import FancyBboxPatch
 from PIL import Image
 
 OUT = Path(__file__).resolve().parent / "figures"
 ROOT = Path(__file__).resolve().parents[2]
 
 INK = "#2D3741"
-LINE = "#9AA4AE"
+LINE = "#8E979F"
 C_ENC = "#4E7FA6"
 C_FC = "#4E8D8D"
 C_PHYS = "#8A7AA0"
@@ -48,26 +49,29 @@ RESULTS = [
 
 def box(ax, x, y, w, h, fc, ec, lw=1.2):
     ax.add_patch(FancyBboxPatch((x, y), w, h,
-                                boxstyle="round,pad=0.006,rounding_size=0.03",
+                                boxstyle="round,pad=0.004,rounding_size=0.03",
                                 linewidth=lw, edgecolor=ec, facecolor=fc, zorder=2))
 
 
 def elbow(ax, x1, y1, x2, y2, text=None):
-    """Strictly orthogonal connector: horizontal, vertical, horizontal."""
-    xm = (x1 + x2) / 2
-    ax.plot([x1, xm, xm, x2], [y1, y1, y2, y2], color=LINE, lw=1.3, zorder=1)
-    ax.annotate("", xy=(x2, y2), xytext=(x2 - 0.02, y2),
+    """Orthogonal connector ending exactly at (x2, y2) with a visible arrow."""
+    xm = x1 + 0.18
+    ax.plot([x1, xm, xm, x2 - 0.03], [y1, y1, y2, y2], color=LINE, lw=1.3, zorder=1,
+            solid_capstyle="butt")
+    ax.annotate("", xy=(x2, y2), xytext=(x2 - 0.03, y2),
                 arrowprops=dict(arrowstyle="-|>", color=LINE, lw=1.3,
-                                mutation_scale=11), zorder=1)
+                                mutation_scale=11), zorder=2)
     if text:
         ax.text(xm, max(y1, y2) + 0.10, text, ha="center", fontsize=7.4,
                 color="#4A5560", style="italic")
 
 
 def harrow(ax, x1, x2, y, text=None):
-    ax.annotate("", xy=(x2, y), xytext=(x1, y),
+    ax.plot([x1, x2 - 0.03], [y, y], color=LINE, lw=1.3, zorder=1,
+            solid_capstyle="butt")
+    ax.annotate("", xy=(x2, y), xytext=(x2 - 0.03, y),
                 arrowprops=dict(arrowstyle="-|>", color=LINE, lw=1.3,
-                                mutation_scale=11), zorder=1)
+                                mutation_scale=11), zorder=2)
     if text:
         ax.text((x1 + x2) / 2, y + 0.10, text, ha="center", fontsize=7.4,
                 color="#4A5560", style="italic")
@@ -111,80 +115,84 @@ def glyph_navigation(ax, x, y, w, h):
 
 
 def main():
-    fig, ax = plt.subplots(figsize=(16.6, 6.7))
+    fig, ax = plt.subplots(figsize=(16.6, 7.0))
     ax.set_xlim(0, 16.6)
-    ax.set_ylim(0, 6.7)
+    ax.set_ylim(0, 7.0)
     ax.axis("off")
 
-    # ---- col 1: orifice thumbnails ----
-    ys = [4.65, 2.90, 1.15]
+    # ---- col 1: orifice thumbnails (x 0.15-2.10) ----
+    ys = [4.85, 3.05, 1.25]
     for (name, path), y in zip(FRAMES.items(), ys):
         thumb(ax, path, 0.15, y, 1.95, 1.45, C_ENC)
         ax.text(1.12, y - 0.08, name, ha="center", va="top", fontsize=8.6,
                 fontweight="bold", color=INK)
-    ax.text(1.12, 6.32, "19 datasets · 1,707 sequences", ha="center",
+    ax.text(1.12, 6.55, "19 datasets · 1,707 sequences", ha="center",
             fontsize=7.8, color="#4A5560", style="italic")
 
-    # ---- col 2: encoder ----
-    box(ax, 2.60, 2.80, 2.05, 2.10, SOFT_ENC, C_ENC)
-    gx, gy = 2.85, 3.60
+    # ---- col 2: encoder (x 2.60-4.65, y 2.95-5.15) ----
+    box(ax, 2.60, 2.95, 2.05, 2.20, SOFT_ENC, C_ENC)
+    gx, gy = 2.88, 3.95
     for r in range(3):
         for c in range(4):
             ax.add_patch(plt.Rectangle((gx + c * 0.38, gy + r * 0.30), 0.30, 0.22,
                                        facecolor=WHITE, edgecolor=C_ENC, lw=0.9, zorder=4))
-    ax.text(3.62, 2.62, "Shared encoder\nV-JEPA 2 ViT-L (frozen)", ha="center",
-            va="top", fontsize=8.6, fontweight="bold", color=INK)
+    ax.text(3.62, 3.72, "Shared encoder\nV-JEPA 2 ViT-L (frozen)\ndense tokens $z$, $D{=}1024$",
+            ha="center", va="top", fontsize=8.2, color=INK, zorder=5)
 
-    # ---- col 3: module glyphs ----
-    box(ax, 5.10, 4.30, 2.35, 1.50, SOFT_FC, C_FC)
-    glyph_forecast(ax, 5.35, 4.60, 1.85, 0.85)
-    ax.text(6.27, 4.16, "Causal residual L1 + coarse L2", ha="center", va="top",
-            fontsize=8.4, fontweight="bold", color=INK)
-    box(ax, 5.10, 1.20, 2.35, 1.50, SOFT_PHYS, C_PHYS)
-    glyph_se3(ax, 5.35, 1.40, 1.85, 0.95)
-    ax.text(6.27, 1.06, "SE(3) block-causal dynamics", ha="center", va="top",
-            fontsize=8.4, fontweight="bold", color=INK)
+    # ---- col 3: modules (x 5.15-7.50) ----
+    box(ax, 5.15, 4.45, 2.35, 1.70, SOFT_FC, C_FC)
+    glyph_forecast(ax, 5.40, 5.30, 1.85, 0.70)
+    ax.text(6.32, 5.16, "Causal residual L1 + coarse L2\nshort- and mid-horizon forecast",
+            ha="center", va="top", fontsize=8.0, color=INK, zorder=5)
+    box(ax, 5.15, 1.30, 2.35, 1.70, SOFT_PHYS, C_PHYS)
+    glyph_se3(ax, 5.40, 2.20, 1.85, 0.70)
+    ax.text(6.32, 2.06, "SE(3) block-causal dynamics\nensemble, risk + covariance",
+            ha="center", va="top", fontsize=8.0, color=INK, zorder=5)
 
-    # ---- col 4: capabilities ----
-    box(ax, 7.95, 4.30, 2.45, 1.50, WHITE, C_FC)
-    glyph_forecast(ax, 8.20, 4.60, 1.95, 0.85)
-    ax.text(9.17, 4.16, "Capability 1: forecast\n0.978 cos, p<1e-80", ha="center",
-            va="top", fontsize=8.4, fontweight="bold", color=INK)
-    box(ax, 7.95, 1.20, 2.45, 1.50, WHITE, C_PHYS)
-    glyph_navigation(ax, 8.15, 1.40, 2.05, 0.95)
-    ax.text(9.17, 1.06, "Capabilities 2+3\n83.1% / 51.5%", ha="center", va="top",
-            fontsize=8.4, fontweight="bold", color=INK)
+    # ---- col 4: capabilities (x 8.00-10.45) ----
+    box(ax, 8.00, 4.45, 2.45, 1.70, WHITE, C_FC)
+    glyph_forecast(ax, 8.25, 5.30, 1.95, 0.70)
+    ax.text(9.22, 5.16, "Capability 1: forecast evolution\n0.978 cos, $p{<}10^{-80}$",
+            ha="center", va="top", fontsize=8.0, color=INK, zorder=5)
+    box(ax, 8.00, 1.30, 2.45, 1.70, WHITE, C_PHYS)
+    glyph_navigation(ax, 8.20, 2.20, 2.05, 0.70)
+    ax.text(9.22, 2.06, "Capabilities 2+3\naction 83.1% · navigation 51.5%",
+            ha="center", va="top", fontsize=8.0, color=INK, zorder=5)
 
-    # ---- col 5: clinical pathways (tight text boxes) ----
-    apps = [("Loss-of-view\nwarning", 4.90), ("Camera-handling\ntraining", 3.20),
-            ("Navigation\nassistance", 1.50)]
+    # ---- col 5: clinical pathways (x 10.90-12.75, tight) ----
+    apps = [("Loss-of-view\nwarning", 5.05), ("Camera-handling\ntraining", 3.30),
+            ("Navigation\nassistance", 1.55)]
     for title, y in apps:
-        box(ax, 10.85, y, 1.85, 0.95, SOFT_APP, C_APP)
-        ax.text(11.77, y + 0.475, title, ha="center", va="center", fontsize=8.6,
+        box(ax, 10.90, y, 1.85, 0.95, SOFT_APP, C_APP)
+        ax.text(11.82, y + 0.475, title, ha="center", va="center", fontsize=8.6,
                 fontweight="bold", color=INK, zorder=5)
 
-    # ---- col 6: result images ----
-    res_ys = [4.65, 2.90, 1.15]
+    # ---- col 6: result images (x 13.20-15.50) ----
+    res_ys = [4.85, 3.05, 1.25]
     for (name, path), y in zip(RESULTS, res_ys):
-        thumb(ax, path, 13.15, y, 2.30, 1.45, C_APP)
-        ax.text(14.30, y - 0.08, name, ha="center", va="top", fontsize=8.6,
+        thumb(ax, path, 13.20, y, 2.30, 1.45, C_APP)
+        ax.text(14.35, y - 0.08, name, ha="center", va="top", fontsize=8.6,
                 fontweight="bold", color=INK)
-    ax.text(14.30, 6.32, "Result images (retrieval, not generation)",
+    ax.text(14.35, 6.55, "Result images (retrieval, not generation)",
             ha="center", fontsize=7.8, color="#4A5560", style="italic")
 
-    # ---- arrows (all orthogonal) ----
-    for y in (5.38, 3.63, 1.88):
-        elbow(ax, 2.10, y, 2.60, 3.85)
-    harrow(ax, 4.65, 5.10, 5.05, text="tokens")
-    elbow(ax, 4.65, 3.85, 5.10, 1.95, text=None)
-    harrow(ax, 7.45, 7.95, 5.05, text="forecast")
-    harrow(ax, 7.45, 7.95, 1.95, text="plan")
-    elbow(ax, 10.40, 5.05, 10.85, 5.38)
-    harrow(ax, 10.40, 10.85, 3.68)
-    elbow(ax, 10.40, 1.95, 10.85, 1.98)
-    harrow(ax, 12.70, 13.15, 5.38)
-    harrow(ax, 12.70, 13.15, 3.68)
-    harrow(ax, 12.70, 13.15, 1.98)
+    # ---- arrows: inputs -> encoder (elbows into encoder left edge, y=4.05) ----
+    for y in (5.58, 3.78, 1.98):
+        elbow(ax, 2.10, y, 2.60, 4.05)
+    # encoder -> lanes
+    elbow(ax, 4.65, 4.05, 5.15, 5.30, text="tokens")
+    elbow(ax, 4.65, 4.05, 5.15, 2.15)
+    # modules -> capabilities
+    harrow(ax, 7.50, 8.00, 5.30, text="forecast")
+    harrow(ax, 7.50, 8.00, 2.15, text="plan")
+    # capabilities -> applications
+    elbow(ax, 10.45, 5.30, 10.90, 5.52)
+    harrow(ax, 10.45, 10.90, 3.78)
+    elbow(ax, 10.45, 2.15, 10.90, 2.02)
+    # applications -> results
+    harrow(ax, 12.75, 13.20, 5.52)
+    harrow(ax, 12.75, 13.20, 3.78)
+    harrow(ax, 12.75, 13.20, 2.02)
 
     # ---- bottom strip: four audit gates ----
     gates = [
@@ -203,11 +211,11 @@ def main():
         gx += 4.10
 
     # column labels
-    ax.text(6.27, 6.10, "Passive-video forecast (validated)", ha="center",
+    ax.text(6.32, 6.40, "Passive-video forecast (validated)", ha="center",
             fontsize=9.5, fontweight="bold", color=C_FC)
-    ax.text(6.27, 2.82, "Physical grounding (audited; pose/depth-gated)",
+    ax.text(6.32, 3.30, "Physical grounding (audited; pose/depth-gated)",
             ha="center", fontsize=9.5, fontweight="bold", color=C_PHYS)
-    ax.text(11.77, 6.10, "Clinical application pathways", ha="center",
+    ax.text(11.82, 6.40, "Clinical application pathways", ha="center",
             fontsize=9.5, fontweight="bold", color=C_APP)
 
     fig.tight_layout()
