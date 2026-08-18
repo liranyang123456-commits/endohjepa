@@ -1,8 +1,8 @@
-"""Figure 1: Endo-HJEPA overview with real thumbnails and glyph modules.
+"""Figure 1: Endo-HJEPA overview — thumbnails, glyphs, result images.
 
-Real endoscopic frames for the three orifices (labels below images), vector
-glyphs for each module, data-flow labels on the arrows, and a bottom strip
-with the four correctness-audit gates. Muted palette, orthogonal arrows.
+Columns: real orifice frames -> encoder -> module glyphs -> capabilities ->
+clinical pathways -> result images. All arrows are orthogonal (elbow
+connectors); boxes tightly wrap their text. Bottom strip: four audit gates.
 
     python docs/endohjepa/make_figure1_pipeline.py
 """
@@ -14,7 +14,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import FancyBboxPatch, FancyArrowPatch, Circle
+from matplotlib.patches import FancyBboxPatch, Circle
 from PIL import Image
 
 OUT = Path(__file__).resolve().parent / "figures"
@@ -39,26 +39,38 @@ FRAMES = {
     "GI endoscopy": ROOT / "datasets/HyperKvasir/hyper-kvasir-labeled-images/labeled-images/lower-gi-tract/pathological-findings/ulcerative-colitis-grade-1-2/00064260-95ca-47fc-9103-2b526f59fada.jpg",
     "Bronchoscopy": ROOT / "datasets/ION_bronch/case_001/intraop_00/Video_screenshot_Henan1/ion_screenshot-20211026-035827_439.png",
 }
+RESULTS = [
+    ("Forecast retrieval", OUT / "_fig1_forecast_ret.png"),
+    ("Action-conditioned", OUT / "_fig1_se3.png"),
+    ("Navigation rollout", OUT / "_fig1_nav.png"),
+]
 
 
 def box(ax, x, y, w, h, fc, ec, lw=1.2):
-    p = FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.012,rounding_size=0.04",
-                       linewidth=lw, edgecolor=ec, facecolor=fc, zorder=2)
-    ax.add_patch(p)
+    ax.add_patch(FancyBboxPatch((x, y), w, h,
+                                boxstyle="round,pad=0.006,rounding_size=0.03",
+                                linewidth=lw, edgecolor=ec, facecolor=fc, zorder=2))
 
 
-def label_below(ax, x, y, w, text, color=INK, fs=8.6, bold=True):
-    ax.text(x + w / 2, y, text, ha="center", va="top", fontsize=fs,
-            fontweight="bold" if bold else "normal", color=color)
-
-
-def arrow(ax, x1, y1, x2, y2, text=None, text_dy=0.10):
-    ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
-                arrowprops=dict(arrowstyle="-|>", color=LINE, lw=1.4,
+def elbow(ax, x1, y1, x2, y2, text=None):
+    """Strictly orthogonal connector: horizontal, vertical, horizontal."""
+    xm = (x1 + x2) / 2
+    ax.plot([x1, xm, xm, x2], [y1, y1, y2, y2], color=LINE, lw=1.3, zorder=1)
+    ax.annotate("", xy=(x2, y2), xytext=(x2 - 0.02, y2),
+                arrowprops=dict(arrowstyle="-|>", color=LINE, lw=1.3,
                                 mutation_scale=11), zorder=1)
     if text:
-        ax.text((x1 + x2) / 2, max(y1, y2) + text_dy, text, ha="center",
-                fontsize=7.4, color="#4A5560", style="italic")
+        ax.text(xm, max(y1, y2) + 0.10, text, ha="center", fontsize=7.4,
+                color="#4A5560", style="italic")
+
+
+def harrow(ax, x1, x2, y, text=None):
+    ax.annotate("", xy=(x2, y), xytext=(x1, y),
+                arrowprops=dict(arrowstyle="-|>", color=LINE, lw=1.3,
+                                mutation_scale=11), zorder=1)
+    if text:
+        ax.text((x1 + x2) / 2, y + 0.10, text, ha="center", fontsize=7.4,
+                color="#4A5560", style="italic")
 
 
 def thumb(ax, path, x, y, w, h, ec):
@@ -69,7 +81,6 @@ def thumb(ax, path, x, y, w, h, ec):
 
 
 def glyph_forecast(ax, x, y, w, h):
-    """Mini timeline: history dots -> predicted curve vs persistence."""
     t = np.linspace(0, 1, 20)
     ax.plot([x, x + w * 0.42], [y + h * 0.32, y + h * 0.32], color=INK, lw=1.4, zorder=5)
     ax.plot(x + w * (0.42 + 0.58 * t), y + h * (0.32 + 0.45 * t), color=C_FC, lw=1.6, zorder=5)
@@ -81,7 +92,6 @@ def glyph_forecast(ax, x, y, w, h):
 
 
 def glyph_se3(ax, x, y, w, h):
-    """Coordinate-frame glyph: three axes."""
     cx, cy = x + w * 0.32, y + h * 0.30
     ax.annotate("", xy=(cx + w * 0.42, cy), xytext=(cx, cy),
                 arrowprops=dict(arrowstyle="-|>", color="#C24D4D", lw=1.6), zorder=5)
@@ -89,12 +99,9 @@ def glyph_se3(ax, x, y, w, h):
                 arrowprops=dict(arrowstyle="-|>", color="#3F7A5A", lw=1.6), zorder=5)
     ax.annotate("", xy=(cx + w * 0.26, cy + h * 0.30), xytext=(cx, cy),
                 arrowprops=dict(arrowstyle="-|>", color="#4E7FA6", lw=1.6), zorder=5)
-    ax.text(cx + w * 0.46, cy - 2, "x", fontsize=7, color="#C24D4D")
-    ax.text(cx - 2, cy + h * 0.54, "z", fontsize=7, color="#3F7A5A")
 
 
 def glyph_navigation(ax, x, y, w, h):
-    """Path from start to goal with waypoints."""
     t = np.linspace(0, 1, 30)
     px = x + w * (0.08 + 0.84 * t)
     py = y + h * (0.25 + 0.45 * np.sin(t * np.pi) + 0.1 * t)
@@ -103,102 +110,81 @@ def glyph_navigation(ax, x, y, w, h):
     ax.scatter([px[-1]], [py[-1]], s=60, marker="*", color=C_APP, zorder=6)
 
 
-def glyph_warning(ax, x, y, w, h):
-    """Warning triangle."""
-    tri = plt.Polygon([(x + w * 0.5, y + h * 0.85), (x + w * 0.12, y + h * 0.15),
-                       (x + w * 0.88, y + h * 0.15)], closed=True,
-                      facecolor="#F6E3C5", edgecolor="#B5833A", lw=1.4, zorder=5)
-    ax.add_patch(tri)
-    ax.text(x + w * 0.5, y + h * 0.30, "!", ha="center", va="center",
-            fontsize=11, fontweight="bold", color="#B5833A", zorder=6)
-
-
-def glyph_training(ax, x, y, w, h):
-    """Eye + gauge for camera-handling assessment."""
-    eye = plt.Polygon([(x + w * 0.10, y + h * 0.5), (x + w * 0.5, y + h * 0.85),
-                       (x + w * 0.90, y + h * 0.5), (x + w * 0.5, y + h * 0.15)],
-                      closed=True, facecolor=WHITE, edgecolor=C_APP, lw=1.4, zorder=5)
-    ax.add_patch(eye)
-    ax.add_patch(Circle((x + w * 0.5, y + h * 0.5), w * 0.10, facecolor=C_APP,
-                        edgecolor="none", zorder=6))
-
-
-def glyph_nav_assist(ax, x, y, w, h):
-    """Compass-like target for navigation assistance."""
-    ax.add_patch(Circle((x + w * 0.5, y + h * 0.5), w * 0.30, fill=False,
-                        edgecolor=C_APP, lw=1.4, zorder=5))
-    ax.annotate("", xy=(x + w * 0.68, y + h * 0.68), xytext=(x + w * 0.5, y + h * 0.5),
-                arrowprops=dict(arrowstyle="-|>", color=C_APP, lw=1.6), zorder=6)
-
-
 def main():
-    fig, ax = plt.subplots(figsize=(13.8, 6.6))
-    ax.set_xlim(0, 13.8)
-    ax.set_ylim(0, 6.6)
+    fig, ax = plt.subplots(figsize=(16.6, 6.7))
+    ax.set_xlim(0, 16.6)
+    ax.set_ylim(0, 6.7)
     ax.axis("off")
 
-    # ---- left: three orifice thumbnails, labels below ----
-    ys = [4.55, 2.85, 1.15]
+    # ---- col 1: orifice thumbnails ----
+    ys = [4.65, 2.90, 1.15]
     for (name, path), y in zip(FRAMES.items(), ys):
         thumb(ax, path, 0.15, y, 1.95, 1.45, C_ENC)
-        label_below(ax, 0.15, y - 0.06, 1.95, name)
-    ax.text(1.12, 6.22, "19 datasets · 1,707 sequences", ha="center",
+        ax.text(1.12, y - 0.08, name, ha="center", va="top", fontsize=8.6,
+                fontweight="bold", color=INK)
+    ax.text(1.12, 6.32, "19 datasets · 1,707 sequences", ha="center",
             fontsize=7.8, color="#4A5560", style="italic")
 
-    # ---- shared encoder: token-grid glyph ----
-    box(ax, 2.60, 2.75, 2.05, 2.15, SOFT_ENC, C_ENC)
-    gx, gy = 2.85, 3.55
+    # ---- col 2: encoder ----
+    box(ax, 2.60, 2.80, 2.05, 2.10, SOFT_ENC, C_ENC)
+    gx, gy = 2.85, 3.60
     for r in range(3):
         for c in range(4):
             ax.add_patch(plt.Rectangle((gx + c * 0.38, gy + r * 0.30), 0.30, 0.22,
                                        facecolor=WHITE, edgecolor=C_ENC, lw=0.9, zorder=4))
-    label_below(ax, 2.60, 2.62, 2.05, "Shared encoder\nV-JEPA 2 ViT-L (frozen)")
+    ax.text(3.62, 2.62, "Shared encoder\nV-JEPA 2 ViT-L (frozen)", ha="center",
+            va="top", fontsize=8.6, fontweight="bold", color=INK)
 
-    # ---- lane 1: forecast ----
-    box(ax, 5.10, 4.20, 2.35, 1.55, SOFT_FC, C_FC)
-    glyph_forecast(ax, 5.35, 4.55, 1.85, 0.85)
-    label_below(ax, 5.10, 4.06, 2.35, "Causal residual L1 + coarse L2")
-    box(ax, 7.95, 4.20, 2.45, 1.55, WHITE, C_FC)
-    glyph_forecast(ax, 8.20, 4.55, 1.95, 0.85)
-    label_below(ax, 7.95, 4.06, 2.45, "Capability 1: forecast evolution\n0.978 cos, p<1e-80")
+    # ---- col 3: module glyphs ----
+    box(ax, 5.10, 4.30, 2.35, 1.50, SOFT_FC, C_FC)
+    glyph_forecast(ax, 5.35, 4.60, 1.85, 0.85)
+    ax.text(6.27, 4.16, "Causal residual L1 + coarse L2", ha="center", va="top",
+            fontsize=8.4, fontweight="bold", color=INK)
+    box(ax, 5.10, 1.20, 2.35, 1.50, SOFT_PHYS, C_PHYS)
+    glyph_se3(ax, 5.35, 1.40, 1.85, 0.95)
+    ax.text(6.27, 1.06, "SE(3) block-causal dynamics", ha="center", va="top",
+            fontsize=8.4, fontweight="bold", color=INK)
 
-    # ---- lane 2: physical grounding ----
-    box(ax, 5.10, 1.15, 2.35, 1.55, SOFT_PHYS, C_PHYS)
-    glyph_se3(ax, 5.35, 1.35, 1.85, 0.95)
-    label_below(ax, 5.10, 1.01, 2.35, "SE(3) block-causal dynamics")
-    box(ax, 7.95, 1.15, 2.45, 1.55, WHITE, C_PHYS)
-    glyph_navigation(ax, 8.15, 1.35, 2.05, 0.95)
-    label_below(ax, 7.95, 1.01, 2.45, "Capabilities 2+3: 83.1% / 51.5%")
+    # ---- col 4: capabilities ----
+    box(ax, 7.95, 4.30, 2.45, 1.50, WHITE, C_FC)
+    glyph_forecast(ax, 8.20, 4.60, 1.95, 0.85)
+    ax.text(9.17, 4.16, "Capability 1: forecast\n0.978 cos, p<1e-80", ha="center",
+            va="top", fontsize=8.4, fontweight="bold", color=INK)
+    box(ax, 7.95, 1.20, 2.45, 1.50, WHITE, C_PHYS)
+    glyph_navigation(ax, 8.15, 1.40, 2.05, 0.95)
+    ax.text(9.17, 1.06, "Capabilities 2+3\n83.1% / 51.5%", ha="center", va="top",
+            fontsize=8.4, fontweight="bold", color=INK)
 
-    # ---- right: three application pathways with glyphs ----
-    apps = [
-        ("Loss-of-view warning", glyph_warning, 4.90),
-        ("Camera-handling training", glyph_training, 3.20),
-        ("Navigation assistance", glyph_nav_assist, 1.50),
-    ]
-    for title, glyph, y in apps:
-        box(ax, 10.85, y, 2.80, 1.30, SOFT_APP, C_APP)
-        glyph(ax, 11.05, y + 0.28, 0.75, 0.75)
-        ax.text(11.95, y + 0.65, title, ha="left", va="center", fontsize=8.8,
+    # ---- col 5: clinical pathways (tight text boxes) ----
+    apps = [("Loss-of-view\nwarning", 4.90), ("Camera-handling\ntraining", 3.20),
+            ("Navigation\nassistance", 1.50)]
+    for title, y in apps:
+        box(ax, 10.85, y, 1.85, 0.95, SOFT_APP, C_APP)
+        ax.text(11.77, y + 0.475, title, ha="center", va="center", fontsize=8.6,
                 fontweight="bold", color=INK, zorder=5)
 
-    # ---- arrows ----
-    for y in (5.28, 3.58, 1.88):
-        ax.plot([2.10, 2.35, 2.35, 2.60], [y, y, 3.82, 3.82], color=LINE, lw=1.2, zorder=1)
-    arrow(ax, 2.35, 3.82, 2.60, 3.82, text=None)
+    # ---- col 6: result images ----
+    res_ys = [4.65, 2.90, 1.15]
+    for (name, path), y in zip(RESULTS, res_ys):
+        thumb(ax, path, 13.15, y, 2.30, 1.45, C_APP)
+        ax.text(14.30, y - 0.08, name, ha="center", va="top", fontsize=8.6,
+                fontweight="bold", color=INK)
+    ax.text(14.30, 6.32, "Result images (retrieval, not generation)",
+            ha="center", fontsize=7.8, color="#4A5560", style="italic")
 
-    ax.plot([4.65, 4.88, 4.88, 5.10], [3.82, 3.82, 4.97, 4.97], color=LINE, lw=1.3)
-    arrow(ax, 4.88, 4.97, 5.10, 4.97)
-    ax.plot([4.65, 4.88, 4.88, 5.10], [3.82, 3.82, 1.92, 1.92], color=LINE, lw=1.3)
-    arrow(ax, 4.88, 1.92, 5.10, 1.92)
-    ax.text(4.88, 4.10, "tokens", ha="center", fontsize=7.4, color="#4A5560", style="italic")
-
-    arrow(ax, 7.45, 4.97, 7.95, 4.97, text="forecast")
-    arrow(ax, 7.45, 1.92, 7.95, 1.92, text="plan")
-
-    arrow(ax, 10.40, 4.97, 10.85, 5.35)
-    arrow(ax, 10.40, 4.60, 10.85, 3.85)
-    arrow(ax, 10.40, 1.92, 10.85, 2.15)
+    # ---- arrows (all orthogonal) ----
+    for y in (5.38, 3.63, 1.88):
+        elbow(ax, 2.10, y, 2.60, 3.85)
+    harrow(ax, 4.65, 5.10, 5.05, text="tokens")
+    elbow(ax, 4.65, 3.85, 5.10, 1.95, text=None)
+    harrow(ax, 7.45, 7.95, 5.05, text="forecast")
+    harrow(ax, 7.45, 7.95, 1.95, text="plan")
+    elbow(ax, 10.40, 5.05, 10.85, 5.38)
+    harrow(ax, 10.40, 10.85, 3.68)
+    elbow(ax, 10.40, 1.95, 10.85, 1.98)
+    harrow(ax, 12.70, 13.15, 5.38)
+    harrow(ax, 12.70, 13.15, 3.68)
+    harrow(ax, 12.70, 13.15, 1.98)
 
     # ---- bottom strip: four audit gates ----
     gates = [
@@ -209,19 +195,19 @@ def main():
     ]
     gx = 0.15
     for title, sub in gates:
-        box(ax, gx, 0.12, 3.28, 0.72, SOFT_AUD, C_AUD)
-        ax.text(gx + 1.64, 0.60, title, ha="center", fontsize=8.2,
+        box(ax, gx, 0.12, 3.95, 0.72, SOFT_AUD, C_AUD)
+        ax.text(gx + 1.97, 0.62, title, ha="center", fontsize=8.2,
                 fontweight="bold", color=INK, zorder=4)
-        ax.text(gx + 1.64, 0.30, sub, ha="center", fontsize=7.2,
+        ax.text(gx + 1.97, 0.32, sub, ha="center", fontsize=7.2,
                 color="#4A5560", zorder=4)
-        gx += 3.44
+        gx += 4.10
 
-    # lane + column labels
-    ax.text(6.30, 6.05, "Passive-video forecast (validated)", ha="center",
+    # column labels
+    ax.text(6.27, 6.10, "Passive-video forecast (validated)", ha="center",
             fontsize=9.5, fontweight="bold", color=C_FC)
-    ax.text(6.30, 2.72, "Physical grounding (audited; pose/depth-gated)",
+    ax.text(6.27, 2.82, "Physical grounding (audited; pose/depth-gated)",
             ha="center", fontsize=9.5, fontweight="bold", color=C_PHYS)
-    ax.text(12.25, 6.05, "Clinical application pathways", ha="center",
+    ax.text(11.77, 6.10, "Clinical application pathways", ha="center",
             fontsize=9.5, fontweight="bold", color=C_APP)
 
     fig.tight_layout()
