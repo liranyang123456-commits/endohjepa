@@ -20,4 +20,4 @@ This manuscript is original, has not been published previously, and is not under
 
 Sincerely,
 
-Ranyang Li, Junjun Pan (corresponding authors), on behalf of all authors
+Ranyang Li (corresponding author), on behalf of all authors
