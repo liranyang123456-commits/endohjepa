@@ -123,12 +123,27 @@ def glyph_navigation(ax, cx, cy, s=0.38):
     ax.scatter([px[-1]], [py[-1]], s=60, marker="*", color=C_APP, zorder=7)
 
 
-def glyph_tokens(ax, cx, cy):
-    for r in range(3):
-        for c in range(4):
-            ax.add_patch(plt.Rectangle((cx - 0.72 + c * 0.36, cy - 0.42 + r * 0.28),
-                                       0.28, 0.20, facecolor=WHITE, edgecolor=C_ENC,
-                                       lw=0.9, zorder=6))
+def glyph_network(ax, cx, cy):
+    """PlotNeuralNet-style mini stack: input patch -> ViT blocks -> tokens."""
+    def iso_block(x, y, w, h, d, fc, ec):
+        # front face
+        ax.add_patch(plt.Polygon([(x, y), (x + w, y), (x + w, y + h), (x, y + h)],
+                                 closed=True, facecolor=fc, edgecolor=ec, lw=1.0, zorder=6))
+        # top face
+        ax.add_patch(plt.Polygon([(x, y + h), (x + d, y + h + d), (x + w + d, y + h + d),
+                                  (x + w, y + h)], closed=True, facecolor=fc,
+                                 edgecolor=ec, lw=0.9, zorder=6, alpha=0.85))
+        # side face
+        ax.add_patch(plt.Polygon([(x + w, y), (x + w + d, y + d), (x + w + d, y + h + d),
+                                  (x + w, y + h)], closed=True, facecolor=fc,
+                                 edgecolor=ec, lw=0.9, zorder=6, alpha=0.7))
+    # input patch (small image-like block)
+    iso_block(cx - 0.85, cy - 0.35, 0.16, 0.70, 0.16, "#DCE7F0", C_ENC)
+    # three ViT-L blocks
+    for i, ww in enumerate((0.20, 0.24, 0.28)):
+        iso_block(cx - 0.45 + i * 0.42, cy - 0.35, ww, 0.70, 0.20, WHITE, C_ENC)
+    # output tokens (thin slab)
+    iso_block(cx + 0.95, cy - 0.20, 0.14, 0.40, 0.14, SOFT_FC, C_FC)
 
 
 def main():
@@ -155,8 +170,8 @@ def main():
     box_h = (ROW_FC[0] - ROW_FC[2]) + 1.1
     module(ax, X_ENC, enc_cy - box_h / 2, 1.95, box_h,
            "Shared encoder", "", SOFT_ENC, C_ENC)
-    glyph_tokens(ax, X_ENC + 0.97, enc_cy + 0.85)
-    ax.text(X_ENC + 0.97, enc_cy - 0.55,
+    glyph_network(ax, X_ENC + 0.97, enc_cy + 1.05)
+    ax.text(X_ENC + 0.97, enc_cy - 0.75,
             "V-JEPA 2 ViT-L (frozen)\ndense tokens $z$, $D{=}1024$\n+ domain $e_d$",
             ha="center", va="center", fontsize=7.6, color="#4A5560", zorder=5)
 

@@ -11,6 +11,18 @@ from PIL import Image
 
 FIG = Path(__file__).resolve().parent / "figures"
 
+def _trim_white(im, thresh=245):
+    """Crop to the non-white content bounding box (complete image, no margins)."""
+    import numpy as np
+    arr = np.asarray(im.convert("RGB"))
+    mask = (arr < thresh).any(axis=-1)
+    rows = np.where(mask.any(axis=1))[0]
+    cols = np.where(mask.any(axis=0))[0]
+    if len(rows) == 0 or len(cols) == 0:
+        return im
+    return im.crop((cols[0], rows[0], cols[-1] + 1, rows[-1] + 1))
+
+
 im = Image.open(FIG / "figure10a_forecast_qualitative.png")
 w, h = im.size
 top, row_h = 230, (h - 180) / 6
@@ -20,9 +32,9 @@ rows = {"laparo": 0, "gi": 2, "bronch": 3}
 for name, r in rows.items():
     y0 = int(top + r * row_h + 20)
     y1 = int(top + (r + 1) * row_h - 60)
-    inp = im.crop((pad_x, y0, int(col_w) - pad_x, y1))
+    inp = _trim_white(im.crop((pad_x, y0, int(col_w) - pad_x, y1)))
     inp.save(FIG / f"_fig1_in_{name}.png")
-    out = im.crop((int(2 * col_w) + pad_x, y0, int(3 * col_w) - pad_x, y1))
+    out = _trim_white(im.crop((int(2 * col_w) + pad_x, y0, int(3 * col_w) - pad_x, y1)))
     out.save(FIG / f"_fig1_out_{name}.png")
 
 # SCARED physical-lane input: observed frame from figure8 row 0
@@ -30,6 +42,8 @@ im8 = Image.open(FIG / "figure8_qualitative.png")
 w8, h8 = im8.size
 top8, row_h8 = 120, (h8 - 160) / 3
 col_w8 = w8 / 5
-scared_in = im8.crop((0, int(top8), int(col_w8), int(top8 + row_h8)))
+scared_in = _trim_white(im8.crop((0, int(top8), int(col_w8), int(top8 + row_h8))))
 scared_in.save(FIG / "_fig1_in_scared.png")
-print("[thumbs] wrote domain-matched pairs + SCARED input")
+se3 = _trim_white(im8.crop((int(2 * col_w8), int(top8), int(3 * col_w8), int(top8 + row_h8))))
+se3.save(FIG / "_fig1_se3.png")
+print("[thumbs] wrote trimmed domain-matched pairs + SCARED")
