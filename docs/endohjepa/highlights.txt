@@ -1,5 +1,5 @@
-- Unified JEPA forecasts laparoscopy, GI endoscopy, and bronchoscopy.
-- Causal latent forecasting outperforms GRU, Mamba, and persistence.
-- A correctness audit excludes the original discrete latent-MPC scores.
-- Continuous SE(3), calibrated risk, and hard-gated CEM/MPPI are implemented.
-- Unsupervised latent actions fail physical and semantic grounding.
+- A hierarchical JEPA world model unifies laparoscopy, GI endoscopy, and bronchoscopy video prediction.
+- A causal residual forecaster reaches 0.978 cosine at horizon four, surpassing GRU, Mamba, and persistence (p < 1e-80).
+- A correctness-audited continuous SE(3) action branch passes its sensitivity gate (83.1%) after four data defects are fixed.
+- Behaviour-constrained continuous MPC passes all offline navigation gates (200 trials, 51.5% reach).
+- Executable audits, a depth-reprojection pose gate, and grouped cross-validation form a reusable grounding protocol.

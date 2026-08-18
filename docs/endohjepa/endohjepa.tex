@@ -178,10 +178,13 @@ These protocols are never mixed in a single table.
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figure1_pipeline.pdf}
-\caption{Overall Endo-HJEPA study framework. Three endoscopic domains share one
-visual encoder and split into a validated passive-video forecast path and a
-separately gated physical path. Only aligned pose/depth enters SE(3) dynamics
-and safe continuous MPC; no control conclusion is inferred from forecast alone.}
+\caption{Endo-HJEPA overview. Three endoscopic domains share one frozen
+V-JEPA~2 encoder. The upper lane is the validated passive-video forecast path
+(Capability 1); the lower lane is the audited physical-grounding path
+(Capabilities 2 and 3), gated by aligned pose/depth. The three validated
+capabilities map onto loss-of-view warning, camera-handling training, and
+navigation-assistance prototypes. No pixel decoder; no control conclusion is
+inferred from forecast alone.}
 \label{fig:pipeline}
 \end{figure}
 

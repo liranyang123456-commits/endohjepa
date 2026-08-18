@@ -1,7 +1,10 @@
-"""Figure 1: horizontal, orthogonal, muted-color pipeline (journal flowchart).
+"""Figure 1: capability-driven Endo-HJEPA overview (journal flowchart).
+
+Two horizontal lanes: the validated passive-forecast path (Capability 1) and
+the audited physical-grounding path (Capabilities 2/3), with the three
+clinical application pathways on the right. Muted palette, orthogonal arrows.
 
     python docs/endohjepa/make_figure1_pipeline.py
-Not a rainbow box salad: one row, right-angle connectors, three chip colours.
 """
 from __future__ import annotations
 
@@ -10,107 +13,105 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch, FancyArrowPatch, Rectangle
+from matplotlib.patches import FancyBboxPatch
 
 OUT = Path(__file__).resolve().parent / "figures"
 
 INK = "#2D3741"
-LINE = "#A0A8B0"
-CHIP_A = "#5A8CBE"   # encoder
-CHIP_B = "#50969B"   # predictors
-CHIP_C = "#82739B"   # energy / plan
-SOFT_A = "#F2F7FC"
-SOFT_B = "#F2F9F9"
-SOFT_C = "#F7F4FA"
-IO = "#FFFFFF"
-GOAL = "#E8F5F0"
+LINE = "#9AA4AE"
+C_ENC = "#4E7FA6"    # encoder blue
+C_FC = "#4E8D8D"     # forecast teal
+C_PHYS = "#8A7AA0"   # physical purple
+C_APP = "#3F7A5A"    # application green
+SOFT_ENC = "#EFF5FA"
+SOFT_FC = "#EFF8F8"
+SOFT_PHYS = "#F5F3F8"
+SOFT_APP = "#EFF7F2"
+WHITE = "#FFFFFF"
 
 
-def box(ax, x, y, w, h, title, sub, fc, ec, fs=8.5):
+def box(ax, x, y, w, h, title, sub, fc, ec, fs=8.5, subfs=7.2):
     p = FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.012,rounding_size=0.04",
                        linewidth=1.15, edgecolor=ec, facecolor=fc, zorder=2)
     ax.add_patch(p)
-    ax.text(x + w / 2, y + h * 0.62, title, ha="center", va="center",
+    ax.text(x + w / 2, y + h * 0.66, title, ha="center", va="center",
             fontsize=fs, fontweight="bold", color=INK, zorder=3)
-    ax.text(x + w / 2, y + h * 0.28, sub, ha="center", va="center",
-            fontsize=7.2, color="#4A5560", zorder=3)
+    if sub:
+        ax.text(x + w / 2, y + h * 0.30, sub, ha="center", va="center",
+                fontsize=subfs, color="#4A5560", zorder=3)
 
 
-def h_arrow(ax, x1, x2, y):
-    ax.annotate("", xy=(x2, y), xytext=(x1, y),
-                arrowprops=dict(arrowstyle="-|>", color=LINE, lw=1.4,
+def arrow(ax, x1, y1, x2, y2):
+    ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
+                arrowprops=dict(arrowstyle="-|>", color=LINE, lw=1.3,
                                 mutation_scale=10), zorder=1)
 
 
 def main():
-    fig, ax = plt.subplots(figsize=(13.4, 4.15))
-    ax.set_xlim(0, 13.4)
-    ax.set_ylim(0, 4.15)
+    fig, ax = plt.subplots(figsize=(13.6, 5.4))
+    ax.set_xlim(0, 13.6)
+    ax.set_ylim(0, 5.4)
     ax.axis("off")
 
-    # column x positions (grid)
-    xs = [0.18, 2.15, 4.35, 6.55, 8.75, 10.95]
-    w, h = 1.82, 1.15
-    y_mid = 1.85
+    # ---- left: three orifice inputs ----
+    box(ax, 0.15, 3.55, 1.75, 0.8, "Laparoscopy", "rigid MIS", WHITE, C_ENC)
+    box(ax, 0.15, 2.55, 1.75, 0.8, "GI endoscopy", "flexible / capsule", WHITE, C_ENC)
+    box(ax, 0.15, 1.55, 1.75, 0.8, "Bronchoscopy", "ION / airway", WHITE, C_ENC)
+    ax.text(1.02, 4.62, "19 datasets · 1,707 sequences", ha="center",
+            fontsize=7.5, color="#4A5560", style="italic")
 
-    # inputs stacked left
-    box(ax, 0.18, 2.85, 1.82, 0.85, "Laparoscopy", "rigid MIS", IO, CHIP_A)
-    box(ax, 0.18, 1.85, 1.82, 0.85, "GI endoscopy", "flexible / capsule", IO, CHIP_A)
-    box(ax, 0.18, 0.85, 1.82, 0.85, "Bronchoscopy", "ION / airway", IO, CHIP_A)
+    # ---- shared encoder ----
+    box(ax, 2.35, 2.15, 1.9, 1.6, "Shared encoder",
+        "V-JEPA 2 ViT-L\nfrozen, $D{=}1024$", SOFT_ENC, C_ENC, 9)
 
-    # encoder
-    box(ax, 2.35, 1.45, 1.95, 1.95, "Shared encoder",
-        "V-JEPA 2 ViT-L\nfrozen  $D{=}1024$", SOFT_A, CHIP_A, 9)
+    # ---- lane 1: passive forecast (Capability 1) ----
+    box(ax, 4.75, 3.30, 2.15, 1.15, "Causal residual L1",
+        "short-horizon forecast", SOFT_FC, C_FC)
+    box(ax, 4.75, 2.00, 2.15, 1.0, "Coarse L2",
+        "mid-horizon anatomy", SOFT_FC, C_FC)
+    box(ax, 7.35, 2.65, 2.3, 1.15, "Capability 1",
+        "forecast scene evolution\n0.978 cos, $p{<}10^{-80}$", WHITE, C_FC, 9)
 
-    # tokens
-    box(ax, 4.55, 1.70, 1.70, 1.45, "Tokens $z$",
-        r"$T'\times N\times D$"+"\n+ domain $e_d$", IO, INK)
+    # ---- lane 2: physical grounding (Capabilities 2/3) ----
+    box(ax, 4.75, 0.55, 2.15, 1.05, "SE(3) dynamics",
+        "block-causal, ensemble\nrisk + covariance", SOFT_PHYS, C_PHYS)
+    box(ax, 7.35, 0.55, 2.3, 1.05, "Capabilities 2 + 3",
+        "action evaluation 83.1%\noffline navigation 51.5%", WHITE, C_PHYS, 9)
 
-    # validated predictors + physically grounded state path
-    box(ax, 6.50, 2.85, 1.95, 0.95, "L1  causal AR",
-        "short-horizon  residual", SOFT_B, CHIP_B)
-    box(ax, 6.50, 1.70, 1.95, 0.95, "L2  coarse",
-        "mid-horizon  pool$\\times$2", SOFT_B, CHIP_B)
-    box(ax, 6.50, 0.55, 1.95, 0.95, "Factorised state",
-        "$s_g,s_q,s_m$ / nuisance $\\xi$", SOFT_B, CHIP_B)
+    # ---- right: clinical pathways ----
+    box(ax, 10.35, 3.85, 2.95, 0.95, "Loss-of-view warning",
+        "anticipate before losing sight", SOFT_APP, C_APP, 9)
+    box(ax, 10.35, 2.55, 2.95, 0.95, "Camera-handling training",
+        "score a motion's visual effect", SOFT_APP, C_APP, 9)
+    box(ax, 10.35, 1.25, 2.95, 0.95, "Navigation assistance",
+        "model-based planning prototype", SOFT_APP, C_APP, 9)
 
-    # probabilistic physical dynamics
-    box(ax, 8.70, 1.55, 1.85, 1.75, "SE(3) dynamics",
-        "block-causal ensemble\nrisk + covariance", SOFT_C, CHIP_C)
+    # ---- arrows ----
+    for y in (3.95, 2.95, 1.95):
+        ax.plot([1.90, 2.12, 2.12, 2.35], [y, y, 2.95, 2.95], color=LINE, lw=1.2, zorder=1)
+    arrow(ax, 2.12, 2.95, 2.35, 2.95)
 
-    # output
-    box(ax, 10.80, 1.45, 2.35, 1.95, "Safe continuous MPC",
-        "CEM / MPPI\nhard reject + zero motion\noffline only", GOAL, "#2F6B4F", 9)
+    # encoder -> lane split
+    ax.plot([4.25, 4.5, 4.5, 4.75], [2.95, 2.95, 3.87, 3.87], color=LINE, lw=1.2)
+    arrow(ax, 4.5, 3.87, 4.75, 3.87)
+    ax.plot([4.25, 4.5, 4.5, 4.75], [2.95, 2.95, 1.07, 1.07], color=LINE, lw=1.2)
+    arrow(ax, 4.5, 1.07, 4.75, 1.07)
 
-    # orthogonal connectors: inputs -> encoder
-    for y in (3.27, 2.27, 1.27):
-        ax.plot([2.00, 2.17, 2.17, 2.35], [y, y, 2.42, 2.42], color=LINE, lw=1.2, zorder=1)
-    ax.annotate("", xy=(2.35, 2.42), xytext=(2.28, 2.42),
-                arrowprops=dict(arrowstyle="-|>", color=LINE, lw=1.2, mutation_scale=9))
+    arrow(ax, 6.90, 3.87, 7.35, 3.35)   # L1 -> Capability 1
+    arrow(ax, 6.90, 2.50, 7.35, 3.05)   # L2 -> Capability 1
+    arrow(ax, 6.90, 1.07, 7.35, 1.07)   # SE(3) -> Capabilities 2+3
 
-    h_arrow(ax, 4.30, 4.55, 2.42)
-    # tokens fan to L1/L2/L3
-    ax.plot([6.25, 6.40, 6.40], [2.42, 2.42, 3.32], color=LINE, lw=1.2)
-    ax.plot([6.40, 6.50], [3.32, 3.32], color=LINE, lw=1.2)
-    ax.plot([6.40, 6.50], [2.17, 2.17], color=LINE, lw=1.2)
-    ax.plot([6.40, 6.40, 6.50], [2.42, 1.02, 1.02], color=LINE, lw=1.2)
-    for y in (3.32, 2.17, 1.02):
-        ax.annotate("", xy=(6.50, y), xytext=(6.45, y),
-                    arrowprops=dict(arrowstyle="-|>", color=LINE, lw=1.2, mutation_scale=8))
+    arrow(ax, 9.65, 3.35, 10.35, 4.32)  # Capability 1 -> loss-of-view
+    arrow(ax, 9.65, 3.10, 10.35, 3.02)  # Capability 1/2 -> training
+    arrow(ax, 9.65, 1.07, 10.35, 1.72)  # Capabilities 2+3 -> navigation
 
-    # grounded state -> physical dynamics -> safe MPC
-    ax.plot([8.45, 8.58, 8.58, 8.70], [1.02, 1.02, 2.00, 2.00],
-            color=LINE, lw=1.2)
-    ax.annotate("", xy=(8.70, 2.00), xytext=(8.62, 2.00),
-                arrowprops=dict(arrowstyle="-|>", color=LINE, lw=1.2,
-                                mutation_scale=9))
-    h_arrow(ax, 10.55, 10.80, 2.42)
-
-    ax.text(6.75, 3.95, "Predictive foundation + grounded state", ha="center",
-            fontsize=9, fontweight="bold", color=INK)
-    ax.text(6.7, 0.18,
-            "Forecast from passive video; ground control only with aligned pose/depth.  No pixel decoder.",
-            ha="center", fontsize=8, style="italic", color="#4A5560")
+    # lane labels
+    ax.text(6.05, 4.75, "Passive-video forecast (validated)", ha="center",
+            fontsize=9, fontweight="bold", color=C_FC)
+    ax.text(6.05, 0.12, "Physical grounding (audited; pose/depth-gated)",
+            ha="center", fontsize=9, fontweight="bold", color=C_PHYS)
+    ax.text(11.82, 5.05, "Clinical application pathways", ha="center",
+            fontsize=9, fontweight="bold", color=C_APP)
 
     fig.tight_layout()
     OUT.mkdir(parents=True, exist_ok=True)
