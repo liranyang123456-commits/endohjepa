@@ -454,13 +454,13 @@ def main():
     # ---- lane titles --------------------------------------------------------
     # The lane-A title is wider than the input column, so it is lifted clear of
     # the encoder box rather than allowed to run across its border.
-    ax.text(IN_L, 9.55, "Lane A: passive-video forecasting", ha="left",
+    ax.text(IN_L, 9.60, "Lane A: passive-video forecasting", ha="left",
             va="bottom", fontsize=8.4, fontweight="bold", color=C_FC)
-    ax.text(IN_L, 9.33, "validated across three orifices", ha="left",
+    ax.text(IN_L, 9.42, "validated across three orifices", ha="left",
             va="bottom", fontsize=7.6, color=C_FC, style="italic")
-    ax.text(IN_L, 3.24, "Lane B: physical grounding", ha="left", va="bottom",
+    ax.text(IN_L, 3.44, "Lane B: physical grounding", ha="left", va="bottom",
             fontsize=9.6, fontweight="bold", color=C_PHYS)
-    ax.text(IN_L, 3.05, "audited on pose-gated data only", ha="left",
+    ax.text(IN_L, 3.24, "audited on pose-gated data only", ha="left",
             va="bottom", fontsize=7.6, color=C_PHYS, style="italic")
     ax.text(IN_L, 0.80, "Correctness audits applied to both lanes", ha="left",
             va="bottom", fontsize=8.4, fontweight="bold", color=C_AUD)
