@@ -10,6 +10,7 @@ reprojection gate covers pose; depth there uses a different convention).
         --cache outputs/physical_actions_v2/sequences.pt \
         --out outputs/physical_actions_v2/sequences_risk.pt
 """
+
 from __future__ import annotations
 
 import argparse
@@ -20,14 +21,19 @@ import torch
 
 from endoworld.eval.scared_collision import _depth_proximities
 from endoworld.world.physical_actions import (
-    PhysicalSequence,
     load_sequences,
     save_sequences,
 )
 
 
-def attach(cache: str, out: str, scared_root: str, stride: int,
-           lookback_tubelets: int, tubelet: int) -> dict:
+def attach(
+    cache: str,
+    out: str,
+    scared_root: str,
+    stride: int,
+    lookback_tubelets: int,
+    tubelet: int,
+) -> dict:
     sequences = load_sequences(cache)
     warm = lookback_tubelets - 1
     labelled, missing = 0, []
@@ -61,7 +67,8 @@ def attach(cache: str, out: str, scared_root: str, stride: int,
         )
     save_sequences(sequences, out)
     report = {
-        "cache": cache, "out": out,
+        "cache": cache,
+        "out": out,
         "label": "5th-percentile scene depth (mm) per latent step",
         "frame_mapping": f"latent k -> video frame {(warm + 1) * tubelet * stride - stride} + {tubelet * stride}k",
         "n_scared_labelled": labelled,
@@ -69,7 +76,8 @@ def attach(cache: str, out: str, scared_root: str, stride: int,
         "missing": missing,
     }
     Path(out).with_suffix(".risk.json").write_text(
-        json.dumps(report, indent=2), encoding="utf-8")
+        json.dumps(report, indent=2), encoding="utf-8"
+    )
     print(json.dumps(report, indent=2))
     return report
 
@@ -77,14 +85,22 @@ def attach(cache: str, out: str, scared_root: str, stride: int,
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cache", default="outputs/physical_actions_v2/sequences.pt")
-    parser.add_argument("--out", default="outputs/physical_actions_v2/sequences_risk.pt")
-    parser.add_argument("--scared", default="E:/MIS_Datasets/SCARED")
+    parser.add_argument(
+        "--out", default="outputs/physical_actions_v2/sequences_risk.pt"
+    )
+    parser.add_argument("--scared", default="datasets/SCARED")
     parser.add_argument("--stride", type=int, default=2)
     parser.add_argument("--lookback-tubelets", type=int, default=8)
     parser.add_argument("--tubelet", type=int, default=2)
     args = parser.parse_args()
-    attach(args.cache, args.out, args.scared, args.stride,
-           args.lookback_tubelets, args.tubelet)
+    attach(
+        args.cache,
+        args.out,
+        args.scared,
+        args.stride,
+        args.lookback_tubelets,
+        args.tubelet,
+    )
 
 
 if __name__ == "__main__":

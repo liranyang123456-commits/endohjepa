@@ -7,6 +7,7 @@ Both expose encode(clip (B,T,C,H,W) in [0,1]) -> (B, D) pooled, and .image_size.
 
     python -m endoworld.understanding.baselines_encoders --smoke
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -25,16 +26,19 @@ def _norm(clip, mean, std):
 class VideoMAEEncoder(nn.Module):
     """MCG-NJU/videomae-base: self-supervised video model (Kinetics-400)."""
 
-    def __init__(self, model_id: str = "MCG-NJU/videomae-base", device: str | None = None):
+    def __init__(
+        self, model_id: str = "MCG-NJU/videomae-base", device: str | None = None
+    ):
         super().__init__()
         from transformers import VideoMAEModel
+
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = VideoMAEModel.from_pretrained(model_id).to(self.device).eval()
         cfg = self.model.config
-        self.image_size = cfg.image_size          # 224
-        self.num_frames = cfg.num_frames          # 16
-        self.embed_dim = cfg.hidden_size          # 768
-        self.tubelet = cfg.tubelet_size           # 2
+        self.image_size = cfg.image_size  # 224
+        self.num_frames = cfg.num_frames  # 16
+        self.embed_dim = cfg.hidden_size  # 768
+        self.tubelet = cfg.tubelet_size  # 2
         for p in self.model.parameters():
             p.requires_grad_(False)
 
@@ -42,8 +46,11 @@ class VideoMAEEncoder(nn.Module):
         b, t, c, h, w = clip.shape
         if (h, w) != (self.image_size, self.image_size):
             clip = torch.nn.functional.interpolate(
-                clip.reshape(b * t, c, h, w), size=(self.image_size, self.image_size),
-                mode="bilinear", align_corners=False).reshape(b, t, c, self.image_size, self.image_size)
+                clip.reshape(b * t, c, h, w),
+                size=(self.image_size, self.image_size),
+                mode="bilinear",
+                align_corners=False,
+            ).reshape(b, t, c, self.image_size, self.image_size)
         return (clip - _MEAN.to(clip)) / _STD.to(clip)
 
     @torch.no_grad()
@@ -57,9 +64,12 @@ class VideoMAEEncoder(nn.Module):
 class ImageNetViTEncoder(nn.Module):
     """google/vit-base-patch16-224: supervised ImageNet features, pooled over time."""
 
-    def __init__(self, model_id: str = "google/vit-base-patch16-224", device: str | None = None):
+    def __init__(
+        self, model_id: str = "google/vit-base-patch16-224", device: str | None = None
+    ):
         super().__init__()
         from transformers import ViTModel
+
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = ViTModel.from_pretrained(model_id).to(self.device).eval()
         self.image_size = 224
@@ -75,7 +85,11 @@ class ImageNetViTEncoder(nn.Module):
         x = clip.to(self.device).float().reshape(b * t, c, h, w)  # always 4D per-frame
         if (h, w) != (self.image_size, self.image_size):
             x = torch.nn.functional.interpolate(
-                x, size=(self.image_size, self.image_size), mode="bilinear", align_corners=False)
+                x,
+                size=(self.image_size, self.image_size),
+                mode="bilinear",
+                align_corners=False,
+            )
         x = (x - _MEAN.to(x)[:, 0]) / _STD.to(x)[:, 0]
         out = self.model(pixel_values=x).last_hidden_state  # (B*T, 1+P, D)
         feat = out[:, 0]  # CLS token
@@ -92,6 +106,7 @@ def _download_via_get(model_id: str, files: list[str]) -> str:
     works, so we fetch the resolve URLs straight into a local dir.
     """
     import urllib.request
+
     out = _HF_CACHE / model_id.replace("/", "__")
     out.mkdir(parents=True, exist_ok=True)
     base = "https://hf-mirror.com"
@@ -103,7 +118,10 @@ def _download_via_get(model_id: str, files: list[str]) -> str:
             url = f"{host}/{model_id}/resolve/main/{f}"
             try:
                 req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-                with urllib.request.urlopen(req, timeout=120) as r, open(dest, "wb") as w:
+                with (
+                    urllib.request.urlopen(req, timeout=120) as r,
+                    open(dest, "wb") as w,
+                ):
                     w.write(r.read())
                 break
             except Exception:
@@ -119,6 +137,7 @@ def _load_local(model_id: str, files=("config.json", "model.safetensors")):
     Tries model.safetensors then pytorch_model.bin for the weights.
     """
     from transformers import AutoModel
+
     try:
         local = _download_via_get(model_id, ["config.json", "model.safetensors"])
     except OSError:
@@ -129,7 +148,9 @@ def _load_local(model_id: str, files=("config.json", "model.safetensors")):
 class DINOv2Encoder(nn.Module):
     """facebook/dinov2-base: strong self-supervised image features, pooled over time."""
 
-    def __init__(self, model_id: str = "facebook/dinov2-base", device: str | None = None):
+    def __init__(
+        self, model_id: str = "facebook/dinov2-base", device: str | None = None
+    ):
         super().__init__()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = _load_local(model_id).to(self.device).eval()
@@ -145,8 +166,12 @@ class DINOv2Encoder(nn.Module):
         b, t, c, h, w = clip.shape
         x = clip.to(self.device).float().reshape(b * t, c, h, w)
         if (h, w) != (self.image_size, self.image_size):
-            x = torch.nn.functional.interpolate(x, size=(self.image_size, self.image_size),
-                                                mode="bilinear", align_corners=False)
+            x = torch.nn.functional.interpolate(
+                x,
+                size=(self.image_size, self.image_size),
+                mode="bilinear",
+                align_corners=False,
+            )
         x = (x - _MEAN.to(x)[:, 0]) / _STD.to(x)[:, 0]
         out = self.model(pixel_values=x).last_hidden_state
         feat = out[:, 0]  # CLS
@@ -156,7 +181,9 @@ class DINOv2Encoder(nn.Module):
 class TimeSformerEncoder(nn.Module):
     """facebook/timesformer-base-finetuned-k400: divided space-time video Transformer."""
 
-    def __init__(self, model_id: str = "facebook/timesformer-base-finetuned-k400", device=None):
+    def __init__(
+        self, model_id: str = "facebook/timesformer-base-finetuned-k400", device=None
+    ):
         super().__init__()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = _load_local(model_id).to(self.device).eval()
@@ -174,8 +201,11 @@ class TimeSformerEncoder(nn.Module):
         x = clip.to(self.device).float()
         if (h, w) != (self.image_size, self.image_size):
             x = torch.nn.functional.interpolate(
-                x.reshape(b * t, c, h, w), size=(self.image_size, self.image_size),
-                mode="bilinear", align_corners=False).reshape(b, t, c, self.image_size, self.image_size)
+                x.reshape(b * t, c, h, w),
+                size=(self.image_size, self.image_size),
+                mode="bilinear",
+                align_corners=False,
+            ).reshape(b, t, c, self.image_size, self.image_size)
         x = (x - _MEAN.to(x)) / _STD.to(x)
         # TimeSformer wants (batch, frames, C, H, W) == our (B,T,C,H,W)
         out = self.model(pixel_values=x).last_hidden_state
@@ -208,8 +238,11 @@ class ViViTEncoder(nn.Module):
             t = self.num_frames
         if (h, w) != (self.image_size, self.image_size):
             x = torch.nn.functional.interpolate(
-                x.reshape(b * t, c, h, w), size=(self.image_size, self.image_size),
-                mode="bilinear", align_corners=False).reshape(b, t, c, self.image_size, self.image_size)
+                x.reshape(b * t, c, h, w),
+                size=(self.image_size, self.image_size),
+                mode="bilinear",
+                align_corners=False,
+            ).reshape(b, t, c, self.image_size, self.image_size)
         x = (x - _MEAN.to(x)) / _STD.to(x)
         out = self.model(pixel_values=x).last_hidden_state
         return out.mean(dim=1)
@@ -231,6 +264,7 @@ def load_baseline(name: str, device: str):
 
 if __name__ == "__main__":
     import argparse
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--smoke", action="store_true")
     args = ap.parse_args()

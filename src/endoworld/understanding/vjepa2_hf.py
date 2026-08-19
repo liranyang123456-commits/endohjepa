@@ -3,6 +3,7 @@
 Provides encode / encode_dense / encode_temporal. Frozen by default; last encoder
 blocks can be unfrozen for endoscopic domain adaptation.
 """
+
 from __future__ import annotations
 
 import torch
@@ -24,16 +25,26 @@ def _encoder_blocks(model: nn.Module) -> list[nn.Module]:
             if layers is not None and len(list(layers)) > 0:
                 return list(layers)
     # fallback: collect modules named *block* / *layer*
-    found = [m for n, m in model.named_modules()
-             if n.endswith("layer") or "encoder.layer" in n]
+    found = [
+        m
+        for n, m in model.named_modules()
+        if n.endswith("layer") or "encoder.layer" in n
+    ]
     return found
 
 
 class VJEPA2Encoder(nn.Module):
-    def __init__(self, model_id: str = DEFAULT_MODEL, device: str | None = None,
-                 image_size: int = 256, freeze: bool = True, unfreeze_last: int = 0):
+    def __init__(
+        self,
+        model_id: str = DEFAULT_MODEL,
+        device: str | None = None,
+        image_size: int = 256,
+        freeze: bool = True,
+        unfreeze_last: int = 0,
+    ):
         super().__init__()
         from transformers import AutoModel
+
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = AutoModel.from_pretrained(model_id).to(self.device)
         self.image_size = image_size
@@ -60,9 +71,11 @@ class VJEPA2Encoder(nn.Module):
         b, t, c, h, w = clip.shape
         if (h, w) != (self.image_size, self.image_size):
             clip = torch.nn.functional.interpolate(
-                clip.reshape(b * t, c, h, w), size=(self.image_size, self.image_size),
-                mode="bilinear", align_corners=False).reshape(
-                    b, t, c, self.image_size, self.image_size)
+                clip.reshape(b * t, c, h, w),
+                size=(self.image_size, self.image_size),
+                mode="bilinear",
+                align_corners=False,
+            ).reshape(b, t, c, self.image_size, self.image_size)
         clip = (clip - _MEAN.to(clip)) / _STD.to(clip)
         return clip
 

@@ -4,6 +4,7 @@ The canonical batch-shuffled score and same-sequence fixed-bank scores answer
 different questions.  This entry point reports both without relabelling either
 as the other, and records the number of correlated windows and sequences.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,17 +39,19 @@ def audit(args: argparse.Namespace) -> dict:
     device = "cuda" if torch.cuda.is_available() and not args.cpu else "cpu"
     sequences = load_sequences(args.data)
     if args.dataset:
-        sequences = [sequence for sequence in sequences
-                     if sequence.dataset == args.dataset]
-    dataset = PhysicalActionDataset(
-        sequences, args.history, args.horizon, "test")
+        sequences = [
+            sequence for sequence in sequences if sequence.dataset == args.dataset
+        ]
+    dataset = PhysicalActionDataset(sequences, args.history, args.horizon, "test")
     if not len(dataset):
         raise RuntimeError("no test windows for the requested dataset")
     model = _load_model(args.checkpoint, device)
     batch_shuffled = evaluate(
-        model, DataLoader(dataset, batch_size=args.batch_size, shuffle=False), device)
+        model, DataLoader(dataset, batch_size=args.batch_size, shuffle=False), device
+    )
     fixed_bank = evaluate_fixed_bank(
-        model, dataset, device, n_negatives=args.negatives, seed=args.seed)
+        model, dataset, device, n_negatives=args.negatives, seed=args.seed
+    )
     report = {
         "task": "continuous SE(3) action-conditioned sensitivity audit",
         "checkpoint": args.checkpoint,
@@ -56,10 +59,12 @@ def audit(args: argparse.Namespace) -> dict:
         "history": args.history,
         "horizon": args.horizon,
         "n_windows": len(dataset),
-        "n_test_sequences": len({
-            dataset.sequences[sequence_index].sequence_id
-            for sequence_index, _ in dataset.windows
-        }),
+        "n_test_sequences": len(
+            {
+                dataset.sequences[sequence_index].sequence_id
+                for sequence_index, _ in dataset.windows
+            }
+        ),
         "batch_shuffled": {
             **batch_shuffled,
             "negative_protocol": (

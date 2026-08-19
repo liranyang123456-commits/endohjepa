@@ -5,6 +5,7 @@
 
     python -m endoworld.captioning.train_caption --smoke
 """
+
 from __future__ import annotations
 
 import argparse
@@ -28,6 +29,7 @@ def tokenize(text: str) -> list[str]:
 class Vocab:
     def __init__(self, texts, min_freq=1):
         from collections import Counter
+
         c = Counter(t for s in texts for t in tokenize(s))
         self.itos = list(SPECIAL) + [w for w, f in c.items() if f >= min_freq]
         self.stoi = {w: i for i, w in enumerate(self.itos)}
@@ -37,7 +39,11 @@ class Vocab:
         return len(self.itos)
 
     def encode(self, text, max_len):
-        ids = [self.bos] + [self.stoi.get(t, self.unk) for t in tokenize(text)] + [self.eos]
+        ids = (
+            [self.bos]
+            + [self.stoi.get(t, self.unk) for t in tokenize(text)]
+            + [self.eos]
+        )
         ids = ids[:max_len]
         ids += [self.pad] * (max_len - len(ids))
         return ids
@@ -65,10 +71,15 @@ class CaptionDataset(Dataset):
 
     def __getitem__(self, idx):
         from PIL import Image, ImageFile
+
         ImageFile.LOAD_TRUNCATED_IMAGES = True
         path, caption = self.rows[idx]
         try:
-            img = Image.open(path).convert("RGB").resize((self.image_size, self.image_size))
+            img = (
+                Image.open(path)
+                .convert("RGB")
+                .resize((self.image_size, self.image_size))
+            )
             arr = np.asarray(img, dtype=np.float32) / 255.0
         except Exception:
             arr = np.zeros((self.image_size, self.image_size, 3), dtype=np.float32)
@@ -101,13 +112,18 @@ def train(args):
     max_len = 48
     tr = CaptionDataset(train_rows, vocab, img_size, max_len)
     va = CaptionDataset(val_rows, vocab, img_size, max_len)
-    dl = DataLoader(tr, batch_size=args.batch_size, shuffle=True,
-                    num_workers=args.workers, drop_last=True)
+    dl = DataLoader(
+        tr,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.workers,
+        drop_last=True,
+    )
 
     dim = 128 if args.smoke else 256
     depth = 2 if args.smoke else 4
     model = Captioner(len(vocab), dim=dim, depth=depth, max_len=max_len).to(device)
-    print(f"[model] {sum(p.numel() for p in model.parameters())/1e6:.1f}M params")
+    print(f"[model] {sum(p.numel() for p in model.parameters()) / 1e6:.1f}M params")
 
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
     crit = torch.nn.CrossEntropyLoss(ignore_index=vocab.pad)
@@ -118,13 +134,13 @@ def train(args):
         run = 0.0
         for img, ids in dl:
             img, ids = img.to(device), ids.to(device)
-            logits = model(img, ids[:, :-1])              # predict next token
+            logits = model(img, ids[:, :-1])  # predict next token
             loss = crit(logits.reshape(-1, logits.size(-1)), ids[:, 1:].reshape(-1))
             opt.zero_grad(set_to_none=True)
             loss.backward()
             opt.step()
             run += loss.item()
-        print(f"[epoch {epoch}] loss={run/max(len(dl),1):.4f}")
+        print(f"[epoch {epoch}] loss={run / max(len(dl), 1):.4f}")
 
     # qualitative eval
     model.eval()
@@ -133,9 +149,16 @@ def train(args):
     print("[sample] GT  :", vocab.decode(ids.tolist()))
     print("[sample] PRED:", vocab.decode(gen[0].tolist()))
 
-    torch.save({"model": model.state_dict(), "vocab": vocab.itos,
-                "dim": dim, "depth": depth, "max_len": max_len},
-               os.path.join(args.out, "captioner.pt"))
+    torch.save(
+        {
+            "model": model.state_dict(),
+            "vocab": vocab.itos,
+            "dim": dim,
+            "depth": depth,
+            "max_len": max_len,
+        },
+        os.path.join(args.out, "captioner.pt"),
+    )
     print(f"[ckpt] {os.path.join(args.out, 'captioner.pt')}")
     if args.smoke:
         print("[smoke] OK")

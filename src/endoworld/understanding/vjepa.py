@@ -11,6 +11,7 @@ Architecture (LeCun's JEPA in latent space):
 This is a from-scratch reference that trains end-to-end. For SOTA, load official
 V-JEPA 2 weights into the same interface and domain-adapt.
 """
+
 from __future__ import annotations
 
 import copy
@@ -28,7 +29,7 @@ class VJEPAConfig:
     in_chans: int = 3
     patch_size: int = 16
     tubelet_size: int = 2
-    embed_dim: int = 384          # compact ViT (vit_small-ish)
+    embed_dim: int = 384  # compact ViT (vit_small-ish)
     depth: int = 6
     num_heads: int = 6
     predictor_dim: int = 192
@@ -59,14 +60,15 @@ class TubeletEmbed(nn.Module):
     def __init__(self, cfg: VJEPAConfig):
         super().__init__()
         self.proj = nn.Conv3d(
-            cfg.in_chans, cfg.embed_dim,
+            cfg.in_chans,
+            cfg.embed_dim,
             kernel_size=(cfg.tubelet_size, cfg.patch_size, cfg.patch_size),
             stride=(cfg.tubelet_size, cfg.patch_size, cfg.patch_size),
         )
 
     def forward(self, x):  # x: (B, C, T, H, W)
-        x = self.proj(x)                       # (B, D, t, h, w)
-        return x.flatten(2).transpose(1, 2)    # (B, N, D)
+        x = self.proj(x)  # (B, D, t, h, w)
+        return x.flatten(2).transpose(1, 2)  # (B, N, D)
 
 
 class Block(nn.Module):
@@ -90,8 +92,12 @@ class ViTEncoder(nn.Module):
         super().__init__()
         self.patch = TubeletEmbed(cfg)
         self.register_buffer("pos", _sincos_pos_embed(cfg.n_tokens, cfg.embed_dim))
-        self.blocks = nn.ModuleList([Block(cfg.embed_dim, cfg.num_heads, cfg.mlp_ratio)
-                                     for _ in range(cfg.depth)])
+        self.blocks = nn.ModuleList(
+            [
+                Block(cfg.embed_dim, cfg.num_heads, cfg.mlp_ratio)
+                for _ in range(cfg.depth)
+            ]
+        )
         self.norm = nn.LayerNorm(cfg.embed_dim)
 
     def forward_tokens(self, tokens):
@@ -100,11 +106,11 @@ class ViTEncoder(nn.Module):
         return self.norm(tokens)
 
     def forward(self, x, keep_idx=None):
-        tok = self.patch(x) + self.pos            # (B, N, D)
+        tok = self.patch(x) + self.pos  # (B, N, D)
         if keep_idx is not None:
             b, n, d = tok.shape
             idx = keep_idx.unsqueeze(-1).expand(-1, -1, d)
-            tok = torch.gather(tok, 1, idx)       # keep only visible
+            tok = torch.gather(tok, 1, idx)  # keep only visible
         return self.forward_tokens(tok)
 
 
@@ -115,27 +121,34 @@ class Predictor(nn.Module):
         self.mask_token = nn.Parameter(torch.zeros(1, 1, cfg.predictor_dim))
         nn.init.normal_(self.mask_token, std=0.02)
         self.register_buffer("pos", _sincos_pos_embed(cfg.n_tokens, cfg.predictor_dim))
-        self.blocks = nn.ModuleList([Block(cfg.predictor_dim, cfg.num_heads, cfg.mlp_ratio)
-                                     for _ in range(cfg.predictor_depth)])
+        self.blocks = nn.ModuleList(
+            [
+                Block(cfg.predictor_dim, cfg.num_heads, cfg.mlp_ratio)
+                for _ in range(cfg.predictor_depth)
+            ]
+        )
         self.norm = nn.LayerNorm(cfg.predictor_dim)
         self.head = nn.Linear(cfg.predictor_dim, cfg.embed_dim)
 
     def forward(self, vis_tokens, vis_idx, mask_idx):
         b = vis_tokens.size(0)
-        n_total = self.pos.size(1)
+        self.pos.size(1)
         x = self.embed(vis_tokens) + self._gather_pos(vis_idx)
-        mask = self.mask_token.expand(b, mask_idx.size(1), -1) + self._gather_pos(mask_idx)
+        mask = self.mask_token.expand(b, mask_idx.size(1), -1) + self._gather_pos(
+            mask_idx
+        )
         seq = torch.cat([x, mask], dim=1)
         for blk in self.blocks:
             seq = blk(seq)
         seq = self.norm(seq)
-        pred_mask = seq[:, x.size(1):, :]        # predictions at masked positions
+        pred_mask = seq[:, x.size(1) :, :]  # predictions at masked positions
         return self.head(pred_mask)
 
     def _gather_pos(self, idx):
         d = self.pos.size(-1)
-        return torch.gather(self.pos.expand(idx.size(0), -1, -1), 1,
-                            idx.unsqueeze(-1).expand(-1, -1, d))
+        return torch.gather(
+            self.pos.expand(idx.size(0), -1, -1), 1, idx.unsqueeze(-1).expand(-1, -1, d)
+        )
 
 
 class VJEPA(nn.Module):
@@ -151,7 +164,9 @@ class VJEPA(nn.Module):
     @torch.no_grad()
     def update_target(self):
         m = self.cfg.ema_momentum
-        for tp, cp in zip(self.target_encoder.parameters(), self.context_encoder.parameters()):
+        for tp, cp in zip(
+            self.target_encoder.parameters(), self.context_encoder.parameters()
+        ):
             tp.data.mul_(m).add_(cp.data, alpha=1 - m)
 
     def sample_masks(self, batch: int, device):
@@ -175,7 +190,7 @@ class VJEPA(nn.Module):
         pred = self.predictor(vis_tokens, vis_idx, mask_idx)
 
         with torch.no_grad():
-            full = self.target_encoder(x)                 # (B, N, D)
+            full = self.target_encoder(x)  # (B, N, D)
             d = full.size(-1)
             tgt = torch.gather(full, 1, mask_idx.unsqueeze(-1).expand(-1, -1, d))
         per = nn.functional.smooth_l1_loss(pred, tgt, reduction="none").mean(dim=-1)

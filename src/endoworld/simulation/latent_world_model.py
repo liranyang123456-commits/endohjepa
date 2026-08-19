@@ -5,6 +5,7 @@ predictors on dense/pooled tokens, hierarchy, latent actions, and energy MPC.
 This module still exposes a GRU predictor so published GRU numbers remain
 reproducible.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -25,13 +26,16 @@ def build_predictor(cfg: WorldModelConfig):
 
     if cfg.kind == "gru":
         from endoworld.world.baselines import GRUDynamics
+
         return GRUDynamics(cfg.latent_dim, cfg.hidden_dim, cfg.horizon)
 
     from endoworld.world.h_jepa import HJEPAConfig, TransformerPredictor
 
     wcfg = HJEPAConfig(
-        latent_dim=cfg.latent_dim, hidden_dim=cfg.hidden_dim,
-        history=cfg.history, horizon=cfg.horizon,
+        latent_dim=cfg.latent_dim,
+        hidden_dim=cfg.hidden_dim,
+        history=cfg.history,
+        horizon=cfg.horizon,
     )
     pred = TransformerPredictor(wcfg, action_cond=False)
 
@@ -49,5 +53,6 @@ def build_predictor(cfg: WorldModelConfig):
 
 def rollout(predictor, z_hist, actions=None):
     import torch
+
     with torch.no_grad():
         return predictor(z_hist, actions)

@@ -1,12 +1,13 @@
-# Endo-HJEPA: Predictive Foundations and Physical-Grounding Limits of a Cross-Orifice Endoscopic World Model
+# Endo-HJEPA: Multi-Domain Latent Forecasting with Audited SE(3)-Conditioned Dynamics for Endoscopic Video
 
 Official code and reproducibility package for the Endo-HJEPA manuscript.
 
-Endo-HJEPA is a hierarchical joint-embedding predictive architecture (JEPA) world
-model for endoscopic video, built on a frozen V-JEPA 2 ViT-L encoder with
-domain-conditioned causal predictors, a continuous SE(3) action-conditioned
-branch, and an audited physical-grounding evaluation protocol across 19 local
-endoscopic datasets (1,707 sequences, 1.07M decoded frames).
+Endo-HJEPA studies latent forecasting across laparoscopic, gastrointestinal and
+bronchoscopic video. It combines a frozen V-JEPA 2 ViT-L encoder, a
+domain-conditioned causal residual forecaster and a separately audited
+continuous SE(3)-conditioned branch. The 19-dataset census contains 1,707
+sequences and 1.07M decoded frames; the main forecast caches use the eligible
+RGB-video subsets.
 
 ## Repository layout
 
@@ -18,7 +19,7 @@ src/endoworld/          # the endoworld package
   data/                 # manifests, video-level splits, clip datasets
 tests/                  # unit tests (action-path sensitivity, geometry, risk, planner)
 docs/endohjepa/         # paper (endohjepa.tex), figures + generators, metric ledger
-manifests/              # sequence manifest and domain census
+manifests/              # released aggregate census; local manifest is generated from data
 results/                # every JSON cited by docs/endohjepa/verified_metrics.json
 requirements.txt
 ```
@@ -30,7 +31,8 @@ entries point at the JSON files under `results/`.
 
 ```bash
 pip install -r requirements.txt   # install torch matching your CUDA separately
-python -m pytest tests/test_endohjepa_units.py -q
+pip install -e .
+python -m pytest tests -q
 ```
 
 Key entry points:
@@ -41,32 +43,34 @@ Key entry points:
 | Per-dataset decomposition | `python -m endoworld.eval.per_dataset --ckpt outputs/scale_6000_causal/endohjepa.pt` |
 | Physical cache (v2, mono + past-only) | `python -m endoworld.world.build_physical_actions --encoder vjepa2 --stereo-eye top --past-only` |
 | Continuous SE(3) dynamics | `python -m endoworld.world.train_continuous_actions --data outputs/physical_actions_v2/sequences.pt --negatives local --skip-test` |
-| Grouped CV (development protocol) | `python -m endoworld.world.train_grouped_cv --data outputs/physical_actions_v2/sequences.pt --negatives local` |
-| Offline planning proxy (single-shot oracle-goal latent retrieval) | `python -m endoworld.eval.physical_navigation --data outputs/physical_actions_v2/sequences.pt --checkpoint outputs/continuous_actions_v2/continuous_dynamics.pt --trials 200` |
-| C3VD depth-warp diagnostic | `python -m endoworld.eval.c3vd_pose_gate` |
+| Oracle-goal retrieval diagnostic | `python -m endoworld.eval.physical_navigation --data outputs/physical_actions_v2/sequences.pt --checkpoint outputs/continuous_actions_v2/continuous_dynamics.pt --trials 200 --normalised-actions` |
+| C3VD pose-convention gate | `python -m endoworld.eval.c3vd_pose_gate` |
 | CholecT50 dense MIL probe | `python -m endoworld.eval.cholect50_dense_probe` |
 | Paper figures | `python docs/endohjepa/make_figures.py` (reads only `verified_metrics.json`) |
 
 Datasets are not redistributed; see `docs/endohjepa/c3vd_download_links.json` for
-the C3VD/C3VDv2 download recipe and `manifests/` for the expected layout. Private
+the C3VD/C3VDv2 download recipe and `docs/endohjepa/DATA_ACCESS.md` for the
+expected layout and local-manifest instructions. Private
 ION bronchoscopy data cannot be shared; all ION-derived numbers are marked in the
 paper.
 
 ## Headline results (from `verified_metrics.json`)
 
-- Latent forecast, horizon 4, video-level held-out: **0.978 cosine** vs 0.916
-  persistence, 0.974 GRU, 0.971 Mamba (Holm-corrected Wilcoxon p < 1e-80).
-- Continuous SE(3) action sensitivity (v2 corrected pipeline): **83.1%**
-  real-action win on the frozen SCARED test case (grouped-CV macro 88.9%),
-  passing the 80% gate; external C3VD ten-trajectory pooled 58.3% (above
-  chance, below gate).
-- Calibrated risk screen: **fails its gate** (AUC 0.523 vs 0.75 target) and is
-  reported as a negative result; the risk head is inactive in the proxy.
-- Offline planning proxy (single-shot oracle-goal latent retrieval, 200
-  trials): one-step reach 51.5% (descriptive only; no receding-horizon control
-  or robot execution is claimed).
+- Latent forecast, mean over steps 1--4: **0.978 cosine** vs 0.916
+  persistence, 0.974 GRU and 0.971 Mamba on the same 750-clip validation set.
+- The separate past-only sensitivity audit is **0.9578** vs 0.9102 persistence.
+- The audit-selected SCARED action result is **87.0%** deranged-batch wins;
+  a distinct same-sequence bank gives 91.3% pair wins and 66.5%
+  all-negative wins (958 overlapping windows, four sequences).
+- Corrected near-wall risk fails the prespecified gate: AUC **0.523**.
+- The 98.0% forced-future oracle retrieval result is a structurally advantaged
+  diagnostic, not navigation or robot control.
 - CholecT50 official 5-fold CV: frozen V-JEPA 2 dense MIL probe 0.719 phase /
-  0.586 instrument mAP.
+  0.586 instrument mAP; this is below task-specific supervised SOTA.
+
+No external SOTA claim is made for latent forecasting because no standard
+multi-domain endoscopic latent-forecast benchmark was identified. C3VD action
+percentages are archived until rerun with the final negative evaluator.
 
 ## License
 

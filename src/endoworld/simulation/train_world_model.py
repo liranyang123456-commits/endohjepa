@@ -7,6 +7,7 @@ history. Rolling it forward = "imagining" the endoscopic world in latent space.
     python -m endoworld.simulation.train_world_model \
         --vjepa outputs/vjepa/vjepa_epoch8.pt --epochs 20
 """
+
 from __future__ import annotations
 
 import argparse
@@ -40,41 +41,69 @@ def train(args):
     print(f"[device] {device}")
     if args.encoder == "vjepa2":
         from endoworld.understanding.vjepa2_hf import VJEPA2Encoder
+
         vjepa = VJEPA2Encoder(args.vjepa2_id, device=device)
-        clip_len, image_size, tubelet, embed_dim = 64, vjepa.image_size, vjepa.tubelet, vjepa.embed_dim
+        clip_len, image_size, tubelet, embed_dim = (
+            64,
+            vjepa.image_size,
+            vjepa.tubelet,
+            vjepa.embed_dim,
+        )
     else:
         vjepa, vcfg = load_vjepa(args.vjepa, device)
-        clip_len, image_size, tubelet, embed_dim = vcfg.clip_len, vcfg.image_size, vcfg.tubelet_size, vcfg.embed_dim
+        clip_len, image_size, tubelet, embed_dim = (
+            vcfg.clip_len,
+            vcfg.image_size,
+            vcfg.tubelet_size,
+            vcfg.embed_dim,
+        )
 
     t_steps = clip_len // tubelet
     history = min(args.history, t_steps - 1)
     horizon = t_steps - history
-    print(f"[world] encoder={args.encoder} latent seq len={t_steps}, history={history}, "
-          f"horizon={horizon}, dim={embed_dim}")
+    print(
+        f"[world] encoder={args.encoder} latent seq len={t_steps}, history={history}, "
+        f"horizon={horizon}, dim={embed_dim}"
+    )
 
-    ds = EndoClipDataset(args.manifest, clip_len=clip_len, stride=args.stride,
-                         image_size=image_size, exclude=["EndoVis2019_ROBUST-MIS"])
+    ds = EndoClipDataset(
+        args.manifest,
+        clip_len=clip_len,
+        stride=args.stride,
+        image_size=image_size,
+        exclude=["EndoVis2019_ROBUST-MIS"],
+    )
     if args.max_clips and len(ds.clips) > args.max_clips:
         import random
+
         random.seed(0)
         ds.clips = random.sample(ds.clips, args.max_clips)
     print(f"[data] {len(ds)} clips")
-    dl = DataLoader(ds, batch_size=args.batch_size, shuffle=True,
-                    num_workers=args.workers, collate_fn=collate, drop_last=True)
+    dl = DataLoader(
+        ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.workers,
+        collate_fn=collate,
+        drop_last=True,
+    )
 
     # ---- encode ALL clips ONCE (cache latents), then train the small predictor fast ----
     print("[cache] encoding clips to latents (one pass through the frozen encoder) ...")
     Z = []
     import time as _t
+
     t0 = _t.time()
     for bi, clip in enumerate(dl):
         clip = clip.to(device).float()
         with torch.no_grad():
             Z.append(vjepa.encode_temporal(clip).cpu())
         if (bi + 1) % 10 == 0:
-            print(f"  encoded {sum(z.shape[0] for z in Z)} clips ({_t.time()-t0:.0f}s)")
-    Z = torch.cat(Z)                                     # (N, t, D)
-    print(f"[cache] latents {tuple(Z.shape)} in {_t.time()-t0:.0f}s")
+            print(
+                f"  encoded {sum(z.shape[0] for z in Z)} clips ({_t.time() - t0:.0f}s)"
+            )
+    Z = torch.cat(Z)  # (N, t, D)
+    print(f"[cache] latents {tuple(Z.shape)} in {_t.time() - t0:.0f}s")
 
     n = Z.size(0)
     n_val = max(1, int(0.15 * n))
@@ -82,10 +111,13 @@ def train(args):
     val_idx, tr_idx = perm[:n_val], perm[n_val:]
     Z_tr, Z_val = Z[tr_idx].to(device), Z[val_idx].to(device)
 
-    wcfg = WorldModelConfig(latent_dim=embed_dim, hidden_dim=args.hidden,
-                            history=history, horizon=horizon)
+    wcfg = WorldModelConfig(
+        latent_dim=embed_dim, hidden_dim=args.hidden, history=history, horizon=horizon
+    )
     predictor = build_predictor(wcfg).to(device)
-    print(f"[model] predictor {sum(p.numel() for p in predictor.parameters())/1e6:.2f}M params")
+    print(
+        f"[model] predictor {sum(p.numel() for p in predictor.parameters()) / 1e6:.2f}M params"
+    )
     opt = torch.optim.AdamW(predictor.parameters(), lr=args.lr, weight_decay=0.01)
     os.makedirs(args.out, exist_ok=True)
     bs = args.batch_size
@@ -95,7 +127,7 @@ def train(args):
         idx = torch.randperm(Z_tr.size(0), device=device)
         run = 0.0
         for i in range(0, Z_tr.size(0), bs):
-            z = Z_tr[idx[i:i + bs]]
+            z = Z_tr[idx[i : i + bs]]
             z_hist, z_future = z[:, :history], z[:, history:]
             pred = predictor(z_hist)
             loss = F.smooth_l1_loss(pred, z_future)
@@ -104,7 +136,7 @@ def train(args):
             opt.step()
             run += loss.item() * z.size(0)
         if (epoch + 1) % max(args.epochs // 10, 1) == 0 or epoch == 0:
-            print(f"[epoch {epoch}] train_loss={run/Z_tr.size(0):.4f}")
+            print(f"[epoch {epoch}] train_loss={run / Z_tr.size(0):.4f}")
 
     # held-out rollout vs persistence baseline
     predictor.eval()
@@ -119,8 +151,10 @@ def train(args):
     print(f"[rollout|val] cos_sim  model={cos_model:.3f}  persistence={cos_base:.3f}")
     print(f"[rollout|val] mse      model={l2_model:.4f}  persistence={l2_base:.4f}")
 
-    torch.save({"predictor": predictor.state_dict(), "wcfg": wcfg.__dict__},
-               os.path.join(args.out, "world_model.pt"))
+    torch.save(
+        {"predictor": predictor.state_dict(), "wcfg": wcfg.__dict__},
+        os.path.join(args.out, "world_model.pt"),
+    )
     print(f"[ckpt] {os.path.join(args.out, 'world_model.pt')}")
 
 

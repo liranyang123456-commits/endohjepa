@@ -11,6 +11,7 @@ into self-supervised training, so we crop to the content bounding box.
 
 Only stdlib + numpy + opencv are required.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -72,8 +73,13 @@ def unzip_all(dataset_dir: str, overwrite: bool = False) -> list[str]:
 # ----------------------------------------------------------------------------- #
 # video -> frames
 # ----------------------------------------------------------------------------- #
-def video_to_frames(video_path: str, out_dir: str, target_fps: float = 2.0,
-                    crop: bool = True, max_frames: int | None = None) -> int:
+def video_to_frames(
+    video_path: str,
+    out_dir: str,
+    target_fps: float = 2.0,
+    crop: bool = True,
+    max_frames: int | None = None,
+) -> int:
     if cv2 is None:
         raise RuntimeError("opencv required: pip install opencv-python")
     os.makedirs(out_dir, exist_ok=True)
@@ -88,8 +94,11 @@ def video_to_frames(video_path: str, out_dir: str, target_fps: float = 2.0,
         if idx % step == 0:
             if crop:
                 frame = crop_content(frame)
-            cv2.imwrite(os.path.join(out_dir, f"frame_{saved:06d}.jpg"), frame,
-                        [cv2.IMWRITE_JPEG_QUALITY, 92])
+            cv2.imwrite(
+                os.path.join(out_dir, f"frame_{saved:06d}.jpg"),
+                frame,
+                [cv2.IMWRITE_JPEG_QUALITY, 92],
+            )
             saved += 1
             if max_frames and saved >= max_frames:
                 break
@@ -98,8 +107,12 @@ def video_to_frames(video_path: str, out_dir: str, target_fps: float = 2.0,
     return saved
 
 
-def extract_all_videos(dataset_dir: str, target_fps: float = 2.0, crop: bool = True,
-                       max_frames: int | None = None) -> int:
+def extract_all_videos(
+    dataset_dir: str,
+    target_fps: float = 2.0,
+    crop: bool = True,
+    max_frames: int | None = None,
+) -> int:
     root = Path(dataset_dir)
     total = 0
     for vp in sorted(root.rglob("*")):

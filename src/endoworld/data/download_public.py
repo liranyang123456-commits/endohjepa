@@ -3,6 +3,7 @@
 Resumable HTTP downloads. C3VD files are hosted on Google Drive; we parse the
 project page for file ids and use the `confirm=t` export URL.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -52,7 +53,10 @@ def download_http(url: str, dest: Path, chunk: int = 8 * 1024 * 1024) -> Path:
     mode = "ab" if existing else "wb"
     t0 = time.time()
     last_log = t0
-    with urllib.request.urlopen(req, timeout=120, context=CTX) as resp, open(tmp, mode) as f:
+    with (
+        urllib.request.urlopen(req, timeout=120, context=CTX) as resp,
+        open(tmp, mode) as f,
+    ):
         total = existing
         clen = resp.headers.get("Content-Length")
         expected = existing + int(clen) if clen else None
@@ -125,7 +129,11 @@ def fetch_capsule(include_unlabeled: bool = True) -> None:
 
 def _c3vd_drive_files() -> list[tuple[str, str]]:
     req = urllib.request.Request(C3VD_PAGE, headers={"User-Agent": UA})
-    html = urllib.request.urlopen(req, timeout=40, context=CTX).read().decode("utf-8", "replace")
+    html = (
+        urllib.request.urlopen(req, timeout=40, context=CTX)
+        .read()
+        .decode("utf-8", "replace")
+    )
     pairs = re.findall(
         r"id=([A-Za-z0-9_-]+)&amp;confirm=t\"><span[^>]*>([A-Za-z0-9_.]+\.zip)",
         html,
@@ -144,7 +152,8 @@ def download_gdrive(file_id: str, dest: Path) -> Path:
         import gdown
     except ImportError:
         download_http(
-            f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t", dest)
+            f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t", dest
+        )
         return dest
     url = f"https://drive.google.com/uc?id={file_id}"
     print(f"[gdown] {dest.name}")
@@ -177,7 +186,9 @@ def fetch_c3vd(max_files: int | None = None, skip_screening: bool = False) -> No
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--set", choices=["hyperkvasir", "capsule", "c3vd", "all"], default="all")
+    ap.add_argument(
+        "--set", choices=["hyperkvasir", "capsule", "c3vd", "all"], default="all"
+    )
     ap.add_argument("--no-unlabeled-capsule", action="store_true")
     ap.add_argument("--c3vd-max", type=int, default=None)
     ap.add_argument("--skip-screening", action="store_true")

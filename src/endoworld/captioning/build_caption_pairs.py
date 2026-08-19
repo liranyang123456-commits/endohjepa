@@ -5,6 +5,7 @@ We have no free-text captions, but several datasets carry structured annotations
 turns those into templated clinical captions so we can train/align a VLM before any
 manual annotation. Later, replace/augment with clinician-written or model-refined text.
 """
+
 from __future__ import annotations
 
 import csv
@@ -50,6 +51,7 @@ def caption_from_present_classes(present: set[str]) -> str:
 def _present_classes_from_mask(mask_path: str) -> set[str]:
     import numpy as np
     from PIL import Image
+
     arr = np.asarray(Image.open(mask_path))
     if arr.ndim == 3:
         arr = arr[..., 0]
@@ -57,14 +59,17 @@ def _present_classes_from_mask(mask_path: str) -> set[str]:
     return {CHOLECSEG8K_CLASSES[i] for i in ids if i in CHOLECSEG8K_CLASSES}
 
 
-def build_cholecseg8k_pairs(images_dir: str, masks_dir: str, out_csv: str,
-                            limit: int | None = None) -> int:
+def build_cholecseg8k_pairs(
+    images_dir: str, masks_dir: str, out_csv: str, limit: int | None = None
+) -> int:
     """Pair each frame with a caption derived from its 13-class mask.
 
     Assumes matching filenames between images_dir and masks_dir (adjust the
     `mask_name` mapping to your export naming if needed).
     """
-    images = sorted(f for f in os.listdir(images_dir) if f.lower().endswith((".png", ".jpg")))
+    images = sorted(
+        f for f in os.listdir(images_dir) if f.lower().endswith((".png", ".jpg"))
+    )
     n = 0
     Path(out_csv).parent.mkdir(parents=True, exist_ok=True)
     with open(out_csv, "w", newline="", encoding="utf-8") as f:
@@ -89,6 +94,7 @@ def build_cholecseg8k_pairs(images_dir: str, masks_dir: str, out_csv: str,
 
 if __name__ == "__main__":
     import argparse
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--images", required=True)
     ap.add_argument("--masks", required=True)

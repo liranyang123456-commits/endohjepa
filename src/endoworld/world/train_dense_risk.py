@@ -8,6 +8,7 @@ then evaluates frame-level AUC/ECE on the frozen test case (dataset_7).
     python -m endoworld.world.train_dense_risk \
         --dense outputs/physical_actions_v2/dense_scared.pt
 """
+
 from __future__ import annotations
 
 import argparse
@@ -21,7 +22,11 @@ import torch
 import torch.nn.functional as F
 
 from endoworld.world.physical_actions import video_split
-from endoworld.world.probabilistic_dynamics import RiskCalibrator, binary_auc, binary_ece
+from endoworld.world.probabilistic_dynamics import (
+    RiskCalibrator,
+    binary_auc,
+    binary_ece,
+)
 
 
 def _depth_maps(keyframe_dir: Path) -> dict[int, np.ndarray]:
@@ -37,7 +42,9 @@ def _depth_maps(keyframe_dir: Path) -> dict[int, np.ndarray]:
             handle = tar.extractfile(member)
             if handle is None:
                 continue
-            img = cv2.imdecode(np.frombuffer(handle.read(), np.uint8), cv2.IMREAD_UNCHANGED)
+            img = cv2.imdecode(
+                np.frombuffer(handle.read(), np.uint8), cv2.IMREAD_UNCHANGED
+            )
             if img is None or img.ndim != 3:
                 continue
             depth = img[..., 0].astype(np.float32)
@@ -60,8 +67,8 @@ class DenseRiskHead(torch.nn.Module):
     def __init__(self, dim: int, hidden: int = 256):
         super().__init__()
         self.network = torch.nn.Sequential(
-            torch.nn.Linear(dim, hidden), torch.nn.SiLU(),
-            torch.nn.Linear(hidden, 1))
+            torch.nn.Linear(dim, hidden), torch.nn.SiLU(), torch.nn.Linear(hidden, 1)
+        )
         self.attention = torch.nn.Linear(dim, 1)
 
     def forward(self, tokens):  # (B, N, D) -> (B,)
@@ -72,22 +79,26 @@ class DenseRiskHead(torch.nn.Module):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dense", default="outputs/physical_actions_v2/dense_scared.pt")
-    parser.add_argument("--risk-cache",
-                        default="outputs/physical_actions_v2/sequences_risk.pt")
-    parser.add_argument("--scared", default="E:/MIS_Datasets/SCARED")
+    parser.add_argument(
+        "--dense", default="outputs/physical_actions_v2/dense_scared.pt"
+    )
+    parser.add_argument(
+        "--risk-cache", default="outputs/physical_actions_v2/sequences_risk.pt"
+    )
+    parser.add_argument("--scared", default="datasets/SCARED")
     parser.add_argument("--threshold", type=float, default=34.4)
-    parser.add_argument("--label-mode", choices=["absolute", "relative"],
-                        default="absolute")
+    parser.add_argument(
+        "--label-mode", choices=["absolute", "relative"], default="absolute"
+    )
     parser.add_argument("--epochs", type=int, default=15)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--out", default="outputs/dense_risk_v2/metrics.json")
     args = parser.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     pack = torch.load(args.dense, map_location="cpu", weights_only=False)
-    stride = pack["stride"]
-    tubelet = pack["tubelet"]
-    warm = pack["lookback_tubelets"] - 1
+    pack["stride"]
+    pack["tubelet"]
+    pack["lookback_tubelets"] - 1
 
     # Frame-level near-wall labels come from the v2 risk cache (5th-percentile
     # scene depth per latent step); dense steps align 1:1 with pooled latents.
@@ -118,13 +129,19 @@ def main():
             continue
         dense = row["dense"]
         n = min(dense.size(0), labels.size(0))
-        split = video_split(row["sequence_id"], case_id=row["case_id"], dataset="SCARED")
-        data[split].append({
-            "dense": dense[:n].float(),
-            "targets": labels[:n],
-        })
-    print({k: sum(int(v["dense"].size(0)) for v in vv) for k, vv in data.items()},
-          flush=True)
+        split = video_split(
+            row["sequence_id"], case_id=row["case_id"], dataset="SCARED"
+        )
+        data[split].append(
+            {
+                "dense": dense[:n].float(),
+                "targets": labels[:n],
+            }
+        )
+    print(
+        {k: sum(int(v["dense"].size(0)) for v in vv) for k, vv in data.items()},
+        flush=True,
+    )
 
     dim = pack["rows"][0]["dense"].size(-1)
     model = DenseRiskHead(dim).to(device)
@@ -142,8 +159,11 @@ def main():
         print(f"[epoch {epoch + 1}] loss={loss.item():.4f}", flush=True)
 
     model.eval()
-    report = {"threshold": args.threshold, "label_mode": args.label_mode,
-              "supervision": "frame-level 5th-pct depth labels on dense tokens"}
+    report = {
+        "threshold": args.threshold,
+        "label_mode": args.label_mode,
+        "supervision": "frame-level 5th-pct depth labels on dense tokens",
+    }
     split_logits = {}
     for split in ("val", "test"):
         logits_all, target_all = [], []
@@ -166,10 +186,13 @@ def main():
     test_logits, test_target = split_logits["test"]
     calibrator.fit(val_logits, val_target)
     probability, _ = calibrator.predict(test_logits)
-    report["test"]["ece_calibrated"] = binary_ece(probability.numpy(), test_target.numpy())
+    report["test"]["ece_calibrated"] = binary_ece(
+        probability.numpy(), test_target.numpy()
+    )
     report["gate"] = {"auc": 0.75, "min_transitions": 500}
     report["passed"] = bool(
-        report["test"]["auc"] >= 0.75 and report["test"]["n_frames"] >= 500)
+        report["test"]["auc"] >= 0.75 and report["test"]["n_frames"] >= 500
+    )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2), encoding="utf-8")

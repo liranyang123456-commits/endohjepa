@@ -8,6 +8,7 @@ motivating representation-space (JEPA) prediction.
 
     python -m endoworld.eval.pixel_baseline --max-clips 200 --epochs 3
 """
+
 from __future__ import annotations
 
 import argparse
@@ -32,22 +33,26 @@ class NextFrameCNN(nn.Module):
         self.k = k
         ch = 3 * k
         self.net = nn.Sequential(
-            nn.Conv2d(ch, 32, 3, 2, 1), nn.GELU(),
-            nn.Conv2d(32, 64, 3, 2, 1), nn.GELU(),
-            nn.Conv2d(64, 64, 3, 1, 1), nn.GELU(),
-            nn.ConvTranspose2d(64, 32, 4, 2, 1), nn.GELU(),
+            nn.Conv2d(ch, 32, 3, 2, 1),
+            nn.GELU(),
+            nn.Conv2d(32, 64, 3, 2, 1),
+            nn.GELU(),
+            nn.Conv2d(64, 64, 3, 1, 1),
+            nn.GELU(),
+            nn.ConvTranspose2d(64, 32, 4, 2, 1),
+            nn.GELU(),
             nn.ConvTranspose2d(32, 3, 4, 2, 1),
         )
 
     def forward(self, x):
         b, t, c, h, w = x.shape
-        inp = x[:, -self.k:].reshape(b, self.k * c, h, w)
+        inp = x[:, -self.k :].reshape(b, self.k * c, h, w)
         return torch.sigmoid(self.net(inp))
 
 
 def psnr(pred, tgt):
     mse = (pred - tgt).pow(2).mean(dim=(1, 2, 3)).clamp_min(1e-8)
-    return (10 * torch.log10(1.0 / mse))
+    return 10 * torch.log10(1.0 / mse)
 
 
 def main():
@@ -62,14 +67,26 @@ def main():
     args = ap.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    ds = EndoClipDataset(args.manifest, clip_len=args.clip_len, stride=2,
-                         image_size=args.image_size, exclude=["EndoVis2019_ROBUST-MIS"],
-                         split="train")
+    ds = EndoClipDataset(
+        args.manifest,
+        clip_len=args.clip_len,
+        stride=2,
+        image_size=args.image_size,
+        exclude=["EndoVis2019_ROBUST-MIS"],
+        split="train",
+    )
     if len(ds) > args.max_clips:
         idx = domain_balanced_indices(ds.clips, n=args.max_clips, seed=0)
         ds.clips = [ds.clips[i] for i in idx]
-    dl = DataLoader(ds, batch_size=args.batch_size, shuffle=True, num_workers=0,
-                    collate_fn=lambda b: torch.stack([x if torch.is_tensor(x) else torch.as_tensor(x) for x in b]))
+    dl = DataLoader(
+        ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=0,
+        collate_fn=lambda b: torch.stack(
+            [x if torch.is_tensor(x) else torch.as_tensor(x) for x in b]
+        ),
+    )
     print(f"[pixel] {len(ds)} clips")
 
     model = NextFrameCNN(k=args.clip_len - 1).to(device)
@@ -81,12 +98,15 @@ def main():
             clip = clip.to(device).float()
             pred = model(clip[:, :-1])
             loss = F.l1_loss(pred, clip[:, -1])
-            opt.zero_grad(); loss.backward(); opt.step()
-            run += loss.item(); nb += 1
-        print(f"[pixel] epoch {epoch} l1={run/max(nb,1):.4f}")
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+            run += loss.item()
+            nb += 1
+        print(f"[pixel] epoch {epoch} l1={run / max(nb, 1):.4f}")
 
     model.eval()
-    P_model, P_copy, S_model, S_copy = [], [], [], []
+    P_model, P_copy, _S_model, _S_copy = [], [], [], []
     spec_err, nonspec_err = [], []
     with torch.no_grad():
         for clip in dl:
@@ -98,21 +118,24 @@ def main():
             P_copy.extend(psnr(copy, tgt).cpu().tolist())
             # error split by specular regions
             sm = specular_map(clip[:, -1:])[:, 0]  # (B,H,W) keep mask
-            err = (pred - tgt).abs().mean(dim=1)   # (B,H,W)
+            err = (pred - tgt).abs().mean(dim=1)  # (B,H,W)
             spec = 1 - sm
             # Conditional regional means; averaging masked images would confound
             # error magnitude with the much smaller specular-region area.
-            spec_err.append(
-                ((err * spec).sum() / spec.sum().clamp_min(1)).item())
-            nonspec_err.append(
-                ((err * sm).sum() / sm.sum().clamp_min(1)).item())
+            spec_err.append(((err * spec).sum() / spec.sum().clamp_min(1)).item())
+            nonspec_err.append(((err * sm).sum() / sm.sum().clamp_min(1)).item())
     report = {
-        "paper": "Endo-HJEPA", "not_ablation_planning": True,
+        "paper": "Endo-HJEPA",
+        "not_ablation_planning": True,
         "task": "next-frame pixel prediction (contrast to latent/JEPA prediction)",
         "n_clips": len(ds),
-        "psnr_model": float(np.mean(P_model)), "psnr_copy_last": float(np.mean(P_copy)),
-        "err_specular": float(np.mean(spec_err)), "err_nonspecular": float(np.mean(nonspec_err)),
-        "specular_over_normal_err_ratio": float(np.mean(spec_err) / max(np.mean(nonspec_err), 1e-8)),
+        "psnr_model": float(np.mean(P_model)),
+        "psnr_copy_last": float(np.mean(P_copy)),
+        "err_specular": float(np.mean(spec_err)),
+        "err_nonspecular": float(np.mean(nonspec_err)),
+        "specular_over_normal_err_ratio": float(
+            np.mean(spec_err) / max(np.mean(nonspec_err), 1e-8)
+        ),
         "interp": "regional errors are conditional means, normalized by mask area",
     }
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)

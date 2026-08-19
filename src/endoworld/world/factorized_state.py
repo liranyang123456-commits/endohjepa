@@ -1,4 +1,5 @@
 """Factorized state adapter with frozen-teacher fidelity constraints."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -41,16 +42,19 @@ class FactorizedStateAdapter(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.adapter = LowRankResidualAdapter(
-            cfg.teacher_dim, cfg.adapter_rank, cfg.adapter_scale)
+            cfg.teacher_dim, cfg.adapter_rank, cfg.adapter_scale
+        )
         self.slot_norm = nn.LayerNorm(cfg.teacher_dim)
-        self.slot_projectors = nn.ModuleDict({
-            name: nn.Sequential(
-                nn.Linear(cfg.teacher_dim, cfg.slot_dim),
-                nn.GELU(),
-                nn.LayerNorm(cfg.slot_dim),
-            )
-            for name in self.slot_names
-        })
+        self.slot_projectors = nn.ModuleDict(
+            {
+                name: nn.Sequential(
+                    nn.Linear(cfg.teacher_dim, cfg.slot_dim),
+                    nn.GELU(),
+                    nn.LayerNorm(cfg.slot_dim),
+                )
+                for name in self.slot_names
+            }
+        )
         self.teacher_decoder = nn.Linear(cfg.slot_dim * 4, cfg.teacher_dim)
         self.geometry_head = nn.Linear(cfg.slot_dim, cfg.geometry_dim)
         self.tool_head = nn.Linear(cfg.slot_dim, cfg.tool_dim)
@@ -71,9 +75,14 @@ class FactorizedStateAdapter(nn.Module):
             "adapted": adapted,
             "reconstructed_teacher": self.teacher_decoder(all_slots),
             # Nuisance is deliberately excluded from the state exposed to planner.
-            "planner_state": torch.cat([
-                slots["geometry"], slots["tool"], slots["semantic"],
-            ], dim=-1),
+            "planner_state": torch.cat(
+                [
+                    slots["geometry"],
+                    slots["tool"],
+                    slots["semantic"],
+                ],
+                dim=-1,
+            ),
         }
 
     @staticmethod
@@ -86,7 +95,9 @@ class FactorizedStateAdapter(nn.Module):
         count = 0
         for i in range(len(flattened)):
             for j in range(i + 1, len(flattened)):
-                covariance = flattened[i].T @ flattened[j] / max(flattened[i].size(0) - 1, 1)
+                covariance = (
+                    flattened[i].T @ flattened[j] / max(flattened[i].size(0) - 1, 1)
+                )
                 penalty = penalty + covariance.square().mean()
                 count += 1
         return penalty / max(count, 1)
@@ -103,10 +114,10 @@ class FactorizedStateAdapter(nn.Module):
     ) -> dict[str, torch.Tensor]:
         output = self(teacher_latent)
         fidelity = F.smooth_l1_loss(
-            output["reconstructed_teacher"], teacher_latent.detach())
+            output["reconstructed_teacher"], teacher_latent.detach()
+        )
         adapter_drift = F.mse_loss(output["adapted"], teacher_latent.detach())
-        separation = self._slot_covariance(
-            [output[name] for name in self.slot_names])
+        separation = self._slot_covariance([output[name] for name in self.slot_names])
         total = fidelity_weight * fidelity + 0.1 * adapter_drift
         total = total + separation_weight * separation
         losses = {

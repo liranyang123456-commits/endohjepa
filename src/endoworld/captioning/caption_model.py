@@ -5,6 +5,7 @@ produces spatial tokens, a projector maps them into the decoder's embedding spac
 and a Transformer decoder generates the caption while cross-attending to vision
 tokens. Swap `CNNVisionEncoder` for the pretrained V-JEPA encoder in production.
 """
+
 from __future__ import annotations
 
 import torch
@@ -16,17 +17,23 @@ class CNNVisionEncoder(nn.Module):
 
     def __init__(self, dim: int = 256):
         super().__init__()
+
         def block(i, o, s):
-            return nn.Sequential(nn.Conv2d(i, o, 3, stride=s, padding=1),
-                                 nn.BatchNorm2d(o), nn.GELU())
+            return nn.Sequential(
+                nn.Conv2d(i, o, 3, stride=s, padding=1), nn.BatchNorm2d(o), nn.GELU()
+            )
+
         self.stem = nn.Sequential(
-            block(3, 32, 2), block(32, 64, 2), block(64, 128, 2),
-            block(128, dim, 2), block(dim, dim, 2),
+            block(3, 32, 2),
+            block(32, 64, 2),
+            block(64, 128, 2),
+            block(128, dim, 2),
+            block(dim, dim, 2),
         )  # 224 -> 7x7 tokens
 
-    def forward(self, x):                      # x: (B, 3, H, W)
-        f = self.stem(x)                       # (B, dim, h, w)
-        return f.flatten(2).transpose(1, 2)    # (B, h*w, dim)
+    def forward(self, x):  # x: (B, 3, H, W)
+        f = self.stem(x)  # (B, dim, h, w)
+        return f.flatten(2).transpose(1, 2)  # (B, h*w, dim)
 
 
 class DecoderBlock(nn.Module):
@@ -50,11 +57,20 @@ class DecoderBlock(nn.Module):
 
 
 class Captioner(nn.Module):
-    def __init__(self, vocab_size: int, dim: int = 256, heads: int = 4,
-                 depth: int = 4, max_len: int = 64, vision: nn.Module | None = None):
+    def __init__(
+        self,
+        vocab_size: int,
+        dim: int = 256,
+        heads: int = 4,
+        depth: int = 4,
+        max_len: int = 64,
+        vision: nn.Module | None = None,
+    ):
         super().__init__()
         self.vision = vision or CNNVisionEncoder(dim)
-        self.projector = nn.Sequential(nn.Linear(dim, dim), nn.GELU(), nn.Linear(dim, dim))
+        self.projector = nn.Sequential(
+            nn.Linear(dim, dim), nn.GELU(), nn.Linear(dim, dim)
+        )
         self.tok_embed = nn.Embedding(vocab_size, dim)
         self.pos_embed = nn.Parameter(torch.zeros(1, max_len, dim))
         nn.init.normal_(self.pos_embed, std=0.02)
@@ -71,10 +87,12 @@ class Captioner(nn.Module):
         mem = self.encode_image(images)
         b, L = tokens.shape
         x = self.tok_embed(tokens) + self.pos_embed[:, :L]
-        causal = torch.triu(torch.ones(L, L, device=tokens.device) * float("-inf"), diagonal=1)
+        causal = torch.triu(
+            torch.ones(L, L, device=tokens.device) * float("-inf"), diagonal=1
+        )
         for blk in self.blocks:
             x = blk(x, mem, causal)
-        return self.head(self.norm(x))         # (B, L, vocab)
+        return self.head(self.norm(x))  # (B, L, vocab)
 
     @torch.no_grad()
     def generate(self, images, bos_id, eos_id, max_len: int | None = None):
@@ -85,7 +103,9 @@ class Captioner(nn.Module):
         for _ in range(max_len - 1):
             L = seq.size(1)
             x = self.tok_embed(seq) + self.pos_embed[:, :L]
-            causal = torch.triu(torch.ones(L, L, device=images.device) * float("-inf"), diagonal=1)
+            causal = torch.triu(
+                torch.ones(L, L, device=images.device) * float("-inf"), diagonal=1
+            )
             for blk in self.blocks:
                 x = blk(x, mem, causal)
             logits = self.head(self.norm(x))[:, -1]

@@ -1,4 +1,5 @@
 """Latent-space sampling MPC: minimise energy to a goal representation."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -41,7 +42,8 @@ def latent_mpc(model, z_hist, z_goal, domain_id, n_samples: int = 32, steps: int
         z_last = pred[:, rollout_h - 1]
         goal_cost = (z_last - z_goal).pow(2).mean(dim=-1)
         _, path_energy = rollout_path_energy(
-            model, z_hist[:, -1], a[:, :rollout_h], pred[:, :rollout_h])
+            model, z_hist[:, -1], a[:, :rollout_h], pred[:, :rollout_h]
+        )
         e = goal_cost + path_energy
         better = e < best_e
         best_e = torch.where(better, e, best_e)
@@ -172,39 +174,45 @@ def continuous_cem(
     elite_count = min(cfg.elites, cfg.samples)
     for _ in range(cfg.iterations):
         noise = torch.randn(
-            batch, cfg.samples, cfg.horizon, action_dim, device=history.device)
+            batch, cfg.samples, cfg.horizon, action_dim, device=history.device
+        )
         candidates = (mean[:, None] + std[:, None] * noise).clamp(
-            -cfg.action_limit, cfg.action_limit)
+            -cfg.action_limit, cfg.action_limit
+        )
         flat_actions = candidates.flatten(0, 1)
-        flat_history = history[:, None].expand(
-            -1, cfg.samples, -1, -1).flatten(0, 1)
-        flat_goal = goal[:, None].expand(
-            -1, cfg.samples, -1).flatten(0, 1)
+        flat_history = history[:, None].expand(-1, cfg.samples, -1, -1).flatten(0, 1)
+        flat_goal = goal[:, None].expand(-1, cfg.samples, -1).flatten(0, 1)
         evaluated = continuous_rollout_cost(
-            dynamics, flat_history, flat_actions, flat_goal, cfg,
-            risk_head, calibrator, energy_fn)
+            dynamics,
+            flat_history,
+            flat_actions,
+            flat_goal,
+            cfg,
+            risk_head,
+            calibrator,
+            energy_fn,
+        )
         costs = evaluated["cost"].view(batch, cfg.samples)
         elite_index = costs.topk(elite_count, largest=False).indices
-        gather = elite_index[..., None, None].expand(
-            -1, -1, cfg.horizon, action_dim)
+        gather = elite_index[..., None, None].expand(-1, -1, cfg.horizon, action_dim)
         elites = candidates.gather(1, gather)
-        finite = torch.isfinite(
-            costs.gather(1, elite_index)).float()[..., None, None]
+        finite = torch.isfinite(costs.gather(1, elite_index)).float()[..., None, None]
         count = finite.sum(dim=1).clamp_min(1.0)
         mean = (elites * finite).sum(dim=1) / count
         variance = ((elites - mean[:, None]).square() * finite).sum(dim=1) / count
         std = variance.sqrt().clamp_min(0.05)
     final = continuous_rollout_cost(
-        dynamics, history, mean, goal, cfg, risk_head, calibrator, energy_fn)
+        dynamics, history, mean, goal, cfg, risk_head, calibrator, energy_fn
+    )
     accepted = final["safe"]
-    actions = torch.where(
-        accepted[:, None, None], mean, torch.zeros_like(mean))
+    actions = torch.where(accepted[:, None, None], mean, torch.zeros_like(mean))
     # Return a rollout that actually corresponds to the returned action
     # sequence. Previously a rejected candidate exposed the unsafe prediction
     # and cost while returning zero actions, which made the fallback
     # non-executable as an end-to-end result.
     executed = continuous_rollout_cost(
-        dynamics, history, actions, goal, cfg, risk_head, calibrator, energy_fn)
+        dynamics, history, actions, goal, cfg, risk_head, calibrator, energy_fn
+    )
     return {
         **executed,
         "selected_cost": final["cost"],
@@ -234,26 +242,43 @@ def continuous_mppi(
     nominal = torch.zeros(batch, cfg.horizon, action_dim, device=history.device)
     for _ in range(cfg.iterations):
         noise = torch.randn(
-            batch, cfg.samples, cfg.horizon, action_dim, device=history.device)
+            batch, cfg.samples, cfg.horizon, action_dim, device=history.device
+        )
         candidates = (nominal[:, None] + cfg.initial_std * noise).clamp(
-            -cfg.action_limit, cfg.action_limit)
+            -cfg.action_limit, cfg.action_limit
+        )
         flat_actions = candidates.flatten(0, 1)
-        flat_history = history[:, None].expand(
-            -1, cfg.samples, -1, -1).flatten(0, 1)
-        flat_goal = goal[:, None].expand(
-            -1, cfg.samples, -1).flatten(0, 1)
+        flat_history = history[:, None].expand(-1, cfg.samples, -1, -1).flatten(0, 1)
+        flat_goal = goal[:, None].expand(-1, cfg.samples, -1).flatten(0, 1)
         evaluated = continuous_rollout_cost(
-            dynamics, flat_history, flat_actions, flat_goal, cfg,
-            risk_head, calibrator, energy_fn)
+            dynamics,
+            flat_history,
+            flat_actions,
+            flat_goal,
+            cfg,
+            risk_head,
+            calibrator,
+            energy_fn,
+        )
         costs = evaluated["cost"].view(batch, cfg.samples)
         finite_cost = torch.where(
-            torch.isfinite(costs), costs, torch.full_like(costs, 1e6))
+            torch.isfinite(costs), costs, torch.full_like(costs, 1e6)
+        )
         shifted = finite_cost - finite_cost.min(dim=1, keepdim=True).values
         weight = torch.softmax(-shifted / cfg.mppi_temperature, dim=1)
         nominal = (candidates * weight[..., None, None]).sum(dim=1)
     final = continuous_rollout_cost(
-        dynamics, history, nominal, goal, cfg, risk_head, calibrator, energy_fn)
+        dynamics, history, nominal, goal, cfg, risk_head, calibrator, energy_fn
+    )
     accepted = final["safe"]
-    actions = torch.where(
-        accepted[:, None, None], nominal, torch.zeros_like(nominal))
-    return {**final, "actions": actions, "accepted": accepted}
+    actions = torch.where(accepted[:, None, None], nominal, torch.zeros_like(nominal))
+    executed = continuous_rollout_cost(
+        dynamics, history, actions, goal, cfg, risk_head, calibrator, energy_fn
+    )
+    return {
+        **executed,
+        "selected_cost": final["cost"],
+        "selected_raw_cost": final["raw_cost"],
+        "actions": actions,
+        "accepted": accepted,
+    }

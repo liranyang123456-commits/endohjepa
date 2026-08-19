@@ -7,6 +7,7 @@ like SCARED (~150 GB). A video dataloader can expand each row into clips on the 
 Run:
     python -m endoworld.data.scan_datasets --root <path-to>/datasets --out <path>/manifests
 """
+
 from __future__ import annotations
 
 import argparse
@@ -26,24 +27,31 @@ RIGHT_HINTS = ("right", "_r", "rectified1", "cam1")
 
 # Folders that are outputs / logs / archives rather than raw data.
 SKIP_DIR_NAMES = {
-    "_copy_logs", "__pycache__", "_downloads", "jpeg", "mesh_cache",
-    "logs", "results", "scripts", "Comparisons",
+    "_copy_logs",
+    "__pycache__",
+    "_downloads",
+    "jpeg",
+    "mesh_cache",
+    "logs",
+    "results",
+    "scripts",
+    "Comparisons",
 }
 
 
 @dataclass
 class SequenceRow:
     dataset: str
-    sequence_id: str          # relative path of the frame directory
-    modality: str             # rgb | stereo | rgbd | video
-    frames_dir: str           # absolute path
+    sequence_id: str  # relative path of the frame directory
+    modality: str  # rgb | stereo | rgbd | video
+    frames_dir: str  # absolute path
     num_frames: int
     has_depth: bool
     has_mask: bool
     has_stereo: bool
-    split: str                # train | val | test | unknown
-    sample_frame: str         # one example file (for quick preview)
-    domain: str = "mixed"     # laparo | gi | bronch | mixed
+    split: str  # train | val | test | unknown
+    sample_frame: str  # one example file (for quick preview)
+    domain: str = "mixed"  # laparo | gi | bronch | mixed
 
 
 def _infer_split(rel_path: str) -> str:
@@ -65,7 +73,9 @@ def _classify_dir(dir_name: str) -> str:
     return "rgb"
 
 
-def scan_dataset(dataset_dir: Path, dataset_name: str | None = None) -> list[SequenceRow]:
+def scan_dataset(
+    dataset_dir: Path, dataset_name: str | None = None
+) -> list[SequenceRow]:
     """Group image files by their containing directory -> one sequence per dir."""
     name = dataset_name or dataset_dir.name
     rows: list[SequenceRow] = []
@@ -87,17 +97,21 @@ def scan_dataset(dataset_dir: Path, dataset_name: str | None = None) -> list[Seq
     for d, vids in dir_videos.items():
         for v in vids:
             rel = str((d / v).relative_to(dataset_dir))
-            rows.append(SequenceRow(
-                dataset=name,
-                sequence_id=rel,
-                modality="video",
-                frames_dir=str(d),
-                num_frames=-1,  # unknown without decoding
-                has_depth=False, has_mask=False, has_stereo=False,
-                split=_infer_split(rel),
-                sample_frame=str(d / v),
-                domain=infer_domain(name, rel),
-            ))
+            rows.append(
+                SequenceRow(
+                    dataset=name,
+                    sequence_id=rel,
+                    modality="video",
+                    frames_dir=str(d),
+                    num_frames=-1,  # unknown without decoding
+                    has_depth=False,
+                    has_mask=False,
+                    has_stereo=False,
+                    split=_infer_split(rel),
+                    sample_frame=str(d / v),
+                    domain=infer_domain(name, rel),
+                )
+            )
 
     # Frame directories: only treat "rgb" dirs as primary sequences; check siblings
     # for depth / mask / right-eye companions.
@@ -106,40 +120,51 @@ def scan_dataset(dataset_dir: Path, dataset_name: str | None = None) -> list[Seq
         if role != "rgb":
             continue  # depth/mask/right dirs are companions, not primary sequences
         parent = d.parent
-        sibling_names = {p.name.lower() for p in parent.iterdir() if p.is_dir()} if parent.exists() else set()
+        sibling_names = (
+            {p.name.lower() for p in parent.iterdir() if p.is_dir()}
+            if parent.exists()
+            else set()
+        )
         has_depth = any(any(h in n for h in DEPTH_HINTS) for n in sibling_names)
         has_mask = any(any(h in n for h in MASK_HINTS) for n in sibling_names)
         has_stereo = any(any(h in n for h in RIGHT_HINTS) for n in sibling_names)
         modality = "rgbd" if has_depth else ("stereo" if has_stereo else "rgb")
         rel = str(d.relative_to(dataset_dir))
-        rows.append(SequenceRow(
-            dataset=name,
-            sequence_id=rel,
-            modality=modality,
-            frames_dir=str(d),
-            num_frames=len(imgs),
-            has_depth=has_depth,
-            has_mask=has_mask,
-            has_stereo=has_stereo,
-            split=_infer_split(rel),
-            sample_frame=str(d / sorted(imgs)[0]),
-            domain=infer_domain(name, rel),
-        ))
+        rows.append(
+            SequenceRow(
+                dataset=name,
+                sequence_id=rel,
+                modality=modality,
+                frames_dir=str(d),
+                num_frames=len(imgs),
+                has_depth=has_depth,
+                has_mask=has_mask,
+                has_stereo=has_stereo,
+                split=_infer_split(rel),
+                sample_frame=str(d / sorted(imgs)[0]),
+                domain=infer_domain(name, rel),
+            )
+        )
     return rows
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True, help="Path to the datasets/ directory")
-    ap.add_argument("--out", default=None, help="Output dir for manifests (default: <root>/../manifests)")
+    ap.add_argument(
+        "--out",
+        default=None,
+        help="Output dir for manifests (default: <root>/../manifests)",
+    )
     args = ap.parse_args()
 
     root = Path(args.root).resolve()
     out_dir = Path(args.out).resolve() if args.out else root.parent / "manifests"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    dataset_dirs = [p for p in sorted(root.iterdir())
-                    if p.is_dir() and p.name not in SKIP_DIR_NAMES]
+    dataset_dirs = [
+        p for p in sorted(root.iterdir()) if p.is_dir() and p.name not in SKIP_DIR_NAMES
+    ]
     extras = [(name, path) for name, path in extra_local_roots() if path.exists()]
 
     all_rows: list[SequenceRow] = []
@@ -159,26 +184,33 @@ def main() -> None:
         rows = scan_dataset(ds, dataset_name=ds_name)
         all_rows.extend(rows)
         n_frames = sum(r.num_frames for r in rows if r.num_frames > 0)
-        summary.append({
-            "dataset": ds_name,
-            "domain": infer_domain(ds_name),
-            "sequences": len(rows),
-            "total_frames": n_frames,
-            "has_depth": any(r.has_depth for r in rows),
-            "has_stereo": any(r.has_stereo for r in rows),
-            "has_mask": any(r.has_mask for r in rows),
-            "modalities": ",".join(sorted({r.modality for r in rows})),
-        })
-        print(f"[scan] {ds_name:28s} domain={infer_domain(ds_name):6s} seq={len(rows):5d}  frames={n_frames:8d}")
+        summary.append(
+            {
+                "dataset": ds_name,
+                "domain": infer_domain(ds_name),
+                "sequences": len(rows),
+                "total_frames": n_frames,
+                "has_depth": any(r.has_depth for r in rows),
+                "has_stereo": any(r.has_stereo for r in rows),
+                "has_mask": any(r.has_mask for r in rows),
+                "modalities": ",".join(sorted({r.modality for r in rows})),
+            }
+        )
+        print(
+            f"[scan] {ds_name:28s} domain={infer_domain(ds_name):6s} seq={len(rows):5d}  frames={n_frames:8d}"
+        )
 
     from endoworld.data.splits import apply_splits, assign_split, video_key
+
     for r in all_rows:
         if (r.split or "unknown") not in ("train", "val", "test"):
             r.split = assign_split(video_key(r.dataset, r.sequence_id))
 
     manifest_path = out_dir / "sequences.csv"
     with open(manifest_path, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=list(asdict(all_rows[0]).keys()) if all_rows else [])
+        w = csv.DictWriter(
+            f, fieldnames=list(asdict(all_rows[0]).keys()) if all_rows else []
+        )
         w.writeheader()
         for r in all_rows:
             w.writerow(asdict(r))

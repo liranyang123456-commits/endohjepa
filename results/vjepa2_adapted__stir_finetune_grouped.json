@@ -1,0 +1,86 @@
+{
+  "paper": "Endo-HJEPA",
+  "not_ct_ablation_planning": true,
+  "encoder": "vjepa2",
+  "main_table_ok": true,
+  "n_sequences": 120,
+  "n_train_sequences": 112,
+  "n_test_sequences": 8,
+  "n_train_groups": 7,
+  "n_test_groups": 2,
+  "n_train_sequences_used": 12,
+  "n_test_sequences_used": 8,
+  "split_unit": "patient identifier above left/right view directory",
+  "split_seed": 0,
+  "train_fraction": 0.8,
+  "before": {
+    "n_eval": 8,
+    "mean_chamfer": 177.66560745239258
+  },
+  "after": {
+    "n_eval": 8,
+    "mean_chamfer": 172.22743225097656
+  },
+  "finetune_losses": [
+    177.72258122762045,
+    171.41680908203125
+  ],
+  "rows": [
+    {
+      "seq": "datasets\\STIR\\STIRChallenge_2024\\08\\left\\seq00",
+      "n_start": 64,
+      "n_end": 64,
+      "n_frames": 85,
+      "chamfer": 184.44064331054688
+    },
+    {
+      "seq": "datasets\\STIR\\STIRChallenge_2024\\08\\right\\seq00",
+      "n_start": 64,
+      "n_end": 64,
+      "n_frames": 85,
+      "chamfer": 163.27276611328125
+    },
+    {
+      "seq": "datasets\\STIR\\STIRChallenge_2024\\11\\left\\seq01",
+      "n_start": 64,
+      "n_end": 64,
+      "n_frames": 66,
+      "chamfer": 188.32408142089844
+    },
+    {
+      "seq": "datasets\\STIR\\STIRChallenge_2024\\11\\left\\seq08",
+      "n_start": 64,
+      "n_end": 64,
+      "n_frames": 110,
+      "chamfer": 158.05831909179688
+    },
+    {
+      "seq": "datasets\\STIR\\STIRChallenge_2024\\11\\left\\seq09",
+      "n_start": 64,
+      "n_end": 64,
+      "n_frames": 251,
+      "chamfer": 184.0400390625
+    },
+    {
+      "seq": "datasets\\STIR\\STIRChallenge_2024\\11\\right\\seq01",
+      "n_start": 64,
+      "n_end": 64,
+      "n_frames": 66,
+      "chamfer": 172.0167999267578
+    },
+    {
+      "seq": "datasets\\STIR\\STIRChallenge_2024\\11\\right\\seq08",
+      "n_start": 64,
+      "n_end": 64,
+      "n_frames": 110,
+      "chamfer": 153.39505004882812
+    },
+    {
+      "seq": "datasets\\STIR\\STIRChallenge_2024\\11\\right\\seq09",
+      "n_start": 64,
+      "n_end": 64,
+      "n_frames": 251,
+      "chamfer": 174.27175903320312
+    }
+  ]
+}

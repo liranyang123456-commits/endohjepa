@@ -3,12 +3,15 @@
 High-luminance, low-saturation pixels (glare, fluid highlights) are weakly
 predictable and should not dominate the latent loss.
 """
+
 from __future__ import annotations
 
 import torch
 
 
-def specular_map(clip: torch.Tensor, lum_thr: float = 0.85, sat_thr: float = 0.18) -> torch.Tensor:
+def specular_map(
+    clip: torch.Tensor, lum_thr: float = 0.85, sat_thr: float = 0.18
+) -> torch.Tensor:
     """clip (B,T,C,H,W) in [0,1] -> (B,T,H,W) in {0,1}, 1 = keep (not specular)."""
     r, g, b = clip[:, :, 0], clip[:, :, 1], clip[:, :, 2]
     lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
@@ -32,9 +35,14 @@ def tubelet_keep(keep: torch.Tensor, tubelet: int, patch: int) -> torch.Tensor:
     return pooled.reshape(b, -1)
 
 
-def token_loss_weights(clip: torch.Tensor, tubelet: int, patch: int,
-                       floor: float = 0.25, instrument_mask: torch.Tensor | None = None,
-                       instrument_boost: float = 1.0) -> torch.Tensor:
+def token_loss_weights(
+    clip: torch.Tensor,
+    tubelet: int,
+    patch: int,
+    floor: float = 0.25,
+    instrument_mask: torch.Tensor | None = None,
+    instrument_boost: float = 1.0,
+) -> torch.Tensor:
     keep = specular_map(clip)
     w = tubelet_keep(keep, tubelet, patch)
     if instrument_mask is not None:

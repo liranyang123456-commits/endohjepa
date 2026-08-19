@@ -1,21 +1,21 @@
 {
   "figure": "dataset_atlas.pdf",
-  "manifest": "E:\\World_Agent_Enoscopy\\manifests\\sequences.csv",
+  "manifest": "manifests/sequences.csv",
   "manifest_sha256": "301e0625644bf0038581d8da5c0e71bf973eb8a2878c8fdeb253d4f104406735",
   "render_dpi": 500,
   "selection": "highest tissue-visibility score among deterministic candidate positions",
   "cells": [
     {
       "dataset": "ION_bronch",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\ION_bronch\\case_008\\intraop_00\\Video-screenshot-henan08\\Procedure-20220210-054410\\ion_video_2022-02-10_07-18-34_L_frames\\frame_001832.jpg",
+      "source_path": "datasets/ION_bronch/case_008/anonymised_sequence/frame_001832.jpg",
       "source_sha256": "4c6ff760e4e8bb2bbf0e146a98b0fdd607a6477fef1a5e6c6b642d842cb4207c",
       "selection_score": 63.40038585662842,
-      "manifest_sequence_id": "case_008\\intraop_00\\Video-screenshot-henan08\\Procedure-20220210-054410\\ion_video_2022-02-10_07-18-34_L_frames",
+      "manifest_sequence_id": "case_008/anonymised_sequence",
       "split": "val"
     },
     {
       "dataset": "C3VD",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\C3VD\\cecum_t1_a\\cecum_t1_a\\224_color.png",
+      "source_path": "datasets/C3VD/cecum_t1_a/cecum_t1_a/224_color.png",
       "source_sha256": "e5eb58ee06088a29afa249609235dcbbeed45b29ea2698f6f640afd41f555602",
       "selection_score": 80.2900987625122,
       "manifest_sequence_id": "cecum_t1_a\\cecum_t1_a",
@@ -23,7 +23,7 @@
     },
     {
       "dataset": "HyperKvasir",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\HyperKvasir\\hyper-kvasir-videos\\hyper-kvasir-videos\\videos\\31573497-b434-4c27-86ba-a53a65d5f9ce_frames\\frame_000000.jpg",
+      "source_path": "datasets/HyperKvasir/hyper-kvasir-videos/hyper-kvasir-videos/videos/31573497-b434-4c27-86ba-a53a65d5f9ce_frames/frame_000000.jpg",
       "source_sha256": "16cf45eba2558b09b2b946871cd7e484a67ca983e9d27b935273c85af2eee5db",
       "selection_score": 240.72020301818847,
       "manifest_sequence_id": "hyper-kvasir-videos\\hyper-kvasir-videos\\videos\\31573497-b434-4c27-86ba-a53a65d5f9ce_frames",
@@ -31,7 +31,7 @@
     },
     {
       "dataset": "Kvasir-Capsule",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\Kvasir-Capsule\\kvasir-capsule-labeled-videos\\labelled_videos\\bc84479c66fe4da6_frames\\frame_002423.jpg",
+      "source_path": "datasets/Kvasir-Capsule/kvasir-capsule-labeled-videos/labelled_videos/bc84479c66fe4da6_frames/frame_002423.jpg",
       "source_sha256": "70bc4763360cb35d3052d0f6cd7f74c87f7eaba24d73fe4bb3009fd06686f3c7",
       "selection_score": 164.1539981842041,
       "manifest_sequence_id": "kvasir-capsule-labeled-videos\\labelled_videos\\bc84479c66fe4da6_frames",
@@ -39,7 +39,7 @@
     },
     {
       "dataset": "Kvasir-Instrument",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\Kvasir-Instrument\\images\\images\\ckd0afl7u000a3b5y3crqjxla.jpg",
+      "source_path": "datasets/Kvasir-Instrument/images/images/ckd0afl7u000a3b5y3crqjxla.jpg",
       "source_sha256": "a597bc86994ff8b7ef23b7114a26718d611b72109aa38a339c7170b51f28fc4f",
       "selection_score": 137.25555699666342,
       "manifest_sequence_id": "images\\images",
@@ -47,7 +47,7 @@
     },
     {
       "dataset": "Cholec80-Boxes",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\Cholec80-Boxes\\Images\\Images\\video_44\\Video_44_01564.png",
+      "source_path": "datasets/Cholec80-Boxes/Images/Images/video_44/Video_44_01564.png",
       "source_sha256": "10c90d9f1818e58b227cefb2a2122e86bc52a2727e5abda16b37318bfebf3507",
       "selection_score": 100.06761894226074,
       "manifest_sequence_id": "Images\\Images\\video_44",
@@ -55,7 +55,7 @@
     },
     {
       "dataset": "CholecSeg8k",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\CholecSeg8k\\images\\video01_frame_100_endo.png",
+      "source_path": "datasets/CholecSeg8k/images/video01_frame_100_endo.png",
       "source_sha256": "1c455a9d41aa59ab7fa22dae55284b8d5184b90f0356382f3c8d2b255fb02c59",
       "selection_score": 89.69759890238444,
       "manifest_sequence_id": "images",
@@ -63,7 +63,7 @@
     },
     {
       "dataset": "CholecT50",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\CholecT50\\CholecT50\\videos\\VID62\\000000.png",
+      "source_path": "datasets/CholecT50/CholecT50/videos/VID62/000000.png",
       "source_sha256": "ccf6cedca1d700de7aad851f08419de943f2ea553a2d77ce848a8c6222eeac60",
       "selection_score": 104.64176406860352,
       "manifest_sequence_id": "CholecT50\\videos\\VID62",
@@ -71,7 +71,7 @@
     },
     {
       "dataset": "EndoNeRF",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\EndoNeRF\\cutting_tissues_twice\\images\\000000.png",
+      "source_path": "datasets/EndoNeRF/cutting_tissues_twice/images/000000.png",
       "source_sha256": "fa0d526258b17afd932db00663121fd51bf4d9bd5469beed0a73afc057221251",
       "selection_score": 129.91126658121743,
       "manifest_sequence_id": "cutting_tissues_twice\\images",
@@ -79,7 +79,7 @@
     },
     {
       "dataset": "endoscapes",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\endoscapes\\endoscapes\\train\\9_22775.jpg",
+      "source_path": "datasets/endoscapes/endoscapes/train/9_22775.jpg",
       "source_sha256": "9d17d6cdb986eb25c2e193279da178cfeae5fccce337ceb6f85360d9cbc877bb",
       "selection_score": 105.00584246317545,
       "manifest_sequence_id": "endoscapes\\train",
@@ -87,7 +87,7 @@
     },
     {
       "dataset": "endovis2017_full",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\endovis2017_full\\endovis2017\\val10\\image\\seq_10_frame299.bmp",
+      "source_path": "datasets/endovis2017_full/endovis2017/val10/image/seq_10_frame299.bmp",
       "source_sha256": "76a2151c68e8d51e5d5dacfd24706d995fb047091b395b29e4fe3861155bf5eb",
       "selection_score": 100.85561205546061,
       "manifest_sequence_id": "endovis2017\\val10\\image",
@@ -95,7 +95,7 @@
     },
     {
       "dataset": "endovis2018_full",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\endovis2018_full\\endovis2018\\val\\image\\seq_1_frame225.bmp",
+      "source_path": "datasets/endovis2018_full/endovis2018/val/image/seq_1_frame225.bmp",
       "source_sha256": "fbc9d07e3f9adb9bc483a41307ecd6d8a857c22463d37e450be961aa11d8ea6e",
       "selection_score": 98.15713500976562,
       "manifest_sequence_id": "endovis2018\\val\\image",
@@ -103,7 +103,7 @@
     },
     {
       "dataset": "EndoVis_InstrumentTracking",
-      "source_path": "E:\\Surgical_Tracking_Datasets\\EndoVis_InstrumentTracking\\Tracking_Rigid_Training\\Tracking_Rigid_Training\\Training\\OP1\\Raw\\img_745_raw.png",
+      "source_path": "Datasets/EndoVis_InstrumentTracking/Tracking_Rigid_Training/Tracking_Rigid_Training/Training/OP1/Raw/img_745_raw.png",
       "source_sha256": "467489019581673b4b96e276bf169790ed95dfc4b76ecec06feaf8c1ae9c85f2",
       "selection_score": 139.5363613128662,
       "manifest_sequence_id": "Tracking_Rigid_Training\\Tracking_Rigid_Training\\Training\\OP1\\Raw",
@@ -111,7 +111,7 @@
     },
     {
       "dataset": "MIS_own",
-      "source_path": "D:\\Exp_MIS_ChessBox_Datas\\MIS_Videso_1_6\\extracted_frames1\\extracted_frames\\frame_000180.jpg",
+      "source_path": "external/MIS_own/frame_000180.jpg",
       "source_sha256": "65fb753902138eba8aa2a5fe81fd39ae68294323a403b0085bd391f7a78f4112",
       "selection_score": 134.73794593811036,
       "manifest_sequence_id": "extracted_frames1\\extracted_frames",
@@ -119,7 +119,7 @@
     },
     {
       "dataset": "SCARED",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\SCARED\\dataset_3\\keyframe_4\\data\\rgb_frames\\frame_000035.jpg",
+      "source_path": "datasets/SCARED/dataset_3/keyframe_4/data/rgb_frames/frame_000035.jpg",
       "source_sha256": "5666b67032ccda5ff97e2fb88ce26f79492810e9d1a967d4f184fc71029e1d72",
       "selection_score": 137.8125690460205,
       "manifest_sequence_id": "dataset_3\\keyframe_4\\data\\rgb_frames",
@@ -127,7 +127,7 @@
     },
     {
       "dataset": "Stereo_Lap",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\Stereo_Lap\\rectified08\\rectified08\\image02\\0000007196.jpg",
+      "source_path": "datasets/Stereo_Lap/rectified08/rectified08/image02/0000007196.jpg",
       "source_sha256": "a4d10eddeaa495f574f301136f57040ac4ef39b8fd9fdd0044bafe321522b07f",
       "selection_score": 115.77750282287597,
       "manifest_sequence_id": "rectified08\\rectified08\\image02",
@@ -135,7 +135,7 @@
     },
     {
       "dataset": "STIR",
-      "source_path": "E:\\World_Agent_Enoscopy\\datasets\\STIR\\STIRChallenge_2024\\08\\left\\seq00\\frames\\00014400ms-00041480ms-visible_frames\\frame_000000.jpg",
+      "source_path": "datasets/STIR/STIRChallenge_2024/08/left/seq00/frames/00014400ms-00041480ms-visible_frames/frame_000000.jpg",
       "source_sha256": "220f577cafad4448211d8e2f9c2ecd0d3b6e486804a57948ec8d8e1ee0acb695",
       "selection_score": 103.11355075836181,
       "manifest_sequence_id": "STIRChallenge_2024\\08\\left\\seq00\\frames\\00014400ms-00041480ms-visible_frames",
@@ -143,7 +143,7 @@
     },
     {
       "dataset": "SurgT",
-      "source_path": "E:\\Surgical_Tracking_Datasets\\Benchmarks\\SurgT_benchmarking\\data\\test\\case_1\\4\\video.mp4",
+      "source_path": "Datasets/Benchmarks/SurgT_benchmarking/data/test/case_1/4/video.mp4",
       "source_sha256": "182a443a41658800e0845eb28a43e2a479b094fc61c1d92dc4c8d6c4f5ed133f",
       "selection_score": 75.4714511871338,
       "manifest_sequence_id": "test\\case_1\\4\\video.mp4",
@@ -151,7 +151,7 @@
     },
     {
       "dataset": "TrackVes",
-      "source_path": "E:\\Surgical_Tracking_Datasets\\TrackVes\\TrackVes\\TrackVes\\IV3\\videoLeft.avi",
+      "source_path": "Datasets/TrackVes/TrackVes/TrackVes/IV3/videoLeft.avi",
       "source_sha256": "5d14ecab2bf1a33f645033f7ca1c470dad0b2f37f965bddf56d7deb9d7c590af",
       "selection_score": 101.07510782877604,
       "manifest_sequence_id": "IV3\\videoLeft.avi",

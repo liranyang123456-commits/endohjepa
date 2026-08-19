@@ -4,6 +4,7 @@
 - Anonymised copy/extract of ION intraoperative videos (numeric case ids only)
 - STIR / leftover video frame extraction
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,8 +19,12 @@ from endoworld.data.prepare import extract_all_videos, video_to_frames, VIDEO_EX
 REPO = Path(__file__).resolve().parents[3]
 DATASETS = REPO / "datasets"
 
-# ION source lives outside the repo. Only the numeric prefix is copied into datasets/.
-ION_SRC = Path(r"F:\省医-数据") / "省医-数据" / "ION患者整理"
+# ION source lives outside the repository and must be configured explicitly.
+ION_SRC = (
+    Path(os.environ["ENDOWORLD_ION_SOURCE"])
+    if os.environ.get("ENDOWORLD_ION_SOURCE")
+    else None
+)
 
 CASE_RE = re.compile(r"^(\d{3})")
 
@@ -57,8 +62,8 @@ def unzip_stereo_lap(overwrite: bool = False) -> int:
 
 def ingest_ion(overwrite: bool = False) -> int:
     """Copy/extract ION 术中视频 into datasets/ION_bronch/case_XXX (no patient names)."""
-    if not ION_SRC.exists():
-        print(f"[ion] source missing: {ION_SRC}")
+    if ION_SRC is None or not ION_SRC.exists():
+        print("[ion] source unavailable; set ENDOWORLD_ION_SOURCE")
         return 0
     dest_root = DATASETS / "ION_bronch"
     dest_root.mkdir(parents=True, exist_ok=True)
@@ -138,7 +143,9 @@ def extract_extra_videos() -> int:
             flag = out_vid.parent / (out_vid.stem + "_frames.extracted_ok")
             if flag.exists():
                 continue
-            saved = video_to_frames(str(out_vid), str(frames_dir), target_fps=2.0, crop=True)
+            saved = video_to_frames(
+                str(out_vid), str(frames_dir), target_fps=2.0, crop=True
+            )
             flag.write_text(str(saved), encoding="utf-8")
             print(f"[extra] {name}/{rel}: {saved} frames")
             n_vid += 1

@@ -9,10 +9,10 @@
   "selection": "sequence/keyframe stratification; median latent-MSE gain within each deterministically selected eligible stratum",
   "requested_examples": 3,
   "available_sequence_keyframe_strata": [
-    "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_1",
-    "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_2",
-    "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_3",
-    "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_4"
+    "datasets/SCARED/dataset_7/keyframe_1",
+    "datasets/SCARED/dataset_7/keyframe_2",
+    "datasets/SCARED/dataset_7/keyframe_3",
+    "datasets/SCARED/dataset_7/keyframe_4"
   ],
   "n_available_sequence_keyframe_strata": 4,
   "selection_shortfall": 0,
@@ -23,8 +23,8 @@
   "selected": [
     {
       "dataset_index": 61,
-      "sequence_id": "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_1",
-      "sequence_keyframe_stratum": "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_1",
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_1",
+      "sequence_keyframe_stratum": "datasets/SCARED/dataset_7/keyframe_1",
       "real_latent_mse": 0.10870874673128128,
       "shuffled_latent_mse": 0.2495301365852356,
       "real_retrieved_step": 5,
@@ -34,8 +34,8 @@
     },
     {
       "dataset_index": 249,
-      "sequence_id": "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_2",
-      "sequence_keyframe_stratum": "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_2",
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_2",
+      "sequence_keyframe_stratum": "datasets/SCARED/dataset_7/keyframe_2",
       "real_latent_mse": 0.1495024710893631,
       "shuffled_latent_mse": 0.30683809518814087,
       "real_retrieved_step": 0,
@@ -45,8 +45,8 @@
     },
     {
       "dataset_index": 782,
-      "sequence_id": "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_4",
-      "sequence_keyframe_stratum": "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_4",
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_4",
+      "sequence_keyframe_stratum": "datasets/SCARED/dataset_7/keyframe_4",
       "real_latent_mse": 0.08166276663541794,
       "shuffled_latent_mse": 0.22846171259880066,
       "real_retrieved_step": 4,

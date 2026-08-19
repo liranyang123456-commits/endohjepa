@@ -1,4 +1,5 @@
-"""Protocol tests for C3VD ray model, pose error, and hard-negative banks."""
+"""Protocol tests for C3VD Z-depth, strict-future retrieval, and fixed banks."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -7,84 +8,90 @@ import torch
 from endoworld.world.physical_actions import PhysicalActionDataset, PhysicalSequence
 
 
-def test_c3vd_cam_ray_round_trip():
-    from endoworld.eval.c3vd_pose_gate import cam2ray, ray2cam
+def test_c3vd_z_depth_backprojection():
+    from endoworld.eval.c3vd_pose_gate import backproject_z_depth
 
-    u = np.array([320.0, 400.0, 511.5])
-    v = np.array([240.0, 300.0, 511.5])
-    rays = cam2ray(u, v)
-    assert np.allclose(np.linalg.norm(rays, axis=-1), 1.0)
-    depth = np.array([4.0, 2.0, 6.0])
-    points = rays * (depth / rays[..., 2])[..., None]
-    assert np.allclose(points[:, 2], depth)
-    u2, v2, valid = ray2cam(points)
-    assert valid.all()
-    assert np.allclose(u2, u, atol=0.5)
-    assert np.allclose(v2, v, atol=0.5)
+    rays = np.array([[0.6, 0.0, 0.8], [0.0, 0.0, 1.0]])
+    points = backproject_z_depth(rays, np.array([4.0, 2.0]))
+    assert np.allclose(points, np.array([[3.0, 0.0, 4.0], [0.0, 0.0, 2.0]]))
+    assert np.allclose(points[:, 2], np.array([4.0, 2.0]))
 
 
-def test_navigation_pose_error():
-    from endoworld.eval.physical_navigation import _pose_error
+def test_navigation_strict_future_and_pose_error():
+    from endoworld.eval.physical_navigation import (
+        _pose_error,
+        _public_sequence_id,
+        _strict_future_nearest_index,
+    )
 
-    # Pure translation: twist translation equals the displacement.
-    moved = np.eye(4)
-    moved[:3, 3] = [3.0, 4.0, 0.0]
-    translation, rotation = _pose_error(np.eye(4), moved)
+    latents = torch.tensor([[0.0], [5.0], [10.0]])
+    assert (
+        _strict_future_nearest_index(torch.tensor([0.0]), latents, current_index=0) == 1
+    )
+
+    target = np.eye(4)
+    target[:3, :3] = np.array(
+        [
+            [0.0, -1.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
+    target[:3, 3] = [3.0, 4.0, 0.0]
+    translation, rotation = _pose_error(np.eye(4), target)
     assert np.isclose(translation, 5.0)
-    assert np.isclose(rotation, 0.0)
-
-    # Pure rotation: twist rotation equals the rotation angle in degrees.
-    turned = np.eye(4)
-    turned[:3, :3] = np.array([
-        [0.0, -1.0, 0.0],
-        [1.0, 0.0, 0.0],
-        [0.0, 0.0, 1.0],
-    ])
-    translation, rotation = _pose_error(np.eye(4), turned)
-    assert np.isclose(translation, 0.0)
     assert np.isclose(rotation, 90.0)
 
-
-def _toy_dataset(n_windows: int = 7) -> PhysicalActionDataset:
-    actions = torch.arange(42, dtype=torch.float32).reshape(7, 6) / 10
-    latents = torch.cat([torch.zeros(1, 6), actions.cumsum(dim=0)])
     sequence = PhysicalSequence(
-        sequence_id="scared:E:/private/SCARED/dataset_7/keyframe_1",
+        sequence_id="scared:datasets/SCARED/dataset_7/keyframe_3",
         dataset="SCARED",
         case_id="dataset_7",
-        latents=latents,
-        actions=actions,
+        latents=torch.zeros(2, 1),
+        actions=torch.zeros(1, 6),
     )
-    return PhysicalActionDataset([sequence], history=2, horizon=1, split="test")
+    assert _public_sequence_id(sequence) == "SCARED/dataset_7/keyframe_3"
 
 
-def test_hard_negative_is_same_sequence_and_never_self():
-    dataset = _toy_dataset()
-    rng = np.random.default_rng(0)
-    for index in range(len(dataset)):
-        for _ in range(20):
-            negative = dataset.hard_negative_index(index, radius=64, rng=rng)
-            assert negative != index
-            seq_a, _ = dataset.windows[index]
-            seq_b, _ = dataset.windows[negative]
-            assert seq_a == seq_b
+def test_derangement_has_no_fixed_points():
+    from endoworld.world.train_continuous_actions import _derangement
+
+    generator = torch.Generator().manual_seed(0)
+    for n in range(2, 33):
+        perm = _derangement(n, generator)
+        assert perm.numel() == n
+        assert not torch.any(perm == torch.arange(n))
 
 
-def test_fixed_bank_reports_pair_and_window_wins():
+def test_fixed_bank_uses_distinct_negatives_and_reports_shortfall():
     from endoworld.world.train_continuous_actions import evaluate_fixed_bank
 
     class Integrator(torch.nn.Module):
         def forward(self, history, actions):
             return history[:, -1:] + actions.cumsum(dim=1)
 
-    dataset = _toy_dataset()
+    actions = torch.arange(42, dtype=torch.float32).reshape(7, 6) / 10
+    latents = torch.cat([torch.zeros(1, 6), actions.cumsum(dim=0)])
+    sequence = PhysicalSequence(
+        sequence_id="scared:datasets/SCARED/dataset_7/keyframe_1",
+        dataset="SCARED",
+        case_id="dataset_7",
+        latents=latents,
+        actions=actions,
+    )
+    dataset = PhysicalActionDataset([sequence], history=2, horizon=1, split="test")
     report = evaluate_fixed_bank(
-        Integrator(), dataset, "cpu", n_negatives=4, radius=64, seed=7)
-    assert report["n"] == len(dataset)
-    assert report["n_negatives"] == 4
-    # A perfect integrator scores zero error for real actions, so it must win
-    # every pair against any non-identical negative action sequence.
-    assert report["pair_win_fraction"] == 1.0
-    assert report["all_negative_win_fraction"] == 1.0
-    assert report["mse_real_actions"] < 1e-9
-    assert report["mse_negative_actions"] > 1e-3
+        Integrator(),
+        dataset,
+        "cpu",
+        n_negatives=10,
+        radius=64,
+        seed=7,
+        batch_size=2,
+    )
+    expected = len(dataset) - 1
+    assert report["actual_unique_negative_counts"] == [expected] * len(dataset)
+    assert report["windows_with_reduced_bank"] == len(dataset)
+    assert report["actual_unique_negatives_per_window"]["total_pairs"] == (
+        len(dataset) * expected
+    )
+    assert "without replacement" in report["negative_sampling_strategy"]

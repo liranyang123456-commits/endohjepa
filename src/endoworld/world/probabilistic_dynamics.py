@@ -1,4 +1,5 @@
 """Probabilistic continuous dynamics, ensemble uncertainty and risk calibration."""
+
 from __future__ import annotations
 
 import math
@@ -23,7 +24,9 @@ class ProbabilisticContinuousDynamics(ContinuousActionDynamics):
         )
 
     def distribution(
-        self, history: torch.Tensor, actions: torch.Tensor,
+        self,
+        history: torch.Tensor,
+        actions: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         features = self._future_features(history, actions)
         mean = self.head(features) + self.action_residual(actions)
@@ -43,12 +46,16 @@ class ProbabilisticContinuousDynamics(ContinuousActionDynamics):
         inverse_weight: float = 0.25,
     ) -> dict[str, torch.Tensor]:
         mean, log_variance = self.distribution(history, actions)
-        nll = 0.5 * (
-            log_variance + (future - mean).square() * torch.exp(-log_variance)
-        ).mean()
+        nll = (
+            0.5
+            * (
+                log_variance + (future - mean).square() * torch.exp(-log_variance)
+            ).mean()
+        )
         current = torch.cat([history[:, -1:], future[:, :-1]], dim=1)
         inverse = F.smooth_l1_loss(
-            self.inverse(current, future), self.normalise_actions(actions))
+            self.inverse(current, future), self.normalise_actions(actions)
+        )
         return {
             "total": nll + inverse_weight * inverse,
             "nll": nll,
@@ -63,16 +70,18 @@ class DynamicsEnsemble(nn.Module):
         super().__init__()
         if members < 2:
             raise ValueError("ensemble needs at least two members")
-        self.members = nn.ModuleList([
-            ProbabilisticContinuousDynamics(cfg) for _ in range(members)
-        ])
+        self.members = nn.ModuleList(
+            [ProbabilisticContinuousDynamics(cfg) for _ in range(members)]
+        )
 
     def set_action_stats(self, mean: torch.Tensor, std: torch.Tensor) -> None:
         for member in self.members:
             member.set_action_stats(mean, std)
 
     def predict(
-        self, history: torch.Tensor, actions: torch.Tensor,
+        self,
+        history: torch.Tensor,
+        actions: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
         distributions = [
             member.distribution(history, actions) for member in self.members
@@ -104,12 +113,15 @@ class NearWallRiskHead(nn.Module):
     ) -> torch.Tensor:
         aleatoric = aleatoric_variance.mean(dim=-1, keepdim=True)
         epistemic = epistemic_variance.mean(dim=-1, keepdim=True)
-        return self.network(
-            torch.cat([state, aleatoric, epistemic], dim=-1)).squeeze(-1)
+        return self.network(torch.cat([state, aleatoric, epistemic], dim=-1)).squeeze(
+            -1
+        )
 
 
 def near_wall_labels(
-    depth: torch.Tensor, threshold: float, valid: torch.Tensor | None = None,
+    depth: torch.Tensor,
+    threshold: float,
+    valid: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Binary near-wall labels from lower-tail valid depth per frame."""
     if valid is None:
@@ -127,10 +139,9 @@ def binary_auc(probability: np.ndarray, target: np.ndarray) -> float:
     positive, negative = probability[target], probability[~target]
     if len(positive) == 0 or len(negative) == 0:
         return float("nan")
-    comparison = (
-        (positive[:, None] > negative[None, :]).mean()
-        + 0.5 * (positive[:, None] == negative[None, :]).mean()
-    )
+    comparison = (positive[:, None] > negative[None, :]).mean() + 0.5 * (
+        positive[:, None] == negative[None, :]
+    ).mean()
     return float(comparison)
 
 
@@ -141,10 +152,12 @@ def binary_ece(probability: np.ndarray, target: np.ndarray, bins: int = 10) -> f
     result = 0.0
     for lo, hi in zip(edges[:-1], edges[1:]):
         selected = (probability >= lo) & (
-            probability <= hi if hi == 1 else probability < hi)
+            probability <= hi if hi == 1 else probability < hi
+        )
         if selected.any():
             result += selected.mean() * abs(
-                probability[selected].mean() - target[selected].mean())
+                probability[selected].mean() - target[selected].mean()
+            )
     return float(result)
 
 
@@ -157,14 +170,14 @@ class RiskCalibrator:
         self.alpha = alpha
 
     def fit(self, logits: torch.Tensor, target: torch.Tensor) -> "RiskCalibrator":
-        log_temperature = torch.zeros(
-            (), device=logits.device, requires_grad=True)
+        log_temperature = torch.zeros((), device=logits.device, requires_grad=True)
         optimizer = torch.optim.LBFGS([log_temperature], max_iter=50)
 
         def closure():
             optimizer.zero_grad()
             loss = F.binary_cross_entropy_with_logits(
-                logits.detach() / log_temperature.exp(), target.float())
+                logits.detach() / log_temperature.exp(), target.float()
+            )
             loss.backward()
             return loss
 
@@ -179,10 +192,13 @@ class RiskCalibrator:
 
     def predict(self, logits: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         probability = torch.sigmoid(logits / self.temperature)
-        interval = torch.stack([
-            (probability - self.radius).clamp(0, 1),
-            (probability + self.radius).clamp(0, 1),
-        ], dim=-1)
+        interval = torch.stack(
+            [
+                (probability - self.radius).clamp(0, 1),
+                (probability + self.radius).clamp(0, 1),
+            ],
+            dim=-1,
+        )
         return probability, interval
 
     def metrics(self, logits: torch.Tensor, target: torch.Tensor) -> dict[str, float]:
@@ -190,8 +206,8 @@ class RiskCalibrator:
         p = probability.detach().cpu().numpy()
         y = target.detach().cpu().numpy()
         coverage = (
-            (target >= interval[..., 0]) & (target <= interval[..., 1])
-        ).float().mean()
+            ((target >= interval[..., 0]) & (target <= interval[..., 1])).float().mean()
+        )
         return {
             "auc": binary_auc(p, y),
             "brier": float(np.mean((p - y) ** 2)),

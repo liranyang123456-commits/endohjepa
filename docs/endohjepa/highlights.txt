@@ -1,5 +1,5 @@
 - Domain-conditioned latent prediction spans laparoscopic, GI and bronchoscopic video.
-- Offline latent forecasting reaches 0.978 cosine on a video-level split.
+- Latent forecasting reaches 0.978 mean cosine over steps 1--4.
 - A past-only audit remains above persistence (0.9578 versus 0.9102).
-- Audited SE(3) association reaches 85.2% on SCARED (n=958).
-- Oracle-goal CEM retrieval proxy wins 60.0% of 200 SCARED windows.
+- Deranged-batch SE(3) association reaches 87.0% on SCARED (n=958).
+- Corrected near-wall risk fails calibration (AUC 0.523).

@@ -7,60 +7,12 @@
   "split": "SCARED test windows",
   "selection": "25th/50th percentile rollout index error",
   "n_windows": 958,
-  "n_sequence_keyframe_units": 4,
-  "aggregate_unit": "sequence/keyframe; overlapping windows are descriptive",
-  "mean_retrieved_index_by_step": [
-    0.1456489035928288,
-    0.5518811038670852,
-    1.0279544600806283,
-    1.5934923363661682
-  ],
-  "sequence_mean_retrieved_index_by_step": {
-    "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_1": [
-      0.10810810810810811,
-      0.5540540540540541,
-      1.1554054054054055,
-      1.8310810810810811
-    ],
-    "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_2": [
-      0.16783216783216784,
-      0.4965034965034965,
-      0.916083916083916,
-      1.4195804195804196
-    ],
-    "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_3": [
-      0.15151515151515152,
-      0.5681818181818182,
-      0.9393939393939394,
-      1.4242424242424243
-    ],
-    "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_4": [
-      0.15514018691588785,
-      0.5887850467289719,
-      1.1009345794392524,
-      1.6990654205607476
-    ]
-  },
-  "sequence_range_retrieved_index_by_step": {
-    "min": [
-      0.10810810810810811,
-      0.4965034965034965,
-      0.916083916083916,
-      1.4195804195804196
-    ],
-    "max": [
-      0.16783216783216784,
-      0.5887850467289719,
-      1.1554054054054055,
-      1.8310810810810811
-    ]
-  },
   "mean_index_error": 1.8643006263048016,
   "persistence_index_error": 2.5,
   "win_fraction": 0.5876826722338204,
   "selected": [
     {
-      "sequence_id": "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_3",
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_3",
       "current_index": 22,
       "retrieved_indices": [
         0,
@@ -72,7 +24,7 @@
       "mean_index_error": 1.25
     },
     {
-      "sequence_id": "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_2",
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_2",
       "current_index": 80,
       "retrieved_indices": [
         0,

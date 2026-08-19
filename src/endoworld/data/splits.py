@@ -3,6 +3,7 @@
 Clips from the same sequence (same frames_dir / sequence_id) never cross splits.
 Assignment is a stable hash of (dataset, sequence_id), independent of scan order.
 """
+
 from __future__ import annotations
 
 import csv
@@ -36,7 +37,9 @@ def apply_splits(manifest_csv: str | Path, seed: int = 0) -> Path:
         if existing in ("train", "val", "test"):
             split = existing
         else:
-            split = assign_split(video_key(row["dataset"], row["sequence_id"]), seed=seed)
+            split = assign_split(
+                video_key(row["dataset"], row["sequence_id"]), seed=seed
+            )
         row["split"] = split
         if split == "train":
             n_tr += 1
@@ -55,7 +58,10 @@ def apply_splits(manifest_csv: str | Path, seed: int = 0) -> Path:
 
 if __name__ == "__main__":
     import argparse
-    ap = argparse.ArgumentParser(description="Assign video-level train/val/test on sequences.csv")
+
+    ap = argparse.ArgumentParser(
+        description="Assign video-level train/val/test on sequences.csv"
+    )
     ap.add_argument("--manifest", default="manifests/sequences.csv")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()

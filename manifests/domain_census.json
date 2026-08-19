@@ -1,5 +1,5 @@
 {
-  "manifest": "E:\\World_Agent_Enoscopy\\manifests\\sequences.csv",
+  "manifest": "manifests/sequences.csv",
   "n_sequences": 1706,
   "n_frames": 1067733,
   "missing_frames_dir": 0,

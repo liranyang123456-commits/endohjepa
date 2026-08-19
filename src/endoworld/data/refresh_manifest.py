@@ -1,4 +1,5 @@
 """Replace rows for selected datasets in sequences.csv without re-walking SCARED."""
+
 from __future__ import annotations
 
 import argparse
@@ -46,7 +47,11 @@ def main():
     ap.add_argument("--root", default="datasets")
     ap.add_argument("--datasets", default="Kvasir-Capsule,ION_bronch")
     args = ap.parse_args()
-    refresh(Path(args.manifest), Path(args.root).resolve(), [x.strip() for x in args.datasets.split(",") if x.strip()])
+    refresh(
+        Path(args.manifest),
+        Path(args.root).resolve(),
+        [x.strip() for x in args.datasets.split(",") if x.strip()],
+    )
 
 
 if __name__ == "__main__":

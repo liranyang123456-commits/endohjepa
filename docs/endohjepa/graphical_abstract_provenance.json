@@ -14,17 +14,17 @@
     {
       "file": "figures/_fig1_in_laparo.png",
       "sha256": "10d4919e91ab25ad221bd654d57e46b453057b5dc5ac406463458015d95bad4d",
-      "label": "Laparoscopy"
+      "label": "Laparo"
     },
     {
       "file": "figures/_fig1_in_gi.png",
       "sha256": "210e9f19f4a59a2b7b61343d54193e2a5472631906028757f61edfb030d9de4b",
-      "label": "GI endoscopy"
+      "label": "GI"
     },
     {
       "file": "figures/_fig1_in_bronch.png",
       "sha256": "51b6846ab7903eb944a8a77884c4ad1e6b0047b52e53c7dc912d85a8629defb9",
-      "label": "Bronchoscopy"
+      "label": "Bronch"
     }
   ],
   "png_embedded_dpi": [

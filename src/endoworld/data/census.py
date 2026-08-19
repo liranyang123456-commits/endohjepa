@@ -2,6 +2,7 @@
 
 Does not download data. Records GI / Cholec80 / ION coverage gaps for Endo-HJEPA.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,11 +23,18 @@ KNOWN_GAPS = {
 def census(manifest_csv: str | Path) -> dict:
     path = Path(manifest_csv)
     rows = list(csv.DictReader(path.open(encoding="utf-8")))
-    by_ds: dict[str, dict] = defaultdict(lambda: {
-        "sequences": 0, "frames": 0, "domain": "", "splits": defaultdict(int),
-        "modalities": set(),
-    })
-    by_dom: dict[str, dict] = defaultdict(lambda: {"sequences": 0, "frames": 0, "datasets": set()})
+    by_ds: dict[str, dict] = defaultdict(
+        lambda: {
+            "sequences": 0,
+            "frames": 0,
+            "domain": "",
+            "splits": defaultdict(int),
+            "modalities": set(),
+        }
+    )
+    by_dom: dict[str, dict] = defaultdict(
+        lambda: {"sequences": 0, "frames": 0, "datasets": set()}
+    )
     by_split: dict[str, int] = defaultdict(int)
     missing_dirs = 0
     for r in rows:
@@ -66,8 +74,11 @@ def census(manifest_csv: str | Path) -> dict:
         "missing_frames_dir": missing_dirs,
         "by_dataset": _plain(by_ds),
         "by_domain": {
-            k: {"sequences": v["sequences"], "frames": v["frames"],
-                "datasets": sorted(v["datasets"])}
+            k: {
+                "sequences": v["sequences"],
+                "frames": v["frames"],
+                "datasets": sorted(v["datasets"]),
+            }
             for k, v in by_dom.items()
         },
         "by_split": dict(by_split),
@@ -92,7 +103,9 @@ def main():
     print(f"[census] sequences={report['n_sequences']} frames={report['n_frames']}")
     print("[census] by domain:")
     for k, v in sorted(report["by_domain"].items()):
-        print(f"  {k:8s} seq={v['sequences']:5d}  frames={v['frames']:8d}  {v['datasets']}")
+        print(
+            f"  {k:8s} seq={v['sequences']:5d}  frames={v['frames']:8d}  {v['datasets']}"
+        )
     print("[census] by split:", report["by_split"])
     print(f"[census] wrote {args.out}")
 

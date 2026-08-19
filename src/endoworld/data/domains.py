@@ -6,8 +6,10 @@ Domains:
   bronch   bronchoscopy / ION navigation
   mixed    unknown or mixed-orifice
 """
+
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # Canonical dataset folder name -> domain
@@ -46,9 +48,25 @@ def infer_domain(dataset: str, path: str = "") -> str:
     blob = f"{dataset} {path}".lower().replace("\\", "/")
     if any(k in blob for k in ("bronch", "ion_", "ion-", "/ion/")):
         return "bronch"
-    if any(k in blob for k in ("kvasir", "hyperkvasir", "capsule", "c3vd", "colon", "gastro")):
+    if any(
+        k in blob
+        for k in ("kvasir", "hyperkvasir", "capsule", "c3vd", "colon", "gastro")
+    ):
         return "gi"
-    if any(k in blob for k in ("cholec", "endovis", "scared", "lapar", "endoscapes", "endonerf", "stir", "surgt", "trackves")):
+    if any(
+        k in blob
+        for k in (
+            "cholec",
+            "endovis",
+            "scared",
+            "lapar",
+            "endoscapes",
+            "endonerf",
+            "stir",
+            "surgt",
+            "trackves",
+        )
+    ):
         return "laparo"
     return "mixed"
 
@@ -58,14 +76,16 @@ def domain_id(dataset: str, path: str = "") -> int:
 
 
 def extra_local_roots() -> list[tuple[str, Path]]:
-    """Named extra corpora that live outside datasets/ but are already on disk.
+    """Read optional external corpus roots from ``ENDOWORLD_EXTRA_ROOTS``.
 
-    Returns (dataset_name, root_path) pairs. Missing paths are skipped by the scanner.
+    The platform path separator delimits entries and each entry has the form
+    ``DATASET_NAME=PATH``. Missing paths are skipped by the scanner.
     """
-    return [
-        ("TrackVes", Path(r"E:\Surgical_Tracking_Datasets\TrackVes\TrackVes\TrackVes")),
-        ("EndoVis_InstrumentTracking", Path(r"E:\Surgical_Tracking_Datasets\EndoVis_InstrumentTracking")),
-        ("SurgT", Path(r"E:\Surgical_Tracking_Datasets\Benchmarks\SurgT_benchmarking\data")),
-        ("MIS_own", Path(r"D:\Exp_MIS_ChessBox_Datas\MIS_Videso_1_6")),
-        ("MIS_own", Path(r"F:\Exp_Videos")),
-    ]
+    roots = []
+    for item in os.environ.get("ENDOWORLD_EXTRA_ROOTS", "").split(os.pathsep):
+        if not item or "=" not in item:
+            continue
+        name, path = item.split("=", 1)
+        if name.strip() and path.strip():
+            roots.append((name.strip(), Path(path.strip())))
+    return roots

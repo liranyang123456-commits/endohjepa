@@ -12,7 +12,7 @@
   "selected": [
     {
       "dataset_index": 431,
-      "sequence_id": "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_4",
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_4",
       "real_latent_mse": 0.09182603657245636,
       "shuffled_latent_mse": 0.1642170548439026,
       "real_retrieved_step": 4,
@@ -22,7 +22,7 @@
     },
     {
       "dataset_index": 59,
-      "sequence_id": "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_1",
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_1",
       "real_latent_mse": 0.11699488013982773,
       "shuffled_latent_mse": 0.2573307454586029,
       "real_retrieved_step": 3,
@@ -32,7 +32,7 @@
     },
     {
       "dataset_index": 725,
-      "sequence_id": "scared:E:/MIS_Datasets/SCARED/dataset_7/keyframe_4",
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_4",
       "real_latent_mse": 0.06612709909677505,
       "shuffled_latent_mse": 0.29291608929634094,
       "real_retrieved_step": 4,

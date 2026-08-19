@@ -3,7 +3,7 @@
   "dataset": "SCARED",
   "status": "assets_found_standardized_gate_pending",
   "evidence": {
-    "scared_root": "E:/MIS_Datasets/SCARED",
+    "scared_root": "datasets/SCARED",
     "pose_video_audit": {
       "sequences": 23,
       "aligned_frames": 20927,
@@ -26,16 +26,16 @@
   },
   "assets": {
     "vggt": {
-      "source": "D:/vggt-main/vggt-main",
+      "source": "external/SCARED/vggt-main",
       "code_available": true,
       "checkpoint_available": true,
-      "checkpoint": "C:/Users/lry/.cache/huggingface/hub/models--facebook--VGGT-1B/snapshots/860abec7937da0a4c03c41d3c269c366e82abdf9/model.safetensors",
+      "checkpoint": "external/SCARED/model.safetensors",
       "cached_predictions_available": false,
       "accepted_as_teacher": false,
       "reason": "Model and paired SCARED assets exist, but no SCARED-specific VGGT depth/pose evaluation has completed a common case-level split and depth-warp diagnostic."
     },
     "freereg": {
-      "source": "E:/Free_coordinate_MR_Registration/src/nonrigid_rtw.py",
+      "source": "external/SCARED/nonrigid_rtw.py",
       "accepted_modules": [
         "Laplacian-style smoothness",
         "SVD observability penalty"
@@ -44,11 +44,11 @@
       "reason": "Reusable regularizers, not a video geometry teacher."
     },
     "pseudo3d": {
-      "source": "E:/MIS_TMI_Re_3D/e2e_pseudo3d/losses.py",
+      "source": "external/SCARED/losses.py",
       "checkpoint_available": false,
       "existing_results": [
-        "E:/MIS_TMI_Re_3D/benchmark_scared/scared_results.json",
-        "E:/MIS_TMI_Re_3D/benchmark_results/scared_cross_eval_v2v3v4/scared_summary.json"
+        "datasets/SCARED/scared_results.json",
+        "external/SCARED/scared_summary.json"
       ],
       "accepted_modules": [
         "scale-invariant depth loss",
@@ -61,7 +61,7 @@
     }
   },
   "minimal_combination": [
-    "SCARED ground-truth pose/depth from E:/MIS_Datasets/SCARED",
+    "datasets/SCARED",
     "src/endoworld/world/geometry.py regularizers",
     "frozen V-JEPA2 semantic teacher"
   ],

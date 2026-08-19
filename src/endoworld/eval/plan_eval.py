@@ -5,6 +5,7 @@ actions, with an energy threshold as an OOD reject.
 
     python -m endoworld.eval.plan_eval --ckpt outputs/endohjepa/endohjepa.pt
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,21 +23,28 @@ from endoworld.world.plan_mpc import latent_mpc
 
 
 def _reach_metrics(model, z, D, history, horizon, n_samples=16):
-    z_hist, z_fut = z[:, :history], z[:, history:history + horizon]
+    z_hist, z_fut = z[:, :history], z[:, history : history + horizon]
     z_goal = z_fut[:, -1]
     persist = persistence_baseline(z_hist, horizon)[:, -1]
     with torch.no_grad():
         pred_l1 = model.forward_l1(z_hist, D)[:, -1]
-        rand_a = torch.randint(0, model.cfg.n_actions, (z.size(0), model.cfg.horizon),
-                               device=z.device)
+        rand_a = torch.randint(
+            0, model.cfg.n_actions, (z.size(0), model.cfg.horizon), device=z.device
+        )
         pred_rand = model.forward_l3(z_hist, rand_a, D)[:, -1]
-        plan_a, plan_e = latent_mpc(model, z_hist, z_goal, D, n_samples=n_samples, steps=horizon)
+        plan_a, plan_e = latent_mpc(
+            model, z_hist, z_goal, D, n_samples=n_samples, steps=horizon
+        )
         # execute planned first-horizon actions
         h = min(plan_a.size(1), model.cfg.horizon)
         a = plan_a[:, :h]
         if a.size(1) < model.cfg.horizon:
-            pad = torch.zeros(z.size(0), model.cfg.horizon - a.size(1),
-                              dtype=torch.long, device=z.device)
+            pad = torch.zeros(
+                z.size(0),
+                model.cfg.horizon - a.size(1),
+                dtype=torch.long,
+                device=z.device,
+            )
             a = torch.cat([a, pad], dim=1)
         pred_plan = model.forward_l3(z_hist, a, D)[:, -1]
         e_plan = model.energy(z_hist[:, -1], a[:, 0], pred_plan)
@@ -81,18 +89,30 @@ def eval_from_cache(model, pack, history, horizon, n_samples):
     return out
 
 
-def _encode_dataset_clips(encoder, manifest, dataset_name, clip_len, image_size, max_clips, device):
+def _encode_dataset_clips(
+    encoder, manifest, dataset_name, clip_len, image_size, max_clips, device
+):
     from torch.utils.data import DataLoader
     from endoworld.data.video_clips import EndoClipDataset
     from endoworld.world.train import collate_meta, cache_latents
+
     ds = EndoClipDataset(
-        manifest, clip_len=clip_len, stride=4, image_size=image_size,
-        include=[dataset_name], return_meta=True, split="test",
+        manifest,
+        clip_len=clip_len,
+        stride=4,
+        image_size=image_size,
+        include=[dataset_name],
+        return_meta=True,
+        split="test",
     )
     if len(ds) == 0:
         ds = EndoClipDataset(
-            manifest, clip_len=clip_len, stride=4, image_size=image_size,
-            include=[dataset_name], return_meta=True,
+            manifest,
+            clip_len=clip_len,
+            stride=4,
+            image_size=image_size,
+            include=[dataset_name],
+            return_meta=True,
         )
     if len(ds) == 0:
         return None
@@ -109,8 +129,11 @@ def main():
     ap.add_argument("--manifest", default="manifests/sequences.csv")
     ap.add_argument("--out", default="outputs/endohjepa/plan_eval.json")
     ap.add_argument("--n-samples", type=int, default=16)
-    ap.add_argument("--encode-subsets", action="store_true",
-                    help="also encode C3VD/SCARED/ION clips if present")
+    ap.add_argument(
+        "--encode-subsets",
+        action="store_true",
+        help="also encode C3VD/SCARED/ION clips if present",
+    )
     ap.add_argument("--max-clips", type=int, default=32)
     args = ap.parse_args()
 
@@ -124,18 +147,29 @@ def main():
         "note": "ION/SCARED/C3VD are downstream navigation/reach cases, not ablation-efficacy experiments.",
     }
     if kind != "hjepa" or blob.get("ablation", "full") != "full":
-        report["skipped"] = "planning requires full H-JEPA (L3 + energy); L1/GRU ablations are prediction-only"
+        report["skipped"] = (
+            "planning requires full H-JEPA (L3 + energy); L1/GRU ablations are prediction-only"
+        )
         Path(args.out).parent.mkdir(parents=True, exist_ok=True)
         Path(args.out).write_text(json.dumps(report, indent=2), encoding="utf-8")
         print(json.dumps(report, indent=2))
         return
 
-    latents_path = args.latents or os.path.join(os.path.dirname(args.ckpt), "latents_cache.pt")
+    latents_path = args.latents or os.path.join(
+        os.path.dirname(args.ckpt), "latents_cache.pt"
+    )
     if os.path.isfile(latents_path):
         pack = torch.load(latents_path, map_location="cpu", weights_only=False)
-        report["from_cache"] = eval_from_cache(model, pack, history, horizon, args.n_samples)
+        report["from_cache"] = eval_from_cache(
+            model, pack, history, horizon, args.n_samples
+        )
 
-    from endoworld.world.c3vd_actions import find_c3vd_pose_files, load_pose_txt, pose_deltas
+    from endoworld.world.c3vd_actions import (
+        find_c3vd_pose_files,
+        load_pose_txt,
+        pose_deltas,
+    )
+
     pose_files = [str(p) for p in find_c3vd_pose_files("datasets/C3VD")]
     report["c3vd_pose_files"] = len(pose_files)
     if pose_files:
@@ -150,7 +184,6 @@ def main():
         }
 
     if args.encode_subsets:
-        enc = None
         # planning eval uses the world-model latents already cached; optional live encode
         report["live_encode"] = "skipped unless encoder ckpt is passed via cache"
 

@@ -11,6 +11,7 @@ self-evaluation. In-silico only; not a clinical-navigation claim.
 
     python -m endoworld.eval.scared_navigation --ckpt outputs/p2000_full_causal/endohjepa.pt
 """
+
 from __future__ import annotations
 
 import argparse
@@ -20,11 +21,16 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from endoworld.world.scared_actions import find_scared_keyframes, find_scared_rgb, load_scared_poses
+from endoworld.world.scared_actions import (
+    find_scared_keyframes,
+    find_scared_rgb,
+    load_scared_poses,
+)
 
 
 def _encode_frames(enc, frames, device, image_size):
     from PIL import Image
+
     zs = []
     for fp in frames:
         try:
@@ -61,6 +67,7 @@ def main():
 
     from endoworld.understanding.vjepa2_hf import VJEPA2Encoder
     from endoworld.eval.world_benchmark import load_predictor
+
     enc = VJEPA2Encoder(args.vjepa2_id, device=device)
     blob = torch.load(args.ckpt, map_location=device, weights_only=False)
     model, kind, history, horizon, _ = load_predictor(blob, device)
@@ -83,53 +90,84 @@ def main():
             trans = _pose_trans(poses)
             # map encoder temporal index -> pose index (tubelet alignment)
             n_z = z.size(0)
-            pidx = np.clip(np.round(np.linspace(0, len(trans) - 1, n_z)).astype(int), 0, len(trans) - 1)
+            pidx = np.clip(
+                np.round(np.linspace(0, len(trans) - 1, n_z)).astype(int),
+                0,
+                len(trans) - 1,
+            )
             trans_t = torch.from_numpy(trans[pidx]).float().to(device)
 
             dom = torch.zeros(1, dtype=torch.long, device=device)  # laparo
             # goal = a later frame; start history
-            for goal in range(history + horizon, n_z, max(1, (n_z - history - horizon) // 6)):
-                z_hist = z[goal - history - horizon + 1: goal - horizon + 1].unsqueeze(0)
+            for goal in range(
+                history + horizon, n_z, max(1, (n_z - history - horizon) // 6)
+            ):
+                z_hist = z[goal - history - horizon + 1 : goal - horizon + 1].unsqueeze(
+                    0
+                )
                 if z_hist.size(1) < history:
                     continue
                 z_hist = z_hist[:, -history:]
                 z_goal = z[goal].unsqueeze(0)
                 # MPC plan toward the goal latent
-                plan_a, plan_e = model.plan(z_hist, z_goal, dom, n_samples=args.n_samples, steps=horizon)
+                plan_a, plan_e = model.plan(
+                    z_hist, z_goal, dom, n_samples=args.n_samples, steps=horizon
+                )
                 with torch.no_grad():
-                    pred = model.forward_l3(z_hist, plan_a[:, :model.cfg.horizon], dom)[0, -1]
+                    pred = model.forward_l3(
+                        z_hist, plan_a[:, : model.cfg.horizon], dom
+                    )[0, -1]
                 # decode predicted latent -> nearest real frame (by latent distance)
                 dist = torch.cdist(pred.unsqueeze(0), z).squeeze(0)
                 j_star = int(dist.argmin().item())
                 persist_lat = z_hist[0, -1]
                 # metrics
-                latent_gain = (torch.dist(persist_lat, z_goal) - torch.dist(pred, z_goal)).item()
-                pose_err_model = float(torch.dist(trans_t[j_star], trans_t[goal]).item())
-                j_persist = int(torch.cdist(persist_lat.unsqueeze(0), z).squeeze(0).argmin().item())
-                pose_err_persist = float(torch.dist(trans_t[j_persist], trans_t[goal]).item())
-                rows.append({
-                    "keyframe": kf.name, "goal_idx": int(goal),
-                    "latent_gain_vs_persist": latent_gain,
-                    "reach_latent_success": bool(latent_gain > 0),
-                    "pose_err_model_mm": pose_err_model,
-                    "pose_err_persist_mm": pose_err_persist,
-                    "plan_energy": float(plan_e.mean().item()),
-                })
+                latent_gain = (
+                    torch.dist(persist_lat, z_goal) - torch.dist(pred, z_goal)
+                ).item()
+                pose_err_model = float(
+                    torch.dist(trans_t[j_star], trans_t[goal]).item()
+                )
+                j_persist = int(
+                    torch.cdist(persist_lat.unsqueeze(0), z).squeeze(0).argmin().item()
+                )
+                pose_err_persist = float(
+                    torch.dist(trans_t[j_persist], trans_t[goal]).item()
+                )
+                rows.append(
+                    {
+                        "keyframe": kf.name,
+                        "goal_idx": int(goal),
+                        "latent_gain_vs_persist": latent_gain,
+                        "reach_latent_success": bool(latent_gain > 0),
+                        "pose_err_model_mm": pose_err_model,
+                        "pose_err_persist_mm": pose_err_persist,
+                        "plan_energy": float(plan_e.mean().item()),
+                    }
+                )
         except Exception as e:
             rows.append({"keyframe": str(kf), "error": str(e)})
 
     ok = [r for r in rows if "pose_err_model_mm" in r]
     if not ok:
-        print("[nav] no successful runs"); return
+        print("[nav] no successful runs")
+        return
     report = {
-        "paper": "Endo-HJEPA", "not_ablation_planning": True,
+        "paper": "Endo-HJEPA",
+        "not_ablation_planning": True,
         "task": "SCARED goal-directed navigation (physical pose success)",
         "n_trials": len(ok),
-        "reach_latent_success_rate": float(np.mean([r["reach_latent_success"] for r in ok])),
+        "reach_latent_success_rate": float(
+            np.mean([r["reach_latent_success"] for r in ok])
+        ),
         "pose_err_model_mm_mean": float(np.mean([r["pose_err_model_mm"] for r in ok])),
-        "pose_err_persist_mm_mean": float(np.mean([r["pose_err_persist_mm"] for r in ok])),
-        "pose_err_reduction": float(np.mean([r["pose_err_persist_mm"] for r in ok])
-                                    - np.mean([r["pose_err_model_mm"] for r in ok])),
+        "pose_err_persist_mm_mean": float(
+            np.mean([r["pose_err_persist_mm"] for r in ok])
+        ),
+        "pose_err_reduction": float(
+            np.mean([r["pose_err_persist_mm"] for r in ok])
+            - np.mean([r["pose_err_model_mm"] for r in ok])
+        ),
         "in_silico_only": True,
         "rows": ok,
     }

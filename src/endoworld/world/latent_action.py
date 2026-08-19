@@ -1,4 +1,5 @@
 """Discrete latent actions: VQ of z_{t+1}-z_t (Genie/SurgWorld style, JEPA space)."""
+
 from __future__ import annotations
 
 import torch
@@ -22,5 +23,6 @@ class LatentActionTokenizer(nn.Module):
         quantized = self.codebook(idx)
         quantized = residual + (quantized - residual).detach()
         commit = F.mse_loss(residual.detach(), self.codebook(idx)) + F.mse_loss(
-            residual, quantized.detach())
+            residual, quantized.detach()
+        )
         return idx, quantized, commit

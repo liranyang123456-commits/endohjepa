@@ -1,4 +1,5 @@
 """Build a real-image atlas covering every dataset in the local census."""
+
 from __future__ import annotations
 
 import csv
@@ -7,6 +8,7 @@ from pathlib import Path
 
 import cv2
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,8 +23,17 @@ OUT = Path(__file__).resolve().parent / "figures"
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 VIDEO_SUFFIXES = {".mp4", ".avi", ".mov", ".mkv"}
 REJECT = (
-    "depth", "mask", "label", "semantic", "disparity", "normal",
-    "flow", "occlusion", "visualization", "trajectory", "plot",
+    "depth",
+    "mask",
+    "label",
+    "semantic",
+    "disparity",
+    "normal",
+    "flow",
+    "occlusion",
+    "visualization",
+    "trajectory",
+    "plot",
 )
 
 ROLES = {
@@ -68,7 +79,7 @@ def _image(path: Path) -> np.ndarray | None:
         return None
     # Common vertically stacked stereo layout.
     if array.shape[0] >= 1.5 * array.shape[1]:
-        array = array[:array.shape[0] // 2]
+        array = array[: array.shape[0] // 2]
     return array
 
 
@@ -78,15 +89,21 @@ def _candidates(row: dict[str, str]) -> list[Path]:
     paths: list[Path] = []
     if directory.exists():
         files = [
-            path for path in directory.iterdir()
+            path
+            for path in directory.iterdir()
             if path.is_file()
             and path.suffix.lower() in IMAGE_SUFFIXES | VIDEO_SUFFIXES
             and not any(token in path.name.lower() for token in REJECT)
         ]
         files.sort()
         if files:
-            positions = (0, len(files) // 4, len(files) // 2,
-                         3 * len(files) // 4, len(files) - 1)
+            positions = (
+                0,
+                len(files) // 4,
+                len(files) // 2,
+                3 * len(files) // 4,
+                len(files) - 1,
+            )
             paths.extend(files[position] for position in positions)
     if not any(token in sample.name.lower() for token in REJECT):
         paths.append(sample)
@@ -106,7 +123,11 @@ def _representative(rows: list[dict[str, str]]) -> tuple[np.ndarray, dict[str, s
         for path in _candidates(row):
             if not path.exists():
                 continue
-            image = _video_frame(path) if path.suffix.lower() in VIDEO_SUFFIXES else _image(path)
+            image = (
+                _video_frame(path)
+                if path.suffix.lower() in VIDEO_SUFFIXES
+                else _image(path)
+            )
             if image is not None and image.size:
                 small = cv2.resize(image, (96, 96)).astype(np.float32)
                 gray = small.mean(axis=-1)
@@ -128,7 +149,9 @@ def main():
     with MANIFEST.open(newline="", encoding="utf-8-sig") as handle:
         for row in csv.DictReader(handle):
             by_dataset.setdefault(row["dataset"], []).append(row)
-    names = sorted(by_dataset, key=lambda name: (by_dataset[name][0]["domain"], name.lower()))
+    names = sorted(
+        by_dataset, key=lambda name: (by_dataset[name][0]["domain"], name.lower())
+    )
     if set(names) != set(ROLES):
         raise RuntimeError(f"atlas role map mismatch: {set(names) ^ set(ROLES)}")
 
@@ -140,10 +163,18 @@ def main():
         domain = row["domain"]
         axis.set_title(display(name), fontsize=10, fontweight="bold", pad=5)
         axis.text(
-            0.02, 0.03, f"{domain} · {ROLES[name]}",
-            transform=axis.transAxes, fontsize=7.5, color="white",
-            bbox={"facecolor": DOMAIN_COLORS[domain], "edgecolor": "none",
-                  "alpha": 0.88, "pad": 2.5},
+            0.02,
+            0.03,
+            f"{domain} · {ROLES[name]}",
+            transform=axis.transAxes,
+            fontsize=7.5,
+            color="white",
+            bbox={
+                "facecolor": DOMAIN_COLORS[domain],
+                "edgecolor": "none",
+                "alpha": 0.88,
+                "pad": 2.5,
+            },
         )
     summary_axis = axes.flat[len(names)]
     summary_axis.set_facecolor("#F4F6F7")
@@ -154,28 +185,50 @@ def main():
         spine.set_linewidth(1.0)
     summary_axis.set_title("Coverage summary", fontsize=10, fontweight="bold", pad=5)
     summary_axis.text(
-        0.5, 0.63, "19 datasets\n1,707 sequences\n1.07M decoded frames",
-        ha="center", va="center", fontsize=11, fontweight="bold",
-        color="#303942", linespacing=1.45,
+        0.5,
+        0.63,
+        "19 datasets\n1,707 sequences\n1.07M decoded frames",
+        ha="center",
+        va="center",
+        fontsize=11,
+        fontweight="bold",
+        color="#303942",
+        linespacing=1.45,
     )
     summary_axis.text(
-        0.5, 0.20, "GI  4  ·  Laparoscopy  14  ·  Bronchoscopy  1",
-        ha="center", va="center", fontsize=7.5, color="#52606B",
+        0.5,
+        0.20,
+        "GI  4  ·  Laparoscopy  14  ·  Bronchoscopy  1",
+        ha="center",
+        va="center",
+        fontsize=7.5,
+        color="#52606B",
     )
     fig.suptitle(
         "Local endoscopy corpus atlas: one real representative image per dataset",
-        fontsize=13, fontweight="bold",
+        fontsize=13,
+        fontweight="bold",
     )
     fig.text(
-        0.5, 0.012,
+        0.5,
+        0.012,
         "Images document visual coverage; they are not model outputs. "
         "ION cases are anonymised and no identifiers are shown.",
-        ha="center", fontsize=8.5, color="#38434F",
+        ha="center",
+        fontsize=8.5,
+        color="#38434F",
     )
     fig.tight_layout(rect=(0, 0.03, 1, 0.965))
     OUT.mkdir(parents=True, exist_ok=True)
-    fig.savefig(OUT / "figure9_dataset_atlas.pdf", bbox_inches="tight", facecolor="white")
-    fig.savefig(OUT / "figure9_dataset_atlas.png", dpi=220, bbox_inches="tight", facecolor="white")
+    fig.savefig(
+        OUT / "figure9_dataset_atlas.pdf", bbox_inches="tight", facecolor="white"
+    )
+    fig.savefig(
+        OUT / "figure9_dataset_atlas.png",
+        dpi=220,
+        bbox_inches="tight",
+        facecolor="white",
+    )
     print(f"[atlas] wrote {len(names)} datasets")
 
 

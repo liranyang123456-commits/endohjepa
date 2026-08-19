@@ -4,6 +4,7 @@ Manifest keys are storage identifiers (snake case, internal suffixes). Figures
 and tables must show the published corpus name instead, so every figure script
 routes its labels through :func:`display`.
 """
+
 from __future__ import annotations
 
 DISPLAY_NAMES = {

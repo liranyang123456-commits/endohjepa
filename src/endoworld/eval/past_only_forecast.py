@@ -9,6 +9,7 @@ It then trains the same causal-L1 on both caches and reports the delta.
 
     python -m endoworld.eval.past_only_forecast --max-clips 2000
 """
+
 from __future__ import annotations
 
 import argparse
@@ -26,8 +27,13 @@ from endoworld.world.train import collate_meta
 
 @torch.no_grad()
 def encode_cache(enc, dataset, device, past_only: bool, batch_size: int = 8):
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
-                        num_workers=0, collate_fn=collate_meta)
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=0,
+        collate_fn=collate_meta,
+    )
     latents, domains = [], []
     for clips, doms in loader:
         clips = clips.to(device).float()
@@ -53,10 +59,10 @@ def train_and_eval(z_tr, d_tr, z_va, d_va, device, epochs=20, seed=0):
         perm = torch.randperm(n)
         model.train()
         for start in range(0, n, 32):
-            idx = perm[start:start + 32]
+            idx = perm[start : start + 32]
             z = z_tr[idx].to(device)
             pred = model.forward_l1(z[:, :history], d_tr[idx].to(device))
-            loss = F.smooth_l1_loss(pred, z[:, history:history + horizon])
+            loss = F.smooth_l1_loss(pred, z[:, history : history + horizon])
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -66,11 +72,13 @@ def train_and_eval(z_tr, d_tr, z_va, d_va, device, epochs=20, seed=0):
         z_va = z_va.to(device)
         d_va = d_va.to(device)
         pred = model.forward_l1(z_va[:, :history], d_va)
-        future = z_va[:, history:history + horizon]
+        future = z_va[:, history : history + horizon]
         persist = persistence_baseline(z_va[:, :history], horizon)
         return {
             "cos_model": F.cosine_similarity(pred, future, dim=-1).mean().item(),
-            "cos_persistence": F.cosine_similarity(persist, future, dim=-1).mean().item(),
+            "cos_persistence": F.cosine_similarity(persist, future, dim=-1)
+            .mean()
+            .item(),
             "mse_model": (pred - future).pow(2).mean().item(),
             "mse_persistence": (persist - future).pow(2).mean().item(),
         }
@@ -85,19 +93,34 @@ def main():
     args = parser.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     from endoworld.understanding.encoders import load_any_encoder
-    enc, _, _, _ = load_any_encoder(
-        "vjepa2", device, "facebook/vjepa2-vitl-fpc64-256", "")
 
-    ds_tr = EndoClipDataset(args.manifest, clip_len=16, stride=4, image_size=256,
-                            exclude=["EndoVis2019_ROBUST-MIS"], return_meta=True,
-                            split="train")
+    enc, _, _, _ = load_any_encoder(
+        "vjepa2", device, "facebook/vjepa2-vitl-fpc64-256", ""
+    )
+
+    ds_tr = EndoClipDataset(
+        args.manifest,
+        clip_len=16,
+        stride=4,
+        image_size=256,
+        exclude=["EndoVis2019_ROBUST-MIS"],
+        return_meta=True,
+        split="train",
+    )
     idx = domain_balanced_indices(ds_tr.clips, n=args.max_clips, seed=0)
     ds_tr.clips = [ds_tr.clips[i] for i in idx]
-    ds_va = EndoClipDataset(args.manifest, clip_len=16, stride=4, image_size=256,
-                            exclude=["EndoVis2019_ROBUST-MIS"], return_meta=True,
-                            split="val")
+    ds_va = EndoClipDataset(
+        args.manifest,
+        clip_len=16,
+        stride=4,
+        image_size=256,
+        exclude=["EndoVis2019_ROBUST-MIS"],
+        return_meta=True,
+        split="val",
+    )
     idx_va = domain_balanced_indices(
-        ds_va.clips, n=min(args.max_clips // 8, len(ds_va.clips)), seed=1)
+        ds_va.clips, n=min(args.max_clips // 8, len(ds_va.clips)), seed=1
+    )
     ds_va.clips = [ds_va.clips[i] for i in idx_va]
 
     report = {"n_train": len(ds_tr), "n_val": len(ds_va), "epochs": args.epochs}
@@ -107,21 +130,31 @@ def main():
         cache_path = cache_dir / f"cache_{mode}_{args.max_clips}.pt"
         if cache_path.is_file():
             pack = torch.load(cache_path, map_location="cpu", weights_only=False)
-            z_tr, d_tr, z_va, d_va = pack["z_tr"], pack["d_tr"], pack["z_va"], pack["d_va"]
+            z_tr, d_tr, z_va, d_va = (
+                pack["z_tr"],
+                pack["d_tr"],
+                pack["z_va"],
+                pack["d_va"],
+            )
             print(f"[{mode}] loaded cache {cache_path}", flush=True)
         else:
             z_tr, d_tr = encode_cache(enc, ds_tr, device, past_only=mode == "past_only")
             z_va, d_va = encode_cache(enc, ds_va, device, past_only=mode == "past_only")
-            torch.save({"z_tr": z_tr, "d_tr": d_tr, "z_va": z_va, "d_va": d_va},
-                       cache_path)
+            torch.save(
+                {"z_tr": z_tr, "d_tr": d_tr, "z_va": z_va, "d_va": d_va}, cache_path
+            )
         report[mode] = train_and_eval(
-            z_tr, d_tr, z_va, d_va, device, epochs=args.epochs)
+            z_tr, d_tr, z_va, d_va, device, epochs=args.epochs
+        )
         print(f"[{mode}] {report[mode]}", flush=True)
-    report["delta_cos"] = report["past_only"]["cos_model"] - report["bidirectional"]["cos_model"]
+    report["delta_cos"] = (
+        report["past_only"]["cos_model"] - report["bidirectional"]["cos_model"]
+    )
     report["interpretation"] = (
         "past_only - bidirectional cosine on the same clips; a negative delta "
         "bounds how much of the headline forecast score came from "
-        "within-window future attention.")
+        "within-window future attention."
+    )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2), encoding="utf-8")

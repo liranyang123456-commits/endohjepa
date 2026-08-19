@@ -4,13 +4,13 @@ Expands each frame-directory sequence into fixed-length clips for V-JEPA style
 self-supervised training. Kept dependency-light: torch/PIL are imported lazily so
 the manifest tooling works without a full training environment.
 """
+
 from __future__ import annotations
 
 import csv
 import os
 import random
 from dataclasses import dataclass
-from pathlib import Path
 
 from endoworld.data.domains import infer_domain
 
@@ -22,8 +22,8 @@ IMAGE_EXT = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 class ClipSpec:
     dataset: str
     frames_dir: str
-    frame_files: list[str]   # sorted frame filenames within frames_dir
-    start: int               # index into frame_files
+    frame_files: list[str]  # sorted frame filenames within frames_dir
+    start: int  # index into frame_files
     clip_len: int
     stride: int
     domain: str = "mixed"
@@ -36,9 +36,12 @@ class ClipSpec:
         return [os.path.join(self.frames_dir, self.frame_files[i]) for i in idxs]
 
 
-def domain_balanced_indices(clips: list[ClipSpec], n: int | None = None, seed: int = 0) -> list[int]:
+def domain_balanced_indices(
+    clips: list[ClipSpec], n: int | None = None, seed: int = 0
+) -> list[int]:
     """Round-robin across domains so laparoscopy does not drown GI/bronch."""
     from collections import defaultdict
+
     by: dict[str, list[int]] = defaultdict(list)
     for i, c in enumerate(clips):
         by[c.domain].append(i)
@@ -62,18 +65,25 @@ def domain_balanced_indices(clips: list[ClipSpec], n: int | None = None, seed: i
 
 def _list_frames(frames_dir: str) -> list[str]:
     try:
-        files = [f for f in os.listdir(frames_dir)
-                 if os.path.splitext(f)[1].lower() in IMAGE_EXT]
+        files = [
+            f
+            for f in os.listdir(frames_dir)
+            if os.path.splitext(f)[1].lower() in IMAGE_EXT
+        ]
     except OSError:
         return []
     return sorted(files)
 
 
-def build_clip_index(manifest_csv: str, clip_len: int = 16, stride: int = 4,
-                     include: list[str] | None = None,
-                     exclude: list[str] | None = None,
-                     include_domains: list[str] | None = None,
-                     split: str | None = None) -> list[ClipSpec]:
+def build_clip_index(
+    manifest_csv: str,
+    clip_len: int = 16,
+    stride: int = 4,
+    include: list[str] | None = None,
+    exclude: list[str] | None = None,
+    include_domains: list[str] | None = None,
+    split: str | None = None,
+) -> list[ClipSpec]:
     """Read the sequence manifest and enumerate all clips (non-overlapping)."""
     include = set(include or [])
     exclude = set(exclude or [])
@@ -103,8 +113,19 @@ def build_clip_index(manifest_csv: str, clip_len: int = 16, stride: int = 4,
                 continue
             seq_id = row.get("sequence_id") or frames_dir
             for start in range(0, len(files) - span + 1, span):
-                clips.append(ClipSpec(
-                    ds, frames_dir, files, start, clip_len, stride, domain, seq_id, row_split))
+                clips.append(
+                    ClipSpec(
+                        ds,
+                        frames_dir,
+                        files,
+                        start,
+                        clip_len,
+                        stride,
+                        domain,
+                        seq_id,
+                        row_split,
+                    )
+                )
     return clips
 
 
@@ -115,11 +136,21 @@ class EndoClipDataset:
     clear error on first item access.
     """
 
-    def __init__(self, manifest_csv: str, clip_len: int = 16, stride: int = 4,
-                 image_size: int = 224, include=None, exclude=None,
-                 include_domains=None, return_meta: bool = False, split: str | None = None):
+    def __init__(
+        self,
+        manifest_csv: str,
+        clip_len: int = 16,
+        stride: int = 4,
+        image_size: int = 224,
+        include=None,
+        exclude=None,
+        include_domains=None,
+        return_meta: bool = False,
+        split: str | None = None,
+    ):
         self.clips = build_clip_index(
-            manifest_csv, clip_len, stride, include, exclude, include_domains, split)
+            manifest_csv, clip_len, stride, include, exclude, include_domains, split
+        )
         self.image_size = image_size
         self.return_meta = return_meta
 
@@ -131,9 +162,12 @@ class EndoClipDataset:
             import numpy as np
             from PIL import Image
         except ImportError as e:  # pragma: no cover
-            raise RuntimeError("Pillow/numpy required to load clips: pip install pillow numpy") from e
+            raise RuntimeError(
+                "Pillow/numpy required to load clips: pip install pillow numpy"
+            ) from e
 
         from PIL import ImageFile
+
         ImageFile.LOAD_TRUNCATED_IMAGES = True  # tolerate slightly corrupt JPEGs
 
         spec = self.clips[idx]
@@ -141,23 +175,34 @@ class EndoClipDataset:
         prev = None
         for p in spec.frame_paths():
             try:
-                img = Image.open(p).convert("RGB").resize((self.image_size, self.image_size))
+                img = (
+                    Image.open(p)
+                    .convert("RGB")
+                    .resize((self.image_size, self.image_size))
+                )
                 arr = np.asarray(img, dtype=np.float32) / 255.0
                 prev = arr
             except Exception:
                 # unreadable frame: reuse previous frame or a black placeholder
-                arr = prev if prev is not None else np.zeros(
-                    (self.image_size, self.image_size, 3), dtype=np.float32)
+                arr = (
+                    prev
+                    if prev is not None
+                    else np.zeros(
+                        (self.image_size, self.image_size, 3), dtype=np.float32
+                    )
+                )
             frames.append(arr)
-        arr = np.stack(frames, axis=0)                 # (T, H, W, C)
-        arr = arr.transpose(0, 3, 1, 2)                # (T, C, H, W)
+        arr = np.stack(frames, axis=0)  # (T, H, W, C)
+        arr = arr.transpose(0, 3, 1, 2)  # (T, C, H, W)
         try:
             import torch
+
             tensor = torch.from_numpy(arr)
         except ImportError:
             tensor = arr
         if self.return_meta:
             from endoworld.data.domains import DOMAIN_IDS
+
             spec = self.clips[idx]
             return tensor, DOMAIN_IDS.get(spec.domain, 3)
         return tensor
@@ -165,6 +210,7 @@ class EndoClipDataset:
 
 if __name__ == "__main__":
     import argparse
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", default="manifests/sequences.csv")
     ap.add_argument("--clip-len", type=int, default=16)
