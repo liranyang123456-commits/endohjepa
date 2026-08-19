@@ -42,7 +42,7 @@ Availability of data and materials
 Public datasets are available from their original sources subject to their
 licences and access restrictions. The implementation, metric ledger, result
 records and figure generators are available at
-https://github.com/Lry1234/Endo-HJEPA. Independent
+https://github.com/liranyang123456-commits/endohjepa. Independent
 reproduction of ION-derived values requires authorised access to that private
 cohort.
 

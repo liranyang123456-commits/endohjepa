@@ -1,6 +1,7 @@
 # Endo-HJEPA: Multi-Domain Latent Forecasting with Audited SE(3)-Conditioned Dynamics for Endoscopic Video
 
-Official code and reproducibility package for the Endo-HJEPA manuscript.
+Official code and reproducibility package for the Endo-HJEPA manuscript:
+https://github.com/liranyang123456-commits/endohjepa.
 
 Endo-HJEPA studies latent forecasting across laparoscopic, gastrointestinal and
 bronchoscopic video. It combines a frozen V-JEPA 2 ViT-L encoder, a

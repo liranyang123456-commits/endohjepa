@@ -28,7 +28,7 @@ reproducible audit for SE(3)-conditioned association. It documents
 temporal-context, pose-convention and matched-negative checks, and retains
 negative results rather than extending them into unsupported control or
 clinical claims. Code, metric records and figure generators are released at
-https://github.com/Lry1234/Endo-HJEPA.
+https://github.com/liranyang123456-commits/endohjepa.
 
 This manuscript is original, has not been published previously and is not under
 consideration elsewhere. All authors have approved the submission and declare

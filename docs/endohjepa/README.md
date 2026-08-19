@@ -12,4 +12,4 @@ SE(3)-Conditioned Dynamics for Endoscopic Video*
 - Access caveat: ION bronchoscopy is private and is available only through the
   institutional data-governance process.
 - Public code and reproducibility records:
-  `https://github.com/Lry1234/Endo-HJEPA`.
+  `https://github.com/liranyang123456-commits/endohjepa`.
