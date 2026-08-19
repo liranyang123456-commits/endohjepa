@@ -1,6 +1,6 @@
 {
-  "protocol": "v2 model evaluated on C3VD with reprojection-gated pose convention (transpose + GL->CV flip); C3VD was never in training",
-  "pose_gate": "docs/endohjepa/c3vd_pose_gate_gap5.json",
+  "protocol": "v2 model evaluated on C3VD with the implementation's OpenGL-to-OpenCV pose convention; C3VD was never in training. The convention is diagnostic, not independently validated.",
+  "pose_diagnostic": "docs/endohjepa/c3vd_pose_gate.json",
   "n": 55,
   "canonical": {
     "n": 55,

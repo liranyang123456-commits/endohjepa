@@ -1,5 +1,5 @@
 {
-  "protocol": "v2 model (SCARED-only) on 15 external C3VD/C3VDv2 trajectories, pose-gate corrected",
+  "protocol": "v2 model (SCARED-only) on the fixed ten-trajectory C3VD/C3VDv2 external manifest, expressed in the implementation's OpenGL-to-OpenCV pose convention",
   "pooled": {
     "n": 798,
     "canonical": {

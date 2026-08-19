@@ -199,7 +199,19 @@ def continuous_cem(
     accepted = final["safe"]
     actions = torch.where(
         accepted[:, None, None], mean, torch.zeros_like(mean))
-    return {**final, "actions": actions, "accepted": accepted}
+    # Return a rollout that actually corresponds to the returned action
+    # sequence. Previously a rejected candidate exposed the unsafe prediction
+    # and cost while returning zero actions, which made the fallback
+    # non-executable as an end-to-end result.
+    executed = continuous_rollout_cost(
+        dynamics, history, actions, goal, cfg, risk_head, calibrator, energy_fn)
+    return {
+        **executed,
+        "selected_cost": final["cost"],
+        "selected_raw_cost": final["raw_cost"],
+        "actions": actions,
+        "accepted": accepted,
+    }
 
 
 @torch.no_grad()

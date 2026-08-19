@@ -1,8 +1,8 @@
-"""Re-evaluate the v2 continuous model on C3VD with gate-corrected poses.
+"""Re-evaluate the v2 continuous model under the implementation C3VD convention.
 
-C3VD is test-only (cecum_t1_a was never in training), so correcting the pose
-convention changes evaluation labels, not training. Latents are unchanged;
-only the SE(3) action labels are recomputed from the corrected c2w poses with
+C3VD is test-only (cecum_t1_a was never in training), so recomputing its
+implementation-convention action labels does not affect training. Latents are
+unchanged; only the SE(3) action labels are recomputed from the c2w poses with
 the same window-end alignment used by the v2 cache.
 
     python -m endoworld.eval.c3vd_reval \
@@ -42,10 +42,20 @@ def corrected_c3vd_sequence(seq: PhysicalSequence, c3vd_root: Path,
                             stride: int, lookback_tubelets: int,
                             tubelet: int) -> PhysicalSequence:
     pose_files = find_c3vd_pose_files(c3vd_root)
-    if len(pose_files) != 1:
-        raise RuntimeError(f"expected one C3VD pose.txt, found {len(pose_files)}")
-    poses = load_pose_txt(pose_files[0])  # gate-corrected convention
-    paths = find_c3vd_color_frames(pose_files[0].parent)[::stride]
+    # The C3VD root can contain the external v2 trajectories as well as the
+    # local probe. Select the exact sequence recorded in the cache rather than
+    # assuming that the root contains one pose file.
+    sequence_path = Path(seq.sequence_id.split(":", 1)[-1])
+    matches = [
+        pose for pose in pose_files
+        if pose.parent.resolve() == sequence_path.resolve()
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"expected one pose.txt for {sequence_path}, found {len(matches)}")
+    pose_file = matches[0]
+    poses = load_pose_txt(pose_file)  # implementation convention
+    paths = find_c3vd_color_frames(pose_file.parent)[::stride]
     digits = []
     import re
     for p in paths:
@@ -90,9 +100,10 @@ def main():
 
     test = PhysicalActionDataset([corrected], 4, 4, "test")
     report = {
-        "protocol": "v2 model evaluated on C3VD with reprojection-gated pose convention "
-                    "(transpose + GL->CV flip); C3VD was never in training",
-        "pose_gate": "docs/endohjepa/c3vd_pose_gate_gap5.json",
+        "protocol": "v2 model evaluated on C3VD with the implementation's "
+                    "OpenGL-to-OpenCV pose convention; C3VD was never in training. "
+                    "The convention is diagnostic, not independently validated.",
+        "pose_diagnostic": "docs/endohjepa/c3vd_pose_gate.json",
         "n": len(test),
         "canonical": evaluate(model, DataLoader(test, batch_size=32), device),
         "fixed_bank": evaluate_fixed_bank(model, test, device, n_negatives=10, seed=0),

@@ -32,7 +32,7 @@
       "checkpoint": "C:/Users/lry/.cache/huggingface/hub/models--facebook--VGGT-1B/snapshots/860abec7937da0a4c03c41d3c269c366e82abdf9/model.safetensors",
       "cached_predictions_available": false,
       "accepted_as_teacher": false,
-      "reason": "Model and paired SCARED assets exist, but no SCARED-specific VGGT depth/pose/reprojection report has yet passed the common gate."
+      "reason": "Model and paired SCARED assets exist, but no SCARED-specific VGGT depth/pose evaluation has completed a common case-level split and depth-warp diagnostic."
     },
     "freereg": {
       "source": "E:/Free_coordinate_MR_Registration/src/nonrigid_rtw.py",

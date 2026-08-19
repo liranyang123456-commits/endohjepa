@@ -1,6 +1,22 @@
 """PlotNeuralNet rendering of the audited Endo-HJEPA architecture.
 
-The main path is horizontal and all branches use orthogonal connectors.
+The diagram is laid out as three short, left-aligned rows instead of one very
+wide row, which keeps the aspect ratio close to square:
+
+    row 1  shared encoder      clip -> tubelet embed -> ViT-L x24 -> pool -> tokens
+    row 2  forecast heads      independent L1 causal and L2 coarse heads
+    row 3  grounded branch     twist -> ensemble -> mu/Sigma -> risk -> CEM -> rejection
+
+Both branch rows are fed from the dense-token block of row 1 by axis-aligned
+connectors that travel in the clear band between rows and enter the next row
+through its top (north) anchor, so no connector crosses a block or a caption.
+
+The colour key and the reading instructions live in the LaTeX caption rather
+than inside the drawing, so the figure carries no free-floating legend text.
+
+    python docs/endohjepa/make_arch_plotneuralnet.py
+    pdflatex -output-directory docs/endohjepa/figures \
+        docs/endohjepa/figures/figure1_network.tex
 """
 from __future__ import annotations
 
@@ -14,82 +30,105 @@ from pycore.tikzeng import (  # noqa: E402
     to_head, to_Pool, to_SoftMax,
 )
 
+# Row baselines in TikZ units (y grows upwards).
+Y_ENCODER, Y_FORECAST, Y_GROUNDED = 0.0, -6.0, -11.6
+
+PREDICTOR_TEAL = r"\def\ConvColor{rgb:blue,1.0;green,2.5;white,7.8}"
+BLANK = " "
+
+
+def row_label(text: str, y: float) -> str:
+    return (r"\node[anchor=east, align=right, font=\bfseries\footnotesize,"
+            r" text=black!72] at (-1.5," + f"{y}" + r",0) {" + text + r"};" + "\n")
+
+
+def bridge(source: str, target: str, run: float, drop: float) -> str:
+    """Right, down, left, then down into ``target``-north; all axis-aligned."""
+    return (
+        r"\path (" + target + r"-north) ++(0," + f"{drop}" + r",0) coordinate ("
+        + target + r"-entry);" + "\n"
+        + r"\draw [connection] (" + source + r"-east) -- ++(" + f"{run}"
+        + r",0,0) |- (" + target + r"-entry) -- node {\midarrow} ("
+        + target + r"-north);" + "\n"
+    )
+
 
 def main():
     arch = [
         to_head(str(ROOT).replace("\\", "/")),
         r"""
-\def\ConvColor{rgb:blue,2.2;green,1.2;white,7.5}
-\def\ConvReluColor{rgb:blue,1.2;green,2.6;white,7.5}
-\def\PoolColor{rgb:black,0.7;white,9.3}
-\def\SoftmaxColor{rgb:red,1.2;yellow,1.3;white,8.2}
+\def\ConvColor{rgb:blue,2.4;green,1.1;white,7.6}
+\def\ConvReluColor{rgb:blue,1.0;green,2.4;white,7.4}
+\def\PoolColor{rgb:black,0.9;white,9.1}
+\def\SoftmaxColor{rgb:red,1.3;yellow,1.6;white,8.0}
 """,
         to_begin(),
-        to_Conv("inclip", 16, 3, offset="(0,0,0)", to="(0,0,0)",
-                height=30, depth=30, width=2, caption="Endoscopic clip"),
-        to_Conv("vit1", 256, 1024, offset="(1.5,0,0)", to="(inclip-east)",
-                height=28, depth=28, width=3.2, caption="V-JEPA2"),
-        to_connection("inclip", "vit1"),
-        to_Conv("vit2", 256, 1024, offset="(0.25,0,0)", to="(vit1-east)",
-                height=26, depth=26, width=3.2, caption=""),
-        to_connection("vit1", "vit2"),
-        to_Conv("vit3", 256, 1024, offset="(0.25,0,0)", to="(vit2-east)",
-                height=24, depth=24, width=3.2, caption="frozen ViT-L"),
-        to_connection("vit2", "vit3"),
-        to_Pool("tok", offset="(1.25,0,0)", to="(vit3-east)",
-                height=18, depth=18, width=2.2, opacity=0.75,
-                caption="dense tokens $z$"),
+
+        # ---------------- row 1: shared encoder ------------------------------
+        row_label(r"Shared\\encoder\\(frozen)", Y_ENCODER),
+        to_Conv("inclip", 16, 3, offset="(0,0,0)", to=f"(0,{Y_ENCODER},0)",
+                height=18, depth=18, width=2, caption="Input clip"),
+        to_Conv("tubelet", BLANK, 1024, offset="(1.8,0,0)", to="(inclip-east)",
+                height=16, depth=16, width=2.4, caption="Tubelet embed"),
+        to_connection("inclip", "tubelet"),
+        to_Conv("vit1", BLANK, "", offset="(1.8,0,0)", to="(tubelet-east)",
+                height=15, depth=15, width=2.8, caption=""),
+        to_connection("tubelet", "vit1"),
+        to_Conv("vit2", BLANK, "", offset="(0.36,0,0)", to="(vit1-east)",
+                height=15, depth=15, width=2.8,
+                caption=r"ViT-L $\times$24"),
+        to_Conv("vit3", BLANK, "", offset="(0.36,0,0)", to="(vit2-east)",
+                height=15, depth=15, width=2.8, caption=""),
+        to_Pool("tok", offset="(2.0,0,0)", to="(vit3-east)",
+                height=10, depth=10, width=2.4, opacity=0.8,
+                caption=r"Dense tokens $z$"),
         to_connection("vit3", "tok"),
-        # Validated forecast heads above the physical branch.
-        to_ConvConvRelu("forecast", 4, (512, 512),
-                        offset="(1.4,4.2,0)", to="(tok-east)",
-                        height=14, depth=14, width=(2.2, 2.2),
-                        caption="L1 causal / L2 coarse"),
-        r"\draw [connection] (tok-east) -| node[pos=0.85] {\midarrow} (forecast-west);",
-        # Grounded state path.
-        to_ConvConvRelu("slots", 4, (256, 256),
-                        offset="(1.4,-2.8,0)", to="(tok-east)",
-                        height=18, depth=18, width=(2.4, 2.4),
-                        caption="geometry / tool / semantic slots"),
-        r"\draw [connection] (tok-east) -| node[pos=0.85] {\midarrow} (slots-west);",
-        to_Conv("action", 4, 6, offset="(1.3,-4.2,0)", to="(slots-east)",
-                height=8, depth=8, width=1.8, caption="SE(3) action"),
-        to_ConvConvRelu("dyn", 4, (512, 512),
-                        offset="(1.8,0,0)", to="(slots-east)",
-                        height=18, depth=18, width=(2.6, 2.6),
-                        caption="block-causal ensemble"),
-        to_connection("slots", "dyn"),
-        r"\draw [connection] (action-east) -| node[pos=0.8] {\midarrow} (dyn-south);",
-        to_Pool("dist", offset="(1.3,0,0)", to="(dyn-east)",
-                height=13, depth=13, width=2.2, opacity=0.75,
-                caption=r"{$\mu\,/\,\Sigma_{\mathrm{alea}}\,/\,\Sigma_{\mathrm{epi}}$}"),
+        to_Pool("pooled", offset="(1.9,0,0)", to="(tok-east)",
+                height=8, depth=8, width=2.2, opacity=0.8,
+                caption=r"Pooled $\bar z$"),
+        to_connection("tok", "pooled"),
+
+        # ---------------- row 2: forecast heads ------------------------------
+        PREDICTOR_TEAL,
+        row_label(r"Forecast\\heads", Y_FORECAST),
+        to_ConvConvRelu("l1", 4, (512, ""), offset="(0,0,0)",
+                        to=f"(0,{Y_FORECAST},0)", height=12, depth=12,
+                        width=(2.4, 2.4), caption="L1 causal"),
+        to_ConvConvRelu("l2", 2, (512, ""), offset="(3.4,0,0)", to="(l1-east)",
+                        height=12, depth=12, width=(2.4, 2.4),
+                        caption="L2 coarse"),
+        bridge("pooled", "l1", run=0.9, drop=0.9),
+        bridge("pooled", "l2", run=2.8, drop=0.9),
+
+        # ---------------- row 3: grounded branch ------------------------------
+        row_label(r"Grounded\\dynamics\\and decision", Y_GROUNDED),
+        to_Conv("twist", 4, 6, offset="(0,0,0)", to=f"(0,{Y_GROUNDED},0)",
+                height=6, depth=6, width=1.8, caption=r"SE(3) twist $u$"),
+        to_ConvConvRelu("dyn", 4, (512, ""), offset="(2.1,0,0)",
+                        to="(twist-east)", height=16, depth=16,
+                        width=(2.6, 2.6), caption="Block-causal ensemble"),
+        to_connection("twist", "dyn"),
+        to_Pool("dist", offset="(2.1,0,0)", to="(dyn-east)", height=11, depth=11,
+                width=2.4, opacity=0.8,
+                caption=r"{$\mu,\Sigma$}"),
         to_connection("dyn", "dist"),
-        to_SoftMax("risk", 1, offset="(1.2,0,0)", to="(dist-east)",
-                   height=10, depth=10, width=2.0, opacity=0.75,
-                   caption="calibrated risk"),
+        to_SoftMax("risk", 1, offset="(2.1,0,0)", to="(dist-east)", height=9,
+                   depth=9, width=2.0, opacity=0.85,
+                   caption="Risk off"),
         to_connection("dist", "risk"),
-        to_ConvConvRelu("mpc", 1, (256, 256),
-                        offset="(1.25,0,0)", to="(risk-east)",
-                        height=12, depth=12, width=(2.2, 2.2),
-                        caption="continuous CEM / MPPI"),
-        to_connection("risk", "mpc"),
-        to_SoftMax("gate", 1, offset="(1.15,0,0)", to="(mpc-east)",
-                   height=9, depth=9, width=2.0, opacity=0.75,
-                   caption="hard safety gate"),
-        to_connection("mpc", "gate"),
-        r"""
-\node[anchor=north, align=center, text width=18cm, font=\scriptsize] at
-([yshift=-14mm]current bounding box.south)
-{Blue: visual encoder \quad Teal: learned prediction modules \quad
-Grey: latent tensors \quad Ochre: calibrated decision outputs.
-The physical branch is evaluated only with aligned pose/depth; no pixel decoder is used.};
-""",
+        to_ConvConvRelu("cem", 1, (256, ""), offset="(2.1,0,0)", to="(risk-east)",
+                        height=11, depth=11, width=(2.2, 2.2),
+                        caption="CEM proxy"),
+        to_connection("risk", "cem"),
+        to_SoftMax("gate", 1, offset="(2.1,0,0)", to="(cem-east)", height=8,
+                   depth=8, width=2.0, opacity=0.85, caption="Filter off"),
+        to_connection("cem", "gate"),
+        bridge("pooled", "dyn", run=1.9, drop=0.7),
         to_end(),
     ]
     out = Path(__file__).resolve().parent / "figures" / "figure1_network.tex"
     out.parent.mkdir(parents=True, exist_ok=True)
-    arch = [c for c in arch if c]
-    to_generate(arch, str(out))
+    to_generate([chunk for chunk in arch if chunk], str(out))
     print(f"[arch] wrote {out}")
 
 

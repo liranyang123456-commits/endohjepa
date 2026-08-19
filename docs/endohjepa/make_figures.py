@@ -14,6 +14,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dataset_names import display  # noqa: E402
+
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "figures"
 M = json.loads((HERE / "verified_metrics.json").read_text(encoding="utf-8"))
@@ -65,6 +70,13 @@ def fig_scale_horizon_forecast():
     ax.set_xticks(sc["clips"])
     ax.set_xticklabels(["0.5k", "1k", "2k", "4k", "6k", "13.6k"])
     ax.tick_params(axis="x", labelsize=7)
+    past = M["grounded_upgrade"]["past_only_forecast_audit"]
+    ax.text(
+        0.03, 0.08,
+        f"past-only audit (not plotted): "
+        f"{past['past_only_cos_6000']:.4f} vs persist "
+        f"{past['persistence_cos_6000']:.4f}",
+        transform=ax.transAxes, fontsize=6.5, color=C_QUERY)
 
     w = M["wilcoxon_vs_gru"]
     ax = axes[1]
@@ -103,48 +115,37 @@ def fig_scale_horizon_forecast():
 
 
 def fig_planning_domain():
-    """Figure 3: per-domain forecast + audited grounding + few-shot."""
-    fig, axes = plt.subplots(1, 3, figsize=(12.6, 3.6))
-    p = M["planning_2000"]["by_domain"]
-    doms = ["laparo", "gi", "bronch"]
-    labels = ["Laparoscopy", "GI", "Bronchoscopy"]
-    cols = [C_LAP, C_GI, C_BR]
+    """Figure 3: valid action-grounding audit and partial few-shot recovery.
+
+    The legacy 2k ``planning_2000`` record is explicitly invalid in the metric
+    ledger because its L2/L3 encoder was not executed.  It must never be
+    visualised as a forecast-by-orifice result.
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(11.2, 3.8))
 
     ax = axes[0]
-    x = np.arange(3)
-    w = 0.36
-    ax.bar(x - w / 2, [p[d]["forecast"] for d in doms], w, label="Endo-HJEPA", color=C_OURS)
-    ax.bar(x + w / 2, [p[d]["persist"] for d in doms], w, label="persistence", color=C_PERS)
+    grounding = M["action_grounding"]
+    physical = grounding["physical"]
+    keyframes = physical["per_keyframe"]
+    x = np.arange(len(keyframes))
+    width = 0.38
+    latent = [row["nmi_latent"] for row in keyframes]
+    random = [row["nmi_random"] for row in keyframes]
+    ax.bar(x - width / 2, latent, width, label="latent pose NMI", color=C_OURS)
+    ax.bar(x + width / 2, random, width, label="matched random", color=C_PERS)
+    ax.axhline(grounding["semantic"]["nmi"], color=C_GRU, ls="--", lw=1.1,
+               label=f"semantic NMI {grounding['semantic']['nmi']:.3f}")
+    ax.axhline(grounding["semantic"]["nmi_random"], color=C_PERS, ls=":", lw=1.1,
+               label=f"semantic random {grounding['semantic']['nmi_random']:.3f}")
     ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=8)
-    ax.set_ylabel("Forecast cosine ($h{=}4$)")
-    ax.set_title("(a) Forecast by orifice")
-    ax.set_ylim(0.84, 1.0)
-    ax.legend(fontsize=7, frameon=False)
+    ax.set_xticklabels([row["label"] for row in keyframes], fontsize=6.5)
+    ax.set_ylabel("Normalised mutual information")
+    ax.set_title("(a) Six-keyframe latent-action audit")
+    ax.set_ylim(0, 0.65)
+    ax.legend(fontsize=6.2, loc="upper right", frameon=False)
     ax.grid(axis="y", alpha=0.25)
 
     ax = axes[1]
-    grounding = M["action_grounding"]
-    physical = grounding["physical"]
-    values = [
-        grounding["semantic"]["nmi"],
-        grounding["semantic"]["nmi_random"],
-        np.mean(physical["nmi_range"]),
-        np.mean(physical["random_range"]),
-    ]
-    ax.bar(
-        ["Semantic\nlatent", "Semantic\nrandom", "Physical\nlatent", "Physical\nrandom"],
-        values,
-        color=[C_OURS, C_PERS, C_OURS, C_PERS],
-    )
-    ax.set_ylabel("Normalised mutual information")
-    ax.set_title("(b) Action grounding audit")
-    ax.set_ylim(0, 0.6)
-    for i, v in enumerate(values):
-        ax.text(i, v + 0.015, f"{v:.3f}", ha="center", fontsize=7)
-    ax.grid(axis="y", alpha=0.25)
-
-    ax = axes[2]
     fs = M["fewshot"]
     names = ["GI\nzero-shot", "GI\n32-shot", "Bronch\nzero-shot", "Bronch\n32-shot"]
     vals = [fs["gi"]["zero"], fs["gi"]["few"], fs["bronch"]["zero"], fs["bronch"]["few"]]
@@ -155,7 +156,7 @@ def fig_planning_domain():
     ax.set_xticks(x)
     ax.set_xticklabels(names, fontsize=7)
     ax.set_ylabel("Forecast cosine")
-    ax.set_title("(c) Few-shot domain token")
+    ax.set_title("(b) 32-shot token adaptation")
     ax.set_ylim(0.70, 0.95)
     ax.legend(fontsize=7, frameon=False)
     ax.grid(axis="y", alpha=0.25)
@@ -246,12 +247,18 @@ def fig_aux():
 
     ax = axes[1]
     c = M["collision"]
-    ax.bar(["Near-wall AUC", "Chance"], [c["auc"], 0.50], color=[C_OURS, C_PERS])
+    risk = M["grounded_upgrade"]["risk_real_v2"]["test"]
+    names = ["Legacy energy", "Corrected risk", "Chance", "Gate"]
+    vals = [c["auc"], risk["auc"], 0.50, 0.75]
+    cols = [C_OURS, C_GRU, C_PERS, C_QUERY]
+    ax.bar(names, vals, color=cols)
+    ax.axhline(0.75, color=C_QUERY, ls="--", lw=1.0)
     ax.set_ylim(0, 1.0)
-    ax.set_title(f"(b) Energy vs wall proximity\nSpearman $={c['spearman']:.2f}$")
+    ax.set_title("(b) Energy vs corrected risk\nAUC 0.523 FAIL")
     ax.set_ylabel("AUC")
     ax.grid(axis="y", alpha=0.25)
-    ax.text(0, c["auc"] + 0.03, f"{c['auc']:.3f}", ha="center", fontsize=8)
+    for i, v in enumerate(vals):
+        ax.text(i, v + 0.03, f"{v:.3f}", ha="center", fontsize=7)
 
     ax = axes[2]
     s = M["stir"]
@@ -267,13 +274,12 @@ def fig_aux():
 
 
 def fig_latent():
-    """Figure 6: PCA of cached val latents (if cache exists)."""
+    """Figure 6: PCA of the declared 6k validation cache."""
     cache = Path("outputs/scale_6000_causal/latents_cache.pt")
     if not cache.is_file():
-        cache = Path("outputs/p2000_full_causal/latents_cache.pt")
-    if not cache.is_file():
-        print("[fig] skip figure6_latent (no cache)")
-        return
+        raise FileNotFoundError(
+            "Figure 6 requires outputs/scale_6000_causal/latents_cache.pt; "
+            "refusing to substitute a legacy cache.")
     import torch
     from endoworld.data.domains import ID_TO_DOMAIN
     pack = torch.load(cache, map_location="cpu", weights_only=False)
@@ -285,7 +291,7 @@ def fig_latent():
     feat = feat - feat.mean(0, keepdims=True)
     _, s, vt = np.linalg.svd(feat, full_matrices=False)
     P = feat @ vt[:2].T
-    var = s / s.sum()
+    var = s ** 2 / (s ** 2).sum()
     fig, axes = plt.subplots(1, 2, figsize=(11.4, 4.2))
     ax = axes[0]
     colours = {0: C_LAP, 1: C_GI, 2: C_BR, 3: C_PERS}
@@ -316,29 +322,38 @@ def fig_latent():
 
 
 def fig_per_dataset(path: Path | None = None):
-    """Figure 7: per-dataset forecast if per_dataset.json exists."""
+    """Figure 7: per-dataset forecast from the declared 6k evaluation."""
     cands = [
         path,
         Path("outputs/scale_6000_causal/per_dataset.json"),
-        Path("outputs/p2000_full_causal/per_dataset.json"),
-        HERE / "per_dataset.json",
     ]
     src = next((p for p in cands if p is not None and p.is_file()), None)
     if src is None:
-        print("[fig] skip figure7_per_dataset (run endoworld.eval.per_dataset first)")
-        return
+        raise FileNotFoundError(
+            "Figure 7 requires outputs/scale_6000_causal/per_dataset.json; "
+            "refusing to substitute a legacy result.")
     rep = json.loads(src.read_text(encoding="utf-8"))
     rows = sorted(rep["by_dataset"].values(), key=lambda r: -r["n"])
     if not rows:
         return
-    names = [r["dataset"] for r in rows]
+    names = [display(r["dataset"]) for r in rows]
     ours = [r["cos_model"] for r in rows]
     pers = [r["cos_persist"] for r in rows]
+    n_vals = [int(r["n"]) for r in rows]
     fig, ax = plt.subplots(figsize=(max(8.5, 0.55 * len(names) + 2), 4.2))
     x = np.arange(len(names))
     w = 0.38
-    ax.bar(x - w / 2, ours, w, label="Endo-HJEPA", color=C_OURS)
-    ax.bar(x + w / 2, pers, w, label="persistence", color=C_PERS)
+    bars_ours = ax.bar(x - w / 2, ours, w, label="Endo-HJEPA", color=C_OURS)
+    bars_pers = ax.bar(x + w / 2, pers, w, label="persistence", color=C_PERS)
+    for bar, n in zip(bars_ours, n_vals):
+        if n == 1:
+            bar.set_hatch("///")
+    for bar, n in zip(bars_pers, n_vals):
+        if n == 1:
+            bar.set_hatch("///")
+    if any(n == 1 for n in n_vals):
+        ax.bar([], [], color="white", edgecolor=C_OURS, hatch="///",
+               label="$n{=}1$ descriptive only")
     ax.set_xticks(x)
     ax.set_xticklabels(names, rotation=35, ha="right", fontsize=8)
     ax.set_ylabel("Forecast cosine ($h{=}4$)")

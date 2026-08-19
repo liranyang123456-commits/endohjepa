@@ -16,13 +16,15 @@ def load_pose_txt(path: str | Path) -> np.ndarray:
 
     C3VD pose.txt stores camera-to-world matrices flattened so that, after
     reshape(4,4), the translation sits in the last row (column-major c2w).
-    The camera frame is OpenGL-style (+y up, +z out of the screen), while our
-    twist convention is OpenCV (+y down, +z into the screen). The reprojection
-    gate (endoworld.eval.c3vd_pose_gate, Scaramuzza intrinsics + GT depth)
-    shows transpose alone leaves 3.2-33.5 px error growing with frame gap,
-    whereas transpose + GL->CV conjugation gives 0.08-0.64 px. The flip is
-    therefore mandatory; without it the translation direction is wrong and
-    action-conditioned models see chance-level C3VD signal.
+    The camera frame is OpenGL-style (+y up, +z out of the screen), whereas
+    this implementation expresses twists in OpenCV coordinates (+y down, +z
+    into the screen). We therefore apply the conventional GL-to-CV
+    conjugation. ``endoworld.eval.c3vd_pose_gate`` now records only a
+    depth-warp diagnostic for this implementation convention; without
+    independent cross-frame correspondences it cannot select or validate a
+    translation convention. C3VD action results are consequently
+    convention-specific external diagnostics, not independently validated
+    pose-grounded generalisation.
     """
     rows = []
     text = Path(path).read_text(encoding="utf-8").strip().splitlines()

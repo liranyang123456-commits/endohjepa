@@ -44,16 +44,26 @@ def attach(cache: str, out: str, scared_root: str, stride: int,
         keys = sorted(proximities)
         values = []
         for k in range(seq.latents.size(0)):
-            frame = (warm + k + 1) * tubelet * stride - stride + tubelet - 1
+            # Match ``_sequence_from_frames`` exactly: latent k is the final
+            # token of a look-back window ending at sampled index
+            # ``(warm + k + 1) * tubelet - 1``.  ``frame_indices`` advances
+            # by ``stride`` native frames, hence its native-frame index is
+            # ``(warm + k + 1) * tubelet * stride - stride``.
+            frame = (warm + k + 1) * tubelet * stride - stride
             nearest = min(keys, key=lambda x: abs(x - frame))
             values.append(proximities[nearest])
         seq.depth_or_risk = torch.tensor(values, dtype=torch.float32).unsqueeze(-1)
         labelled += 1
+        print(
+            f"[risk-label] {labelled}: {seq.sequence_id} "
+            f"({len(values)} aligned latent steps)",
+            flush=True,
+        )
     save_sequences(sequences, out)
     report = {
         "cache": cache, "out": out,
         "label": "5th-percentile scene depth (mm) per latent step",
-        "frame_mapping": f"latent k -> video frame {(warm + 1) * tubelet * stride - stride + tubelet - 1} + {tubelet * stride}k",
+        "frame_mapping": f"latent k -> video frame {(warm + 1) * tubelet * stride - stride} + {tubelet * stride}k",
         "n_scared_labelled": labelled,
         "n_scared_missing": len(missing),
         "missing": missing,

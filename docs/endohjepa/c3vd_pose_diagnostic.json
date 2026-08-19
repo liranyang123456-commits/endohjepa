@@ -1,0 +1,29 @@
+{
+  "sequence": "datasets\\C3VD\\cecum_t1_a\\cecum_t1_a",
+  "n_pairs": 12,
+  "gap": 5,
+  "depth_scale": 655.35,
+  "intrinsics": "Scaramuzza, Olympus CF-HQ190L (C3VD paper Table 3)",
+  "candidates": {
+    "transpose-only": {
+      "median_depth_err": 8.656542522942619,
+      "median_relative_depth_err": 0.25189768980271887,
+      "median_flow_px": 8.70429229589209,
+      "in_frame": 0.8906666666666667
+    },
+    "loader transpose + GL->CV flip": {
+      "median_depth_err": 8.949137752170326,
+      "median_relative_depth_err": 0.25462974291661333,
+      "median_flow_px": 6.944962364673158,
+      "in_frame": 0.9463888888888888
+    },
+    "loader rotation-only diagnostic": {
+      "median_depth_err": 8.766297203401264,
+      "median_relative_depth_err": 0.25323303523920626,
+      "median_flow_px": 0.18912811814522915,
+      "in_frame": 0.9201666666666668
+    }
+  },
+  "implementation_candidate": "loader transpose + GL->CV flip",
+  "interpretation": "Depth-warp diagnostic only. It does not select a convention or independently validate translation without cross-frame correspondences."
+}

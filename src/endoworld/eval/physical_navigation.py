@@ -1,4 +1,11 @@
-"""Offline continuous-action navigation evaluation with physical pose metrics."""
+"""Single-shot oracle-goal latent-retrieval proxy for continuous actions.
+
+This evaluator is not a closed-loop navigation benchmark. It conditions CEM on
+the held-out terminal latent, performs one open-loop optimisation, and maps its
+terminal prediction to the nearest latent later in that same recorded
+trajectory. Pose values therefore quantify a retrieval proxy, not an endpoint
+produced by executing the planned action.
+"""
 from __future__ import annotations
 
 import argparse
@@ -112,8 +119,27 @@ def _bootstrap(values, statistic, seed=0, samples=2000):
     return [float(np.quantile(estimates, 0.025)), float(np.quantile(estimates, 0.975))]
 
 
+def _bootstrap_relative_reduction(model_errors, persistence_errors,
+                                  seed=0, samples=2000):
+    """CI for 1 - mean(model error) / mean(persistence error)."""
+    model_errors = np.asarray(model_errors, dtype=np.float64)
+    persistence_errors = np.asarray(persistence_errors, dtype=np.float64)
+    if model_errors.shape != persistence_errors.shape:
+        raise ValueError("model and persistence errors must have the same shape")
+    generator = np.random.default_rng(seed)
+    estimates = []
+    for _ in range(samples):
+        indices = generator.integers(0, len(model_errors), len(model_errors))
+        baseline = persistence_errors[indices].mean()
+        estimates.append(1.0 - model_errors[indices].mean() / max(baseline, 1e-8))
+    return [float(np.quantile(estimates, 0.025)), float(np.quantile(estimates, 0.975))]
+
+
 @torch.no_grad()
 def evaluate(args):
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
     device = "cuda" if torch.cuda.is_available() and not args.cpu else "cpu"
     if args.smoke:
         sequences = _smoke_sequences()
@@ -129,9 +155,16 @@ def evaluate(args):
             dynamics = _NormalisedActionDynamics(dynamics).to(device)
     dataset = PhysicalActionDataset(
         sequences, args.history, args.horizon, "test")
+    if args.dataset:
+        selected = [
+            index for index, (sequence_index, _) in enumerate(dataset.windows)
+            if dataset.sequences[sequence_index].dataset == args.dataset
+        ]
+        dataset = torch.utils.data.Subset(dataset, selected)
     if len(dataset) < args.trials:
         raise RuntimeError(
-            f"need at least {args.trials} test windows, found {len(dataset)}")
+            f"need at least {args.trials} test windows for "
+            f"{args.dataset or 'all datasets'}, found {len(dataset)}")
     generator = torch.Generator().manual_seed(args.seed)
     chosen = torch.randperm(len(dataset), generator=generator)[:args.trials]
     subset = torch.utils.data.Subset(dataset, chosen.tolist())
@@ -153,6 +186,8 @@ def evaluate(args):
     rows = []
     for batch in loader:
         history = batch["history"].to(device)
+        # Oracle held-out target for an offline proxy only; it is not a
+        # deployable navigation goal.
         goal = batch["future"][:, -1].to(device)
         result = continuous_cem(
             dynamics, history, goal, planner_cfg,
@@ -164,6 +199,8 @@ def evaluate(args):
             start = int(batch["start_index"][i])
             current_index = start + args.history - 1
             goal_index = current_index + args.horizon
+            # The pose below belongs to a retrieved real future state, not to
+            # the endpoint induced by ``planned_actions``.
             candidates = sequence.latents[current_index:]
             nearest = current_index + int(torch.cdist(
                 predicted[i:i + 1], candidates).argmin())
@@ -189,41 +226,55 @@ def evaluate(args):
                 "persistence_rotation_error_deg": persist_rot,
                 "command_translation_error": command_trans,
                 "command_rotation_error_deg": command_rot,
-                "reach_success": model_trans < persist_trans,
+                "retrieval_beats_persistence": model_trans < persist_trans,
             })
-    reach = [float(row["reach_success"]) for row in rows]
-    reduction = [
-        row["persistence_translation_error"] - row["model_translation_error"]
-        for row in rows
-    ]
-    persist = np.mean([row["persistence_translation_error"] for row in rows])
+    retrieval_wins = [float(row["retrieval_beats_persistence"]) for row in rows]
+    model_trans = np.asarray(
+        [row["model_translation_error"] for row in rows], dtype=np.float64)
+    persistence_trans = np.asarray(
+        [row["persistence_translation_error"] for row in rows], dtype=np.float64)
+    persist = float(persistence_trans.mean())
     command_trans = [row["command_translation_error"] for row in rows]
     report = {
-        "task": "offline receding-horizon continuous-action navigation",
+        "task": "offline single-shot oracle-goal latent-retrieval proxy",
+        "planning_mode": "one open-loop CEM optimisation per window",
+        "goal_source": "held-out terminal latent from the recorded trajectory",
+        "pose_metric": (
+            "translation/rotation error of the nearest future recorded latent; "
+            "not the endpoint of the planned command"
+        ),
+        "retrieval_candidates": "all later latents from the same recorded sequence",
         "n_trials": len(rows),
+        "n_sequences": len({row["sequence_id"] for row in rows}),
+        "dataset_filter": args.dataset,
         "synthetic_smoke": args.smoke,
         "normalised_action_space": bool(args.normalised_actions),
         "accepted_rate": float(np.mean([row["accepted"] for row in rows])),
-        "reach_rate": float(np.mean(reach)),
-        "reach_rate_ci95": _bootstrap(reach, np.mean),
-        "translation_error_mean": float(np.mean([
-            row["model_translation_error"] for row in rows])),
+        "proxy_win_fraction": float(np.mean(retrieval_wins)),
+        "proxy_win_fraction_window_bootstrap95": _bootstrap(
+            retrieval_wins, np.mean),
+        "retrieval_translation_error_mean": float(model_trans.mean()),
         "persistence_translation_error_mean": float(persist),
-        "translation_error_reduction_fraction": float(
-            np.mean(reduction) / max(persist, 1e-8)),
-        "translation_reduction_ci95": _bootstrap(reduction, np.mean),
+        "retrieval_translation_error_reduction_fraction": float(
+            1.0 - model_trans.mean() / max(persist, 1e-8)),
+        "retrieval_translation_reduction_window_bootstrap95": _bootstrap_relative_reduction(
+            model_trans, persistence_trans),
         "rotation_error_deg_mean": float(np.mean([
             row["model_rotation_error_deg"] for row in rows])),
         "command_translation_error_mean": float(np.mean(command_trans)),
         "command_translation_error_ci95": _bootstrap(command_trans, np.mean),
+        "window_dependence_note": (
+            "Windows from the same sequence/keyframe overlap; bootstrap intervals "
+            "are descriptive window-resampling summaries, not case-level inference."
+        ),
         "rows": rows,
     }
-    report["passed"] = bool(
-        not args.smoke
-        and report["reach_rate"] >= 0.5
-        and report["translation_error_reduction_fraction"] >= 0.2
-        and report["n_trials"] >= 100
-    )
+    report["proxy_screening"] = {
+        "n_trials": 100,
+        "proxy_win_fraction": 0.5,
+        "retrieval_translation_error_reduction_fraction": 0.2,
+    }
+    report["navigation_validated"] = False
     output = Path(args.out)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2), encoding="utf-8")
@@ -248,7 +299,10 @@ def build_parser():
     parser.add_argument("--max-uncertainty", type=float, default=2.0)
     parser.add_argument("--normalised-actions", action="store_true",
                         help="sample CEM candidates in the model's normalised "
-                             "action space (behaviour-support constrained)")
+                             "action space (scaled to training coordinates)")
+    parser.add_argument("--dataset", default=None,
+                        help="optional exact PhysicalSequence dataset name; "
+                             "use this to keep an evaluation corpus pure")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--cpu", action="store_true")
     parser.add_argument("--smoke", action="store_true")

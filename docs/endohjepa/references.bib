@@ -1,45 +1,46 @@
-% Endo-HJEPA references. Verify page numbers / years before submission.
+% Endo-HJEPA references.
 
 % ===== World models / JEPA =====
-@article{lecun2022path,
+@misc{lecun2022path,
   title={A Path Towards Autonomous Machine Intelligence},
   author={LeCun, Yann},
-  journal={Open Review},
+  howpublished={OpenReview position paper},
+  url={https://openreview.net/forum?id=BZ5a1r-kVsf},
+  note={Version 0.9.2},
   year={2022}
 }
 @inproceedings{assran2023ijepa,
   title={Self-Supervised Learning from Images with a Joint-Embedding Predictive Architecture},
   author={Assran, Mahmoud and Duval, Quentin and Misra, Ishan and Bojanowski, Piotr and Vincent, Pascal and Rabbat, Michael and LeCun, Yann and Ballas, Nicolas},
-  booktitle={CVPR},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+  pages={15619--15629},
+  doi={10.1109/CVPR52729.2023.01499},
   year={2023}
 }
 @article{bardes2024vjepa,
   title={Revisiting Feature Prediction for Learning Visual Representations from Video},
   author={Bardes, Adrien and Garrido, Quentin and Ponce, Jean and Chen, Xinlei and Rabbat, Michael and LeCun, Yann and Assran, Mahmoud and Ballas, Nicolas},
   journal={TMLR},
+  url={https://mlanthology.org/tmlr/2024/bardes2024tmlr-revisiting/},
   year={2024}
 }
 @article{assran2025vjepa2,
-  title={V-JEPA 2: Self-Supervised Video Models Enable Understanding and Prediction},
-  author={Assran, Mahmoud and others},
+  title={V-JEPA 2: Self-Supervised Video Models Enable Understanding, Prediction and Planning},
+  author={Assran, Mahmoud and Bardes, Adrien and Fan, David and Garrido, Quentin and Howes, Russell and Komeili, Mojtaba and Muckley, Matthew and Rizvi, Ammar and Roberts, Claire and Sinha, Koustuv and Zholus, Artem and Arnaud, Sergio and Gejji, Abha and Martin, Ada and Hogan, Francois Robert and Dugas, Daniel and Bojanowski, Piotr and Khalidov, Vasil and Labatut, Patrick and Massa, Francisco and Szafraniec, Marc and Krishnakumar, Kapil and Li, Yong and Ma, Xiaodong and Chandar, Sarath and Meier, Franziska and LeCun, Yann and Rabbat, Michael and Ballas, Nicolas},
   journal={arXiv preprint arXiv:2506.09985},
+  url={https://arxiv.org/abs/2506.09985},
   year={2025}
-}
-@inproceedings{he2022mae,
-  title={Masked Autoencoders Are Scalable Vision Learners},
-  author={He, Kaiming and Chen, Xinlei and Xie, Saining and Li, Yanghao and Doll{\'a}r, Piotr and Girshick, Ross},
-  booktitle={CVPR},
-  year={2022}
 }
 @inproceedings{tong2022videomae,
   title={VideoMAE: Masked Autoencoders are Data-Efficient Learners for Self-Supervised Video Pre-Training},
   author={Tong, Zhan and Song, Yibing and Wang, Jue and Wang, Limin},
-  booktitle={NeurIPS},
+  booktitle={Advances in Neural Information Processing Systems},
+  volume={35},
+  pages={10078--10093},
   year={2022}
 }
 
 % ===== Surgical / endoscopic SSL + world models =====
-% NOTE: verify exact venues/years for 2025-2026 works at submission.
 @article{surgrecjepa,
   title={Scaling Video Pretraining for Surgical Foundation Models},
   author={Lu, Sicheng and Xiao, Zikai and Wei, Jianhui and Sun, Danyu and Lu, Qi and Hu, Keli and Feng, Yang and Wu, Jian and Yang, Zongxin and Liu, Zuozhu},
@@ -48,33 +49,28 @@
 }
 @inproceedings{jhuvpt,
   title={A Vision Foundation Model for Cataract Surgery Using Joint-Embedding Predictive Architecture},
-  author={Shah, N. and others},
-  booktitle={MIDL (Proceedings of Machine Learning Research, v301)},
-  year={2025},
+  author={Shah, Nisarg A. and Xia, Mingze and Vijay, Subhasri and Sikder, Shameema and Vedula, S. Swaroop and Patel, Vishal M.},
+  booktitle={Proceedings of the 8th International Conference on Medical Imaging with Deep Learning},
+  series={Proceedings of Machine Learning Research},
+  volume={301},
+  pages={1430--1444},
+  year={2025}
 }
 @article{endowam,
   title={EndoWAM: A Grounded World-Action Model for Generalizable Endoscopic Navigation},
-  author={Ren, Hongliang and Wang, Ziyu and Wang, Yin and Gao, Huxin and others},
+  author={Lin, Jinsong and Pan, Zikang and Liu, Wanhao and Ng, Chi Kit and Shao, Liangjing and Yu, Zihang and Wang, Ziyu and Wang, Yin and Wang, Jiaxi and Teoh, Jeremy Yuen-Chun and Xiong, Zhiyong and Gao, Huxin and Ren, Hongliang},
   journal={arXiv preprint arXiv:2608.01221},
+  url={https://arxiv.org/abs/2608.01221},
   year={2026}
 }
-@inproceedings{surgworld,
-  title={Learning Action-Conditioned World Models for Cataract Surgery from Unlabeled Videos},
-  author={SurgWorld authors},
-  booktitle={OpenReview},
-  year={2025},
-}
-@article{svwm,
+@inproceedings{svwm,
   title={Surgical Vision World Model},
-  author={Bhattarai, Binod and others},
-  journal={arXiv preprint arXiv:2503.02904},
-  year={2025},
-}
-@article{endogaussian,
-  title={EndoGaussian: Real-time Gaussian Splatting for Dynamic Endoscopic Scene Reconstruction},
-  author={Liu, Yifan and Li, Chenxin and Yang, Chen and Yuan, Yixuan},
-  journal={arXiv preprint arXiv:2401.12561},
-  year={2024}
+  author={Koju, Saurabh and Bastola, Saurav and Shrestha, Prashant and Amgain, Sanskar and Shrestha, Yash Raj and Poudel, Rudra P. K. and Bhattarai, Binod},
+  booktitle={Medical Image Computing and Computer Assisted Intervention -- MICCAI 2025},
+  series={Lecture Notes in Computer Science},
+  publisher={Springer},
+  doi={10.1007/978-3-032-08009-7_1},
+  year={2025}
 }
 
 % ===== Datasets =====
@@ -96,10 +92,10 @@
   journal={arXiv preprint arXiv:2204.05235},
   year={2022}
 }
-@inproceedings{allan2021scared,
+@article{allan2021scared,
   title={Stereo Correspondence and Reconstruction of Endoscopic Data (SCARED)},
   author={Allan, Max and others},
-  booktitle={MICCAI},
+  journal={arXiv preprint arXiv:2101.01133},
   year={2021}
 }
 @article{bobrow2023c3vd,
@@ -112,14 +108,11 @@
   title={Surgical Tattoos in Infrared: A Dataset for Quantifying Tissue Tracking and Mapping},
   author={Schmidt, Adam and Mohareri, Omid and DiMaio, Simon and Salcudean, Septimiu E.},
   journal={IEEE Transactions on Medical Imaging},
-  year={2024},
-  publisher={IEEE}
-}
-@article{schmidt2025stirchallenge,
-  title={Point Tracking in Surgery---The 2024 Surgical Tattoos in Infrared (STIR) Challenge},
-  author={Schmidt, Adam and Karaoglu, Mert Asim and others},
-  journal={arXiv preprint arXiv:2503.24306},
-  year={2025}
+  volume={43},
+  number={7},
+  pages={2634--2645},
+  doi={10.1109/TMI.2024.3372828},
+  year={2024}
 }
 @article{hong2020cholecseg8k,
   title={CholecSeg8k: A Semantic Segmentation Dataset for Laparoscopic Cholecystectomy Based on Cholec80},
@@ -137,69 +130,84 @@
   title={HyperKvasir, a comprehensive multi-class image and video dataset for gastrointestinal endoscopy},
   author={Borgli, Hanna and others},
   journal={Scientific Data},
-  volume={7}, year={2020}
+  volume={7}, pages={40}, doi={10.1038/s41597-020-00622-y}, year={2020}
 }
-@inproceedings{kvasircapsule,
+@article{kvasircapsule,
   title={Kvasir-Capsule, a video capsule endoscopy dataset},
   author={Smedsrud, Pia H. and others},
-  booktitle={MMM},
-  year={2021},
+  journal={Scientific Data},
+  volume={8},
+  number={1},
+  pages={142},
+  doi={10.1038/s41597-021-00920-z},
+  year={2021}
 }
 @article{endoscapes,
-  title={The Endoscapes Dataset for Surgical Scene Segmentation, Object Detection, and Critical View of Safety Assessment},
-  author={Murali, Aditya and others},
-  journal={arXiv / Scientific Data},
-  year={2023},
+  title={Endoscapes, a Critical View of Safety and Surgical Scene Segmentation Dataset for Laparoscopic Cholecystectomy},
+  author={Mascagni, Pietro and Alapatt, Deepak and Murali, Aditya and others},
+  journal={Scientific Data},
+  volume={12},
+  pages={331},
+  doi={10.1038/s41597-025-04642-4},
+  year={2025},
 }
 @article{surgicalmamba,
   title={SurgicalMamba: Dual-Path SSD with State Regramming for Online Surgical Phase Recognition},
-  author={Oh, Su and others},
+  author={Oh, Sukju and Sun, Sukkyu},
   journal={arXiv preprint arXiv:2605.14889},
+  url={https://arxiv.org/abs/2605.14889},
   year={2026},
 }
-@inproceedings{sprmamba,
-  title={SPRMamba: Surgical Phase Recognition for Endoscopic Submucosal Dissection with Mamba},
-  author={Zhang, X. and others},
-  booktitle={arXiv preprint arXiv:2409.12108},
-  year={2024},
-}
-@inproceedings{mamba,
+@misc{mamba,
   title={Mamba: Linear-Time Sequence Modeling with Selective State Spaces},
   author={Gu, Albert and Dao, Tri},
-  booktitle={COLM},
+  howpublished={The Twelfth International Conference on Learning Representations},
+  url={https://openreview.net/forum?id=tEYskw1VY2},
   year={2024}
 }
 @inproceedings{timesformer,
   title={Is Space-Time Attention All You Need for Video Understanding?},
   author={Bertasius, Gedas and Wang, Heng and Torresani, Lorenzo},
-  booktitle={ICML},
+  booktitle={Proceedings of the 38th International Conference on Machine Learning},
+  series={Proceedings of Machine Learning Research},
+  volume={139},
+  pages={813--824},
   year={2021}
 }
 @inproceedings{vivit,
   title={ViViT: A Video Vision Transformer},
   author={Arnab, Anurag and Dehghani, Mostafa and Heigold, Georg and Sun, Chen and Lucic, Mario and Schmid, Cordelia},
-  booktitle={ICCV},
+  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision},
+  pages={6836--6846},
+  doi={10.1109/ICCV48922.2021.00676},
   year={2021}
 }
 @article{dinov2,
   title={DINOv2: Learning Robust Visual Features without Supervision},
-  author={Oquab, Maxime and others},
-  journal={TMLR},
+  author={Oquab, Maxime and Darcet, Timoth{\'e}e and Moutakanni, Th{\'e}o and Vo, Huy and Szafraniec, Marc and Khalidov, Vasil and Fernandez, Pierre and Haziza, Daniel and Massa, Francisco and El-Nouby, Alaaeldin and Assran, Mahmoud and Ballas, Nicolas and Galuba, Wojciech and Howes, Russell and Huang, Po-Yao and Li, Shang-Wen and Misra, Ishan and Rabbat, Michael and Sharma, Vasu and Synnaeve, Gabriel and Xu, Hu and J{\'e}gou, Herv{\'e} and Mairal, Julien and Labatut, Patrick and Joulin, Armand and Bojanowski, Piotr},
+  journal={Transactions on Machine Learning Research},
+  url={https://openreview.net/forum?id=a68SUt6zFt},
   year={2024}
 }
 
 % ===== World models / dynamics (extended) =====
-@article{lecun2006ebm,
+@incollection{lecun2006ebm,
   title={A Tutorial on Energy-Based Learning},
-  author={LeCun, Yann and Chopra, Sumit and Hadsell, Raia and Ranzato, Marc and Huang, Fu Jie},
-  journal={Predicting Structured Data},
+  author={LeCun, Yann and Chopra, Sumit and Hadsell, Raia and Ranzato, Marc'Aurelio and Huang, Fu Jie},
+  booktitle={Predicting Structured Data},
+  editor={Bakir, G{\"o}khan and Hofmann, Thomas and Sch{\"o}lkopf, Bernhard and Smola, Alexander J. and Taskar, Ben and Vishwanathan, S. V. N.},
+  publisher={MIT Press},
   year={2006}
 }
-@article{genie2024,
+@inproceedings{genie2024,
   title={Genie: Generative Interactive Environments},
   author={Bruce, Jake and others},
-  journal={Nature},
-  year={2024},
+  booktitle={Proceedings of the 41st International Conference on Machine Learning},
+  series={Proceedings of Machine Learning Research},
+  volume={235},
+  pages={4603--4623},
+  publisher={PMLR},
+  year={2024}
 }
 @article{hafner2023dreamer,
   title={Mastering Diverse Domains through World Models},
@@ -209,26 +217,36 @@
 }
 @inproceedings{videomamba,
   title={VideoMamba: State Space Model for Efficient Video Understanding},
-  author={Li, Kunchang and others},
-  booktitle={ECCV},
+  author={Li, Kunchang and Li, Xinhao and Wang, Yi and He, Yinan and Wang, Yali and Wang, Limin and Qiao, Yu},
+  booktitle={Computer Vision -- ECCV 2024},
+  series={Lecture Notes in Computer Science},
+  volume={15084},
+  pages={237--255},
+  doi={10.1007/978-3-031-73347-5_14},
   year={2024}
 }
 @inproceedings{dosovitskiy2021vit,
   title={An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale},
-  author={Dosovitskiy, Alexey and others},
-  booktitle={ICLR},
+  author={Dosovitskiy, Alexey and Beyer, Lucas and Kolesnikov, Alexander and Weissenborn, Dirk and Zhai, Xiaohua and Unterthiner, Thomas and Dehghani, Mostafa and Minderer, Matthias and Heigold, Georg and Gelly, Sylvain and Uszkoreit, Jakob and Houlsby, Neil},
+  booktitle={International Conference on Learning Representations},
+  url={https://openreview.net/forum?id=YicbFdNTTy},
   year={2021}
 }
 @article{ha2018worldmodels,
   title={World Models},
   author={Ha, David and Schmidhuber, J{\"u}rgen},
-  journal={NeurIPS},
+  journal={arXiv preprint arXiv:1803.10122},
+  url={https://arxiv.org/abs/1803.10122},
   year={2018}
 }
-@article{hafner2019planet,
+@inproceedings{hafner2019planet,
   title={Learning Latent Dynamics for Planning from Pixels},
-  author={Hafner, Danijar and others},
-  journal={ICML},
+  author={Hafner, Danijar and Lillicrap, Timothy and Fischer, Ian and Villegas, Ruben and Ha, David and Lee, Honglak and Davidson, James},
+  booktitle={Proceedings of the 36th International Conference on Machine Learning},
+  series={Proceedings of Machine Learning Research},
+  volume={97},
+  pages={2555--2565},
+  url={https://proceedings.mlr.press/v97/hafner19a.html},
   year={2019}
 }
 
@@ -236,12 +254,10 @@
 @inproceedings{endofoundation,
   title={Foundation Model for Endoscopy Video Analysis via Large-scale Self-supervised Pre-train},
   author={Wang, Zhao and Liu, Chang and Zhang, Shaoting and Dou, Qi},
-  booktitle={MICCAI},
+  booktitle={Medical Image Computing and Computer Assisted Intervention -- MICCAI 2023},
+  series={Lecture Notes in Computer Science},
+  volume={14228},
+  pages={101--111},
+  doi={10.1007/978-3-031-43996-4_10},
   year={2023}
-}
-@article{surgicalwam,
-  title={Surgical WAM: A World-Action Model for Data-Efficient Surgical Robot Learning},
-  author={Surgical WAM authors},
-  journal={arXiv preprint arXiv:2608.11204},
-  year={2026},
 }

@@ -2,21 +2,48 @@
 
 Dear Editors and Reviewers,
 
-We submit our manuscript entitled **"Endo-HJEPA: A Hierarchical Latent World Model for Cross-Orifice Endoscopic Video Prediction with Audited Physical Grounding"** for consideration in *Medical Image Analysis*.
+We submit our manuscript, **“Endo-HJEPA: Hierarchical Latent Prediction for
+Cross-Orifice Endoscopic Video with Audited SE(3)-Conditioned Evaluation,”**
+for consideration in *Medical Image Analysis*.
 
-**The problem.** Endoscopic AI is almost entirely reactive: it recognises the present frame but cannot anticipate how the scene will evolve. Meanwhile, world-model research assumes, without testing, that predictive video features are physically grounded enough to score or plan camera motion. We show both gaps matter in practice, and we address them together.
+Endoscopic AI is predominantly reactive. We study offline prediction of scene
+representations and the association between measured camera motion and future
+representations, without claiming clinical warning, calibrated collision safety
+or robot control. Endo-HJEPA combines a frozen V-JEPA 2 ViT-L encoder across
+laparoscopy, gastrointestinal endoscopy and bronchoscopy with residual latent
+forecasting and a separately audited SE(3)-conditioned branch.
 
-**What we contribute.** Endo-HJEPA is a hierarchical joint-embedding world model built on a frozen V-JEPA 2 ViT-L encoder, shared across laparoscopy, gastrointestinal endoscopy, and bronchoscopy. It predicts future representations rather than pixels, with a causal residual forecaster for short horizons and a coarse predictor for mid-horizon anatomy. A block-causal branch conditions on measured continuous SE(3) camera increments, with probabilistic uncertainty, calibrated risk, and a hard safety gate.
+On a video-level non-overlap offline representation protocol over 19 datasets
+and 1,707 sequences, forecast cosine is 0.978 versus 0.916 for persistence,
+0.974 for GRU and 0.971 for Mamba. A strictly past-only audit remains above
+persistence (0.9578 versus 0.9102). The audited SCARED-subset
+action-preference result is 85.2% (n=958); it is explicitly reported as
+audit-selected rather than an independent confirmation test. In a one-shot,
+oracle-goal latent-retrieval proxy over 200 overlapping windows from four
+held-out SCARED sequences, CEM-derived retrieval wins 60.0% of windows and
+reduces retrieved-pose translation error by 33.8% versus persistence; this is
+not an executed navigation result.
+External C3VD action preference is 58.3% across ten usable trajectories
+(n=798), below the prespecified gate, and near-wall risk does not generalise
+across cases.
 
-**Why this is rigorous.** The paper is built around correctness auditing. We identified and fixed a fatal implementation defect (an encoder that was constructed but never executed), verified camera-pose conventions by depth reprojection against official intrinsics, matched counterfactual negative distributions between training and evaluation, and developed all physical-branch variants under grouped cross-validation with a frozen test set. Every number is recorded in a released metric ledger and regenerable from the released code.
+The paper's contribution is therefore an executable audit and reproducible
+protocol for latent prediction and SE(3)-conditioned offline evaluation. It
+documents temporal-context, pose-convention and matched-negative checks, and
+reports negative results rather than extending them into unsupported control or
+clinical claims. Code, metric records and figure generators are released at
+https://github.com/liranyang123456-commits/endohjepa.
 
-**Key results.** On 19 datasets and 1,707 sequences under video-level splits, the causal forecaster reaches 0.978 cosine at horizon four versus 0.916 for persistence, 0.974 for a GRU, and 0.971 for Mamba (Holm-corrected Wilcoxon p < 1e-80). The corrected continuous SE(3) branch passes its prespecified action-sensitivity gate on held-out SCARED cases (83.1%; grouped-CV 88.9%; three seeds 85.9-86.5%). Behaviour-constrained continuous model-predictive control passes all offline navigation gates (200 trials, 51.5% reach, 29.0% pose-error reduction versus persistence). We report external C3VD generalisation (above chance, below gate) and near-wall risk calibration (fails to generalise) as characterised limits rather than claims.
-
-**Significance.** The three validated capabilities, forecasting scene evolution, evaluating the visual consequence of a measured camera motion, and model-based navigation planning, map directly onto loss-of-view warning, camera-handling training, and navigation-assistance prototypes. The paper defines precisely where physically grounded control does and does not follow from passive video features.
-
-**Reproducibility.** Code, the verified metric ledger, all cited result files, and figure generators are released at https://github.com/liranyang123456-commits/endohjepa. Private ION bronchoscopy data cannot be shared; all ION-derived numbers are marked.
-
-This manuscript is original, has not been published previously, and is not under consideration elsewhere. All authors have approved the submission and declare no competing interests.
+This manuscript is original, has not been published previously and is not under
+consideration elsewhere. All authors have approved the submission and declare
+no competing interests. The ION component is a retrospective secondary analysis
+of de-identified CT volumes and intra-operative bronchoscopy videos, provided
+by Dr. Nan Wei after the responsible hospital department's strict institutional
+review process. Data access and use were authorised through Henan Provincial
+People's Hospital. Before this letter is used for submission, the formal
+**[IRB approval / ethics-exemption identifier]**, **[approval date]**,
+approved consent-waiver wording and authorised-data-access procedure must be
+inserted consistently with the hospital record.
 
 Sincerely,
 

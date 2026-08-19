@@ -1,7 +1,7 @@
 {
   "manifest": "E:\\World_Agent_Enoscopy\\manifests\\sequences.csv",
-  "n_sequences": 1707,
-  "n_frames": 1067734,
+  "n_sequences": 1706,
+  "n_frames": 1067733,
   "missing_frames_dir": 0,
   "by_dataset": {
     "C3VD": {
@@ -127,15 +127,14 @@
       ]
     },
     "TrackVes": {
-      "sequences": 10,
-      "frames": 1,
+      "sequences": 9,
+      "frames": 0,
       "domain": "laparo",
       "splits": {
         "val": 2,
-        "train": 8
+        "train": 7
       },
       "modalities": [
-        "rgb",
         "video"
       ]
     },
@@ -256,8 +255,8 @@
       ]
     },
     "laparo": {
-      "sequences": 627,
-      "frames": 488029,
+      "sequences": 626,
+      "frames": 488028,
       "datasets": [
         "Cholec80-Boxes",
         "CholecSeg8k",
@@ -284,7 +283,7 @@
     }
   },
   "by_split": {
-    "train": 1328,
+    "train": 1327,
     "test": 191,
     "val": 188
   },

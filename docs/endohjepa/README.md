@@ -5,9 +5,14 @@
 It is isolated from `docs/paper/` (IBM / CBM / BMEO CT thermal ablation planning).
 Do not reuse figures, tables, contribution lists, or ethics wording from that track.
 
-Working title: *Endo-HJEPA: A Hierarchical Joint-Embedding World Model for Unified Endoscopic Video*
+Working title: *Endo-HJEPA: Hierarchical Latent Prediction for Cross-Orifice
+Endoscopic Video with Audited SE(3)-Conditioned Evaluation*
 
-- Methods: `methods.md` (English, MedIA/MICCAI) / `methods_zh.md` (提纲). Isolated from `docs/paper/`.
-- Data access / CAMMA / C3VD quota: `DATA_ACCESS.md`.
-- Protocol numbers (not a main table): `RESULTS_STATUS.md`.
-- Main checkpoint: `outputs/endohjepa_vjepa2/` (official V-JEPA 2 ViT-L). Scratch `outputs/endohjepa/` is debug-only.
+- Manuscript source: `endohjepa.tex`; build with the command on line 2.
+- Submission highlights: `highlights.txt`; each line is within the 85-character limit.
+- Methods: `methods.md` (English) / `methods_zh.md` (outline).
+- Verified aggregate metrics: `verified_metrics.json`. Qualitative figures are
+  regenerated from their stated checkpoint, cache and selection rule.
+- Access caveat: ION bronchoscopy is private. Do not submit ION-derived results
+  until the required institutional approval/exemption identifier is inserted in
+  the manuscript, or remove and recompute those analyses.

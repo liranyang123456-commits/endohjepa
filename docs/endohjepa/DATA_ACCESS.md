@@ -2,7 +2,8 @@
 
 ## Already ingested locally
 
-HyperKvasir, Kvasir-Capsule (labeled + unlabeled), Kvasir-Instrument, C3VD `cecum_t1_a`,
+HyperKvasir, Kvasir-Capsule (labeled + unlabeled), Kvasir-Instrument, the
+fixed ten-trajectory C3VD/C3VDv2 external-evaluation manifest,
 SCARED (datasets 1–3, 5–7), EndoVis 2017/2018, CholecSeg8k, Cholec80-Boxes (videos 41–45),
 STIR Challenge 2024, ION bronchoscopy (anonymized `case_XXX` only).
 
@@ -20,15 +21,24 @@ python -m endoworld.data.refresh_manifest --datasets Cholec80 --root datasets
 
 This repository does not download Cholec80 from unofficial mirrors.
 
-## C3VD remaining trajectories
+## C3VD external-evaluation manifest
 
 ```bash
 python scripts/09_download_public.py --set c3vd --skip-screening
 ```
 
-Google Drive quota may block extra zips; retry later. Pose files (`pose.txt`) pin L3 actions.
+Google Drive quota may block extra zips. Pose files (`pose.txt`) pin the
+continuous SE(3) actions.
 
-Retry 2026-08-14: all remaining *trajectory* zips (`cecum_t1_b` … `trans_t4_b`) still returned Drive “Too many users…”. Screening/mold zips (`cecum_mold`, `desc_mold`, `sigmoid_mold`, `trans_mold`) downloaded; they are geometry assets, not world-model sequences. Local `cecum_t1_a` has `pose.txt`, `{i}_color.png`, depth/normals/occlusion (276 RGB frames). Extra trajectories still blocked.
+The external result (`n=798`) uses the fixed manifest expressed in the
+implementation's OpenGL-to-OpenCV pose convention:
+`cecum_t1_a`, `c1_ascending_t4_v4`, `c1_cecum_t1_v4`,
+`c1_descending_t4_v4`, `c1_sigmoid1_t4_v4`, `c1_sigmoid2_t4_v4`,
+`c1_transverse1_t1_v4`, `c1_transverse1_t4_v4`, `c2_cecum_t1_v4`, and
+`c2_transverse1_t1_v4`. These are the only C3VD trajectories claimed as
+evaluated in the manuscript. Additional Drive-registered trajectories remain
+unavailable under the host download limits; screening/mold zips are geometry
+assets, not world-model sequences.
 
 ## ION
 

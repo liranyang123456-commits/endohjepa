@@ -1,41 +1,58 @@
 {
   "sequence": "datasets\\C3VD\\cecum_t1_a\\cecum_t1_a",
-  "n_pairs": 40,
+  "n_pairs": 12,
   "gap": 5,
   "depth_scale": 655.35,
+  "depth_unit": "millimetres",
+  "depth_convention": "camera Z-axis depth; backprojection = unit_ray * depth_z / unit_ray_z",
+  "target_depth_comparison": "absolute difference between target depth_z and transformed point Z",
+  "official_source": {
+    "url": "https://durrlab.github.io/C3VD/",
+    "description": "Depth along the camera frame's z-axis, clamped from 0-100 millimeters; values are linearly scaled and encoded as a 16-bit grayscale image."
+  },
+  "random_configuration": {
+    "seed": 0,
+    "generator": "numpy.random.Generator(PCG64)",
+    "point_sampling": "uniform without replacement over positive-depth pixels",
+    "points_per_pair_maximum": 1500,
+    "pair_selection": "deterministic evenly spaced starts via numpy.linspace",
+    "pair_start_indices": [
+      0,
+      24,
+      49,
+      73,
+      98,
+      122,
+      147,
+      171,
+      196,
+      220,
+      245,
+      270
+    ]
+  },
   "intrinsics": "Scaramuzza, Olympus CF-HQ190L (C3VD paper Table 3)",
   "candidates": {
-    "transpose, column-vector (current)": {
-      "median_px": 10.164213625348665,
-      "p90_px": 17.661509277837954,
-      "in_frame": 0.94635,
-      "median_depth_err": 8.9458256836786
+    "transpose-only": {
+      "median_depth_err": 0.2044152964054673,
+      "median_relative_depth_err": 0.005429611100597578,
+      "median_flow_px": 5.631451024407705,
+      "in_frame": 0.9958335110015303
     },
-    "transpose, column-vector, rotation only": {
-      "median_px": 0.2083325318050912,
-      "p90_px": 0.3271052589731006,
-      "in_frame": 0.9213333333333334,
-      "median_depth_err": 8.67249029754856
+    "loader transpose + GL->CV flip": {
+      "median_depth_err": 0.7580132737140399,
+      "median_relative_depth_err": 0.020076608676984308,
+      "median_flow_px": 4.59048240860548,
+      "in_frame": 0.999819134641507
     },
-    "raw, row-vector": {
-      "median_px": 12.40950108392633,
-      "p90_px": 23.94236305470011,
-      "in_frame": 0.9452166666666667,
-      "median_depth_err": 8.962146385933506
-    },
-    "transpose + GL->CV flip, column-vector": {
-      "median_px": 0.208463108116379,
-      "p90_px": 0.3287490513623239,
-      "in_frame": 0.9210833333333334,
-      "median_depth_err": 8.673602160831965
-    },
-    "inverse transpose, column-vector": {
-      "median_px": 9.887892175340758,
-      "p90_px": 16.45401459686979,
-      "in_frame": 0.89155,
-      "median_depth_err": 8.56445711582042
+    "loader rotation-only diagnostic": {
+      "median_depth_err": 0.5094329703412717,
+      "median_relative_depth_err": 0.01377792923825863,
+      "median_flow_px": 0.18912811814522915,
+      "in_frame": 0.998852440521588
     }
   },
-  "winner": "transpose, column-vector, rotation only",
-  "gate_passed": true
+  "implementation_candidate": "loader transpose + GL->CV flip",
+  "implementation_normalisation": "endoworld.world.c3vd_actions.normalise_pose_matrices",
+  "interpretation": "Depth-warp diagnostic only. It does not select a convention or independently validate translation without cross-frame correspondences."
 }

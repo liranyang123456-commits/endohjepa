@@ -43,5 +43,5 @@
   },
   "download_command_template": "curl.exe -L --ssl-no-revoke -o datasets/C3VD/<name>.zip \"https://drive.usercontent.google.com/download?id=<ID>&export=download&confirm=t\"",
   "depth_scale_note": "C3VD depth is 0-100 mm linearly scaled into uint16: depth_mm = raw * 100 / 65535.",
-  "pose_note": "pose.txt = camera-to-world, column-major after reshape (translation in last row); camera frame is OpenGL-style, apply transpose + diag(1,-1,-1,1) conjugation (validated by docs/endohjepa/c3vd_pose_gate.json)."
+  "pose_note": "pose.txt = camera-to-world, column-major after reshape (translation in last row). The implementation expresses twists in OpenCV coordinates using transpose + diag(1,-1,-1,1) conjugation. The released depth-warp diagnostic records this implementation convention but does not select or independently validate its translation without cross-frame correspondences."
 }

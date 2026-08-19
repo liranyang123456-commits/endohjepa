@@ -1,38 +1,59 @@
-DECLARATIONS
+DECLARATIONS — synchronized with endohjepa.tex
 
 Ethics approval and consent to participate
-Public datasets are used under their original licences. Private bronchoscopy
-cases (ION) are stored and processed only as anonymised case_XXX identifiers; no
-patient names appear in manifests, code, or this manuscript. An ethics approval
-number for the institutional bronchoscopy data will be added before publication.
-All planning evaluation is in-silico; no clinical-navigation claim is made.
+Public, de-identified datasets are used under their original licences. The ION
+component is a retrospective secondary analysis of de-identified clinical
+imaging, comprising CT volumes and intra-operative bronchoscopy videos. The
+responsible hospital department de-identified the clinical data through its
+strict institutional review process, and Dr. Nan Wei provided the resulting
+research data. Data access and use were reviewed and authorised through the
+institutional data-governance process of Henan Provincial People's Hospital,
+under [IRB approval / ethics-exemption identifier], approved on [approval /
+exemption date]. The institutional determination of individual-consent
+requirements was [insert approved waiver or consent wording]. No animal
+experiments, prospective enrolment, research-directed intervention or
+identifiable participant information were involved; the study follows the
+Declaration of Helsinki. Authorised researchers may access the private data
+only through [insert hospital-approved access contact and procedure]. The
+bracketed fields must be replaced with hospital-approved wording before
+submission; otherwise all ION-derived analyses must be removed and recomputed.
+All planning evaluation is in-silico.
 
 Consent for publication
-Not applicable (no identifiable individual data).
+Not applicable; no identifiable individual data are presented.
 
 Competing interests
 The authors declare no competing interests.
 
 Funding
-To be completed by the authors.
+This work was supported by the National Natural Science Foundation of China
+(Grant No. 6240074117); the Henan University of Technology Young Backbone
+Teachers Training Program (Grant No. 21421329); the Open Project Program of
+the State Key Laboratory of Virtual Reality Technology and Systems (Grant No.
+VRLAB2023C03); the Cultivation Project of Tuoxin Team in Henan University of
+Technology (Grant No. 2024TXTD18); and the High-level Talents Fund of Henan
+University of Technology (Grant Nos. 2022BS076 and 2022BS075).
 
-Author contributions
-Ranyang Li: methodology, software, experiments, writing—original draft.
-Nan Wei: clinical data, validation, domain expertise.
-Zhipeng Lin: methodology, software.
-Wufeng Liu: data curation, resources.
-Chao Fan: investigation, visualisation.
-Junjun Pan: conceptualisation, supervision, writing—review & editing, funding.
+CRediT authorship contribution statement
+Ranyang Li: Conceptualization, Methodology, Investigation, Writing — original
+draft, Writing — review & editing, Funding acquisition, Resources, Supervision.
+Nan Wei: Conceptualization, Methodology, Investigation, Funding acquisition.
+Zhipeng Lin: Writing — original draft.
+Wufeng Liu: Methodology.
+Chao Fan: Investigation.
+Xiaodong Guo: Investigation, Resources, Writing — review & editing,
+Supervision.
+All authors reviewed and approved the final manuscript.
 
 Availability of data and materials
-Public datasets are available from their respective sources; access conditions
-(CAMMA request form for Cholec80, Google Drive quota for C3VD) are documented in
-DATA_ACCESS.md. Private ION bronchoscopy data are not redistributable. The
-endoworld package and all evaluation protocols are released with this
-manuscript.
+Public datasets are available from their original sources subject to their
+licences and access restrictions. The implementation, metric ledger, result
+records and figure generators are released with the manuscript. Independent
+reproduction of ION-derived values requires authorised access to that private
+cohort.
 
 Declaration of generative AI
 The authors used an AI coding assistant for code implementation and drafting
-support; all experiments, numbers, and scientific claims were produced, run, and
+support; all experiments, numbers and scientific claims were produced, run and
 verified by the authors' pipeline, and the authors take full responsibility for
 the content.

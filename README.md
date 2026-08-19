@@ -42,8 +42,8 @@ Key entry points:
 | Physical cache (v2, mono + past-only) | `python -m endoworld.world.build_physical_actions --encoder vjepa2 --stereo-eye top --past-only` |
 | Continuous SE(3) dynamics | `python -m endoworld.world.train_continuous_actions --data outputs/physical_actions_v2/sequences.pt --negatives local --skip-test` |
 | Grouped CV (development protocol) | `python -m endoworld.world.train_grouped_cv --data outputs/physical_actions_v2/sequences.pt --negatives local` |
-| Offline navigation (normalised CEM) | `python -m endoworld.eval.physical_navigation --data outputs/physical_actions_v2/sequences.pt --checkpoint outputs/continuous_actions_v2/continuous_dynamics.pt --trials 200 --normalised-actions` |
-| C3VD pose-convention gate | `python -m endoworld.eval.c3vd_pose_gate` |
+| Offline planning proxy (single-shot oracle-goal latent retrieval) | `python -m endoworld.eval.physical_navigation --data outputs/physical_actions_v2/sequences.pt --checkpoint outputs/continuous_actions_v2/continuous_dynamics.pt --trials 200` |
+| C3VD depth-warp diagnostic | `python -m endoworld.eval.c3vd_pose_gate` |
 | CholecT50 dense MIL probe | `python -m endoworld.eval.cholect50_dense_probe` |
 | Paper figures | `python docs/endohjepa/make_figures.py` (reads only `verified_metrics.json`) |
 
@@ -58,11 +58,13 @@ paper.
   persistence, 0.974 GRU, 0.971 Mamba (Holm-corrected Wilcoxon p < 1e-80).
 - Continuous SE(3) action sensitivity (v2 corrected pipeline): **83.1%**
   real-action win on the frozen SCARED test case (grouped-CV macro 88.9%),
-  passing the 80% gate; external C3VD five-trajectory pooled 57.9% (above
+  passing the 80% gate; external C3VD ten-trajectory pooled 58.3% (above
   chance, below gate).
-- Offline continuous navigation (normalised-action CEM, 200 trials): **51.5%
-  reach**, 29.0% pose-error reduction vs persistence (model-based, not robot
-  execution).
+- Calibrated risk screen: **fails its gate** (AUC 0.523 vs 0.75 target) and is
+  reported as a negative result; the risk head is inactive in the proxy.
+- Offline planning proxy (single-shot oracle-goal latent retrieval, 200
+  trials): one-step reach 51.5% (descriptive only; no receding-horizon control
+  or robot execution is claimed).
 - CholecT50 official 5-fold CV: frozen V-JEPA 2 dense MIL probe 0.719 phase /
   0.586 instrument mAP.
 

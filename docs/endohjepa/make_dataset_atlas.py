@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import sys
 from pathlib import Path
 
 import cv2
@@ -10,6 +11,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dataset_names import display  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "manifests" / "sequences.csv"
@@ -134,7 +138,7 @@ def main():
         axis.imshow(image)
         axis.axis("off")
         domain = row["domain"]
-        axis.set_title(name, fontsize=10, fontweight="bold", pad=5)
+        axis.set_title(display(name), fontsize=10, fontweight="bold", pad=5)
         axis.text(
             0.02, 0.03, f"{domain} · {ROLES[name]}",
             transform=axis.transAxes, fontsize=7.5, color="white",

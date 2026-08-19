@@ -1,4 +1,4 @@
-"""C3VD pose-convention gate: reproject depth(t) into frame t+1.
+"""C3VD pose-convention depth-warp diagnostic.
 
 C3VD (Bobrow et al., MICCAI 2023) uses a Scaramuzza omnidirectional camera
 (Olympus CF-HQ190L calibration, paper Table 3):
@@ -7,9 +7,11 @@ C3VD (Bobrow et al., MICCAI 2023) uses a Scaramuzza omnidirectional camera
     a0=769.24, a2=-8.13e-4, a3=-6.26e-7, a4=-1.20e-9, stretch ~ identity.
 
 For every candidate pose convention we back-project depth_t to 3D, apply the
-relative pose, project into frame t+1 by solving poly(rho)/rho = Z/sqrt(X^2+Y^2)
-(bisection), and measure pixel reprojection + depth consistency. The correct
-convention must win by a wide margin on synthetic ground truth.
+source-to-target camera transform, project into frame t+1 by solving
+poly(rho)/rho = Z/sqrt(X^2+Y^2) (bisection), and measure target-depth
+consistency. It reports a diagnostic for the convention used by the action
+loader; it does not select a pose convention or validate translation without
+independent cross-frame correspondences.
 
     python -m endoworld.eval.c3vd_pose_gate --seq datasets/C3VD/cecum_t1_a/cecum_t1_a
 """
@@ -76,32 +78,36 @@ def _depth(path: Path, scale: float) -> np.ndarray:
     return np.asarray(Image.open(path)).astype(np.float64) / scale
 
 
-def _candidates(raw: np.ndarray) -> dict[str, tuple[np.ndarray, str]]:
-    """Each candidate is (relative_pose, application convention).
+def _candidates(raw: np.ndarray) -> dict[str, np.ndarray]:
+    """Source-to-target column transforms for diagnostic candidates.
 
-    'col': column-vector p' = R p + t (translation in [:3, 3]).
-    'row': row-vector p' = p R + t (translation in [3, :3]).
+    The action loader uses a row-major pose matrix transposed to column form,
+    followed by an OpenGL-to-OpenCV axis flip. For a camera-to-world pose
+    ``P``, a source-camera point reaches the target camera as
+    ``inv(P_target) @ P_source``. This is the transform required to warp a
+    source depth map into the target frame.
     """
     A, B = raw[0], raw[1]
     flip = np.diag([1.0, -1.0, -1.0, 1.0])
-    rel_col = np.linalg.inv(A.T) @ B.T          # column-major c2w interpretation
-    rel_row = np.linalg.inv(A) @ B              # row-vector c2w interpretation
-    rel_flip = np.linalg.inv((flip @ A.T @ flip).T) @ (flip @ B.T @ flip).T
+    transpose = np.stack([A.T, B.T])
+    loader = flip @ transpose @ flip
+
+    def source_to_target(poses: np.ndarray) -> np.ndarray:
+        return np.linalg.inv(poses[1]) @ poses[0]
+
+    loader_rotation_only = loader.copy()
+    loader_rotation_only[:, :3, 3] = 0.0
     return {
-        "transpose, column-vector (current)": (rel_col, "col"),
-        "transpose, column-vector, rotation only": (
-            np.block([[rel_col[:3, :3], np.zeros((3, 1))],
-                      [np.zeros((1, 3)), np.ones((1, 1))]]), "col"),
-        "raw, row-vector": (rel_row, "row"),
-        "transpose + GL->CV flip, column-vector": (rel_flip, "col"),
-        "inverse transpose, column-vector": (np.linalg.inv(rel_col), "col"),
+        "transpose-only": source_to_target(transpose),
+        "loader transpose + GL->CV flip": source_to_target(loader),
+        "loader rotation-only diagnostic": source_to_target(
+            loader_rotation_only),
     }
 
 
-def _apply(points: np.ndarray, rel: np.ndarray, convention: str) -> np.ndarray:
-    if convention == "col":
-        return points @ rel[:3, :3].T + rel[:3, 3]
-    return points @ rel[:3, :3] + rel[3, :3]
+def _apply(points: np.ndarray, rel: np.ndarray) -> np.ndarray:
+    """Apply a column-vector rigid transform to row-major point samples."""
+    return points @ rel[:3, :3].T + rel[:3, 3]
 
 
 def evaluate_pair(
@@ -117,24 +123,43 @@ def evaluate_pair(
     rays = cam2ray(u, v)
     points = rays * depth_t[valid[:, 0], valid[:, 1], None]
     out = {}
-    for name, (rel, convention) in _candidates(
-            np.stack([pose_t, pose_t1])).items():
-        moved = _apply(points, rel, convention)
+    for name, rel in _candidates(np.stack([pose_t, pose_t1])).items():
+        moved = _apply(points, rel)
         pu, pv, ok = ray2cam(moved)
         in_frame = ok & (pu >= 0) & (pu < W) & (pv >= 0) & (pv < H)
         if in_frame.sum() < 10:
-            out[name] = {"median_px": float("inf"), "in_frame": float(in_frame.mean()),
-                         "median_depth_err": float("inf")}
+            out[name] = {
+                "median_depth_err": float("inf"),
+                "median_relative_depth_err": float("inf"),
+                "median_flow_px": float("inf"),
+                "in_frame": float(in_frame.mean()),
+            }
             continue
         pi, pj = np.clip(pv[in_frame].round().astype(int), 0, H - 1), \
             np.clip(pu[in_frame].round().astype(int), 0, W - 1)
-        depth_err = np.abs(depth_t1[pi, pj] - moved[in_frame, 2])
-        px_err = np.hypot(pu[in_frame] - u[in_frame], pv[in_frame] - v[in_frame])
+        target_depth = depth_t1[pi, pj]
+        valid_target = target_depth > 0
+        if valid_target.sum() < 10:
+            out[name] = {
+                "median_depth_err": float("inf"),
+                "median_relative_depth_err": float("inf"),
+                "median_flow_px": float("inf"),
+                "in_frame": float(in_frame.mean()),
+            }
+            continue
+        depth_err = np.abs(
+            target_depth[valid_target] - moved[in_frame, 2][valid_target])
+        # This is the image displacement induced by the candidate, not a
+        # correspondence reprojection error; keep it descriptive only.
+        flow_px = np.hypot(
+            pu[in_frame][valid_target] - u[in_frame][valid_target],
+            pv[in_frame][valid_target] - v[in_frame][valid_target])
         out[name] = {
-            "median_px": float(np.median(px_err)),
-            "p90_px": float(np.quantile(px_err, 0.9)),
-            "in_frame": float(in_frame.mean()),
             "median_depth_err": float(np.median(depth_err)),
+            "median_relative_depth_err": float(np.median(
+                depth_err / np.maximum(target_depth[valid_target], 1e-6))),
+            "median_flow_px": float(np.median(flow_px)),
+            "in_frame": float(in_frame.mean()),
         }
     return out
 
@@ -142,12 +167,12 @@ def evaluate_pair(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seq", default="datasets/C3VD/cecum_t1_a/cecum_t1_a")
-    parser.add_argument("--pairs", type=int, default=40)
-    parser.add_argument("--gap", type=int, default=1,
+    parser.add_argument("--pairs", type=int, default=12)
+    parser.add_argument("--gap", type=int, default=5,
                         help="frame gap per pair; larger gaps amplify motion")
     parser.add_argument("--points", type=int, default=1500)
-    parser.add_argument("--depth-scale", type=float, default=1000.0,
-                        help="raw uint16 per millimetre (1000 = micrometres)")
+    parser.add_argument("--depth-scale", type=float, default=655.35,
+                        help="raw uint16 per millimetre (0--100 mm over uint16)")
     parser.add_argument("--out", default="docs/endohjepa/c3vd_pose_gate.json")
     args = parser.parse_args()
     seq = Path(args.seq)
@@ -166,12 +191,14 @@ def main():
     summary = {}
     for name, rows in per_candidate.items():
         summary[name] = {
-            "median_px": float(np.median([r["median_px"] for r in rows])),
-            "p90_px": float(np.median([r["p90_px"] for r in rows])),
+            "median_depth_err": float(np.median(
+                [r["median_depth_err"] for r in rows])),
+            "median_relative_depth_err": float(np.median(
+                [r["median_relative_depth_err"] for r in rows])),
+            "median_flow_px": float(np.median(
+                [r["median_flow_px"] for r in rows])),
             "in_frame": float(np.mean([r["in_frame"] for r in rows])),
-            "median_depth_err": float(np.median([r["median_depth_err"] for r in rows])),
         }
-    winner = min(summary, key=lambda k: summary[k]["median_px"])
     report = {
         "sequence": str(seq),
         "n_pairs": len(pair_ids),
@@ -179,8 +206,11 @@ def main():
         "depth_scale": args.depth_scale,
         "intrinsics": "Scaramuzza, Olympus CF-HQ190L (C3VD paper Table 3)",
         "candidates": summary,
-        "winner": winner,
-        "gate_passed": bool(summary[winner]["median_px"] < 5.0),
+        "implementation_candidate": "loader transpose + GL->CV flip",
+        "interpretation": (
+            "Depth-warp diagnostic only. It does not select a convention or "
+            "independently validate translation without cross-frame correspondences."
+        ),
     }
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,34 @@
+{
+  "figure": [
+    "figures/graphical_abstract.pdf",
+    "figures/graphical_abstract.png"
+  ],
+  "design": "standalone simplified landscape conceptual summary; not a copy of Figure 1",
+  "render_dpi": 500,
+  "pixel_size": [
+    6250,
+    2500
+  ],
+  "minimum_declared_font_pt": 8.5,
+  "thumbnail_assets": [
+    {
+      "file": "figures/_fig1_in_laparo.png",
+      "sha256": "10d4919e91ab25ad221bd654d57e46b453057b5dc5ac406463458015d95bad4d",
+      "label": "Laparoscopy"
+    },
+    {
+      "file": "figures/_fig1_in_gi.png",
+      "sha256": "210e9f19f4a59a2b7b61343d54193e2a5472631906028757f61edfb030d9de4b",
+      "label": "GI endoscopy"
+    },
+    {
+      "file": "figures/_fig1_in_bronch.png",
+      "sha256": "51b6846ab7903eb944a8a77884c4ad1e6b0047b52e53c7dc912d85a8629defb9",
+      "label": "Bronchoscopy"
+    }
+  ],
+  "png_embedded_dpi": [
+    499.99899999999997,
+    499.99899999999997
+  ]
+}
