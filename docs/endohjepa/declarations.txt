@@ -1,16 +1,21 @@
 DECLARATIONS — synchronized with endohjepa.tex
 
 Ethics approval and consent to participate
-Public datasets were used under their original licences. The ION component is
-a retrospective secondary analysis of de-identified clinical imaging,
-comprising CT volumes and intra-operative bronchoscopy videos. The responsible
+Public datasets were used under their original licences; the authors conducted
+no new animal experiments. The private clinical component is a retrospective
+secondary analysis of de-identified in-house laparoscopic and ION bronchoscopy
+videos. Associated CT volumes were available under the same governance
+process but were not used in the reported models or analyses. The responsible
 hospital department de-identified the clinical data through its institutional
 review process, and Dr. Nan Wei provided the resulting research data. Data
 access and use were reviewed and authorised through the institutional
-data-governance process of Henan Provincial People's Hospital. No animal
-experiments, prospective enrolment, research-directed intervention or
-identifiable participant information were involved, and the study complies
-with the Declaration of Helsinki.
+data-governance process of Henan Provincial People's Hospital. No prospective
+enrolment, research-directed intervention or identifiable participant
+information were involved, and the study complies with the Declaration of
+Helsinki.
+The formal ethics approval or exemption identifier, decision date and
+consent-waiver determination are not present in the available project records
+and must be supplied by the responsible institution before submission.
 
 Consent for publication
 Not applicable; no identifiable individual data are presented.
@@ -26,6 +31,8 @@ the State Key Laboratory of Virtual Reality Technology and Systems (Grant No.
 VRLAB2023C03); the Cultivation Project of Tuoxin Team in Henan University of
 Technology (Grant No. 2024TXTD18); and the High-level Talents Fund of Henan
 University of Technology (Grant Nos. 2022BS076 and 2022BS075).
+The funders had no role in study design, data analysis, interpretation,
+manuscript preparation or the decision to submit.
 
 CRediT authorship contribution statement
 Ranyang Li: Conceptualization, Methodology, Investigation, Writing — original
@@ -43,8 +50,8 @@ Public datasets are available from their original sources subject to their
 licences and access restrictions. The implementation, metric ledger, result
 records and figure generators are available at
 https://github.com/liranyang123456-commits/endohjepa. Independent
-reproduction of ION-derived values requires authorised access to that private
-cohort.
+reproduction of ION- and in-house-MIS-derived values requires authorised
+access to those private cohorts.
 
 Declaration of generative AI
 During manuscript preparation, the authors used Cursor AI for language editing

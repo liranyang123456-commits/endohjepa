@@ -47,9 +47,7 @@ class HJEPAConfig:
     residual: bool = (
         True  # predict delta from the last token (persistence + correction)
     )
-    l1_causal: bool = (
-        True  # autoregressive causal L1 (GPT-style); beats query-token & GRU
-    )
+    l1_causal: bool = True  # autoregressive decoder-style causal L1
     query_mask: str = "block_causal"  # block_causal | parallel (legacy encoder-bypass)
 
 
@@ -250,7 +248,7 @@ class SpatioTemporalPredictor(nn.Module):
 
 
 class CausalTemporalPredictor(nn.Module):
-    """Autoregressive causal Transformer over time (GPT-style) for latent forecast.
+    """Autoregressive decoder-style causal Transformer for latent forecasting.
 
     Unlike the query-token predictor (which predicts all future steps in parallel),
     this predicts the next token from the causal context and feeds it back, matching

@@ -1,39 +1,47 @@
 {
-  "figure": "figure11_rollout_strip.pdf",
-  "checkpoint": "outputs\\continuous_actions_v2\\continuous_dynamics.pt",
-  "checkpoint_sha256": "ce517073ac681af034ee00e2580c0d09bea71afab02352f6206214c88ffc0571",
-  "cache": "outputs\\physical_actions_v2\\sequences.pt",
+  "figure": "figures/figure11_rollout_strip.pdf",
+  "checkpoint": "outputs/continuous_actions_v2_seeded/continuous_dynamics.pt",
+  "checkpoint_sha256": "82dca6f39f8d281f3aa281fedd3538bb61b4d45dc1b461eb7e947028b6d28b87",
+  "cache": "outputs/physical_actions_v2/sequences.pt",
   "cache_sha256": "e83f81eb53cd1a135f25d717f9e71f547514e12e8982921d24a082fc6f365441",
-  "split": "SCARED test windows",
+  "split": "previously contacted SCARED audit windows",
+  "retrieval_candidates": "same-sequence latent offsets 0 through 23 relative to the current latent, truncated at sequence end; offset 0 is allowed",
   "selection": "25th/50th percentile rollout index error",
   "n_windows": 958,
-  "mean_index_error": 1.8643006263048016,
+  "mean_retrieved_offset_by_step": [
+    0.08663883089770355,
+    0.2818371607515658,
+    0.615866388308977,
+    0.9895615866388309
+  ],
+  "uncertainty_display": "none: overlapping windows are not treated as independent units",
+  "mean_index_error": 2.0670668058455113,
   "persistence_index_error": 2.5,
-  "win_fraction": 0.5876826722338204,
+  "win_fraction": 0.45407098121085593,
   "selected": [
     {
-      "sequence_id": "datasets/SCARED/dataset_7/keyframe_3",
-      "current_index": 22,
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_4",
+      "current_index": 92,
       "retrieved_indices": [
         0,
+        0,
         1,
-        2,
         2
       ],
       "persistence_index": 0,
-      "mean_index_error": 1.25
+      "mean_index_error": 1.75
     },
     {
-      "sequence_id": "datasets/SCARED/dataset_7/keyframe_2",
-      "current_index": 80,
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_4",
+      "current_index": 5,
       "retrieved_indices": [
         0,
         0,
         0,
-        6
+        0
       ],
       "persistence_index": 0,
-      "mean_index_error": 2.0
+      "mean_index_error": 2.5
     }
   ]
 }

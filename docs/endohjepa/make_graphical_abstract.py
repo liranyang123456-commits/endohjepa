@@ -218,7 +218,7 @@ def main() -> None:
         SOFT_TEAL,
         TEAL,
         "Forecast future\nrepresentations",
-        "validated L1 residual forecast;\nL2 implemented, not ablated",
+        "evaluated L1 residual forecast;\nL2 implemented, not ablated",
     )
     _arrow(ax, (1.15, 0.60), (1.28, 0.645), TEAL)
 
@@ -231,7 +231,7 @@ def main() -> None:
         SOFT_PURPLE,
         PURPLE,
         "Audited physical\nassociation",
-        "SE(3)-conditioned dynamics\nmatched-negative evaluation",
+        "SE(3)-conditioned dynamics\nnegative-action evaluation",
     )
     _arrow(ax, (1.15, 0.43), (1.28, 0.37), PURPLE)
 
@@ -244,7 +244,7 @@ def main() -> None:
         "#F7FAF8",
         TEAL,
         "Latent forecast\nevidence",
-        "mean steps 1--4: 0.978 vs 0.916\nretrieval visualisation, not generation",
+        "past-only: 0.9578 vs 0.9102\nseparate bidirectional cache:\n0.978 vs 0.916",
     )
     _arrow(ax, (1.82, 0.645), (1.93, 0.645), TEAL)
 
@@ -257,7 +257,7 @@ def main() -> None:
         "#F8F5FA",
         PURPLE,
         "Action association\nevidence",
-        "87.0% deranged batch\n91.3% fixed-bank pair",
+        "88.5% deranged batch\n92.2% fixed-bank pair",
     )
     _arrow(ax, (1.82, 0.37), (1.93, 0.37), PURPLE)
 
@@ -296,7 +296,7 @@ def main() -> None:
     ax.text(
         0.04,
         0.045,
-        "Risk filtering and closed-loop navigation are not validated.",
+        "Risk filtering and closed-loop navigation are not evaluated.",
         fontsize=9.5,
         color=MUTED,
         va="center",

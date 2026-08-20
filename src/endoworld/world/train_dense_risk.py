@@ -3,7 +3,8 @@
 The pooled-latent risk head stays at chance (AUC 0.54) because near-wall
 geometry is spatially local. This script trains a per-token risk head on dense
 past-only tokens with per-patch depth supervision from SCARED scene_points,
-then evaluates frame-level AUC/ECE on the frozen test case (dataset_7).
+then evaluates frame-level AUC/ECE on the previously contacted audit case
+(dataset_7).
 
     python -m endoworld.world.train_dense_risk \
         --dense outputs/physical_actions_v2/dense_scared.pt

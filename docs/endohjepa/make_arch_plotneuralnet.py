@@ -5,7 +5,7 @@ wide row, which keeps the aspect ratio close to square:
 
     row 1  shared encoder      clip -> tubelet embed -> ViT-L x24 -> pool -> tokens
     row 2  forecast heads      independent L1 causal and L2 coarse heads
-    row 3  grounded branch     twist -> ensemble -> mu/Sigma -> CEM diagnostic
+    row 3  grounded branch     twist -> deterministic dynamics -> latent -> CEM diagnostic
 
 Both branch rows are fed from the dense-token block of row 1 by axis-aligned
 connectors that travel in the clear band between rows and enter the next row
@@ -219,13 +219,13 @@ def main():
         to_ConvConvRelu(
             "dyn",
             4,
-            (512, ""),
+            (256, ""),
             offset="(2.1,0,0)",
             to="(twist-east)",
             height=16,
             depth=16,
             width=(2.6, 2.6),
-            caption="Block-causal ensemble",
+            caption="Block-causal dynamics",
         ),
         to_connection("twist", "dyn"),
         to_Pool(
@@ -236,7 +236,7 @@ def main():
             depth=11,
             width=2.4,
             opacity=0.8,
-            caption=r"{$\mu,\Sigma$}",
+            caption=r"{$\hat{\bar z}_{1:H}$}",
         ),
         to_connection("dyn", "dist"),
         to_ConvConvRelu(

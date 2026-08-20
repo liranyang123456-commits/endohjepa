@@ -105,7 +105,7 @@ def continuous_rollout_cost(
     calibrator=None,
     energy_fn=None,
 ) -> dict[str, torch.Tensor]:
-    """Evaluate continuous candidates and apply a non-negotiable safety gate."""
+    """Evaluate continuous candidates and apply configured rejection thresholds."""
     result = _continuous_distribution(dynamics, history, actions)
     prediction = result["mean"]
     aleatoric = result["aleatoric_variance"]
@@ -162,7 +162,7 @@ def continuous_cem(
     calibrator=None,
     energy_fn=None,
 ) -> dict[str, torch.Tensor]:
-    """Cross-entropy continuous MPC with hard reject/zero-motion fallback."""
+    """Cross-entropy continuous MPC with a hard reject/zero-coordinate fallback."""
     cfg = cfg or ContinuousMPCConfig()
     batch = history.size(0)
     dynamics_cfg = _continuous_config(dynamics)
@@ -232,7 +232,7 @@ def continuous_mppi(
     calibrator=None,
     energy_fn=None,
 ) -> dict[str, torch.Tensor]:
-    """MPPI update with the same hard safety gate as CEM."""
+    """MPPI update with the same configured rejection thresholds as CEM."""
     cfg = cfg or ContinuousMPCConfig()
     batch = history.size(0)
     dynamics_cfg = _continuous_config(dynamics)

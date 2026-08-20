@@ -1,44 +1,45 @@
 {
   "figure": "figure8_qualitative.pdf",
-  "checkpoint": "outputs\\continuous_actions_v2\\continuous_dynamics.pt",
-  "checkpoint_sha256": "ce517073ac681af034ee00e2580c0d09bea71afab02352f6206214c88ffc0571",
+  "checkpoint": "outputs\\continuous_actions_v2_seeded\\continuous_dynamics.pt",
+  "checkpoint_sha256": "82dca6f39f8d281f3aa281fedd3538bb61b4d45dc1b461eb7e947028b6d28b87",
   "cache": "outputs\\physical_actions_v2\\sequences.pt",
   "cache_sha256": "e83f81eb53cd1a135f25d717f9e71f547514e12e8982921d24a082fc6f365441",
-  "split": "SCARED test windows",
-  "negative_protocol": "deterministic batch shuffle, seed 7",
+  "split": "previously contacted SCARED audit windows",
+  "negative_protocol": "deterministic no-fixed-point batch derangement, batch size 32, seed 0",
+  "retrieval_candidates": "same-sequence latent offsets 0 through 16 relative to the current latent, truncated at sequence end; offset 0 is allowed",
   "selection": "25th/50th/75th percentile latent-MSE gain among eligible positive cases",
   "n_candidates": 958,
-  "n_eligible": 322,
+  "n_eligible": 248,
   "selected": [
     {
-      "dataset_index": 431,
+      "dataset_index": 806,
       "sequence_id": "datasets/SCARED/dataset_7/keyframe_4",
-      "real_latent_mse": 0.09182603657245636,
-      "shuffled_latent_mse": 0.1642170548439026,
-      "real_retrieved_step": 4,
-      "shuffled_retrieved_step": 5,
-      "real_mae": 0.0,
-      "shuffled_mae": 23.8623104095459
+      "real_latent_mse": 0.20613282918930054,
+      "deranged_latent_mse": 0.2555122375488281,
+      "real_retrieved_step": 2,
+      "deranged_retrieved_step": 1,
+      "real_mae": 15.783828735351562,
+      "deranged_mae": 18.392492294311523
     },
     {
-      "dataset_index": 59,
-      "sequence_id": "datasets/SCARED/dataset_7/keyframe_1",
-      "real_latent_mse": 0.11699488013982773,
-      "shuffled_latent_mse": 0.2573307454586029,
+      "dataset_index": 538,
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_4",
+      "real_latent_mse": 0.18674133718013763,
+      "deranged_latent_mse": 0.27708297967910767,
       "real_retrieved_step": 3,
-      "shuffled_retrieved_step": 2,
-      "real_mae": 17.445049285888672,
-      "shuffled_mae": 23.6810359954834
+      "deranged_retrieved_step": 1,
+      "real_mae": 19.72916030883789,
+      "deranged_mae": 37.869544982910156
     },
     {
-      "dataset_index": 725,
-      "sequence_id": "datasets/SCARED/dataset_7/keyframe_4",
-      "real_latent_mse": 0.06612709909677505,
-      "shuffled_latent_mse": 0.29291608929634094,
-      "real_retrieved_step": 4,
-      "shuffled_retrieved_step": 8,
-      "real_mae": 0.0,
-      "shuffled_mae": 34.051937103271484
+      "dataset_index": 304,
+      "sequence_id": "datasets/SCARED/dataset_7/keyframe_3",
+      "real_latent_mse": 0.1622362583875656,
+      "deranged_latent_mse": 0.3217456638813019,
+      "real_retrieved_step": 2,
+      "deranged_retrieved_step": 0,
+      "real_mae": 28.30503273010254,
+      "deranged_mae": 30.171722412109375
     }
   ]
 }

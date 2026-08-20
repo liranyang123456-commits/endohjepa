@@ -196,7 +196,12 @@ def build_parser():
     parser.add_argument("--risk-epochs", type=int, default=20)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=3e-4)
-    parser.add_argument("--near-wall-threshold", type=float, default=5.0)
+    parser.add_argument(
+        "--near-wall-threshold",
+        type=float,
+        default=34.4,
+        help="threshold on the per-frame fifth-percentile SCARED depth in millimetres",
+    )
     parser.add_argument("--alpha", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--cpu", action="store_true")

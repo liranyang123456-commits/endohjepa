@@ -1,0 +1,13 @@
+{
+  "paper": "Endo-HJEPA",
+  "not_ablation_planning": true,
+  "task": "latent-action -> semantic verb grounding (CholecT50)",
+  "n_transitions": 295,
+  "n_videos": 16,
+  "n_actions_active": 16,
+  "nmi_action_verb": 0.04444982476367525,
+  "nmi_random": 0.05550190856531024,
+  "verb_probe_acc": 0.3055555555555556,
+  "verb_chance": 0.38996138996138996,
+  "note": "semantic action grounding (distinct from physical pose grounding)"
+}

@@ -68,7 +68,7 @@ def census(manifest_csv: str | Path) -> dict:
         return out
 
     report = {
-        "manifest": str(path.resolve()),
+        "manifest": path.as_posix(),
         "n_sequences": len(rows),
         "n_frames": sum(max(0, int(r.get("num_frames") or 0)) for r in rows),
         "missing_frames_dir": missing_dirs,

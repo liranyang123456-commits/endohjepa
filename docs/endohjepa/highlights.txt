@@ -1,5 +1,5 @@
-- Domain-conditioned latent prediction spans laparoscopic, GI and bronchoscopic video.
-- Latent forecasting reaches 0.978 mean cosine over steps 1--4.
+- Domain-conditioned latent prediction spans laparoscopy, GI and bronchoscopy.
 - A past-only audit remains above persistence (0.9578 versus 0.9102).
-- Deranged-batch SE(3) association reaches 87.0% on SCARED (n=958).
-- Corrected near-wall risk fails calibration (AUC 0.523).
+- On a separate bidirectional cache, forecasting reaches 0.978 mean cosine.
+- Deranged-action association reaches 88.5% on a contacted SCARED audit (n=958).
+- Corrected near-wall risk fails its evaluation gate (AUC 0.523).

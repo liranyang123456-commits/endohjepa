@@ -1,0 +1,10 @@
+{
+  "paper": "Endo-HJEPA",
+  "not_ablation_planning": true,
+  "task": "next-frame pixel diffusion (world-model pixel-generation baseline)",
+  "n_eval": 64,
+  "diffusion_T": 200,
+  "psnr_diffusion": 4.876488517969847,
+  "psnr_copy_last": 30.37190681695938,
+  "interp": "diffusion pixel forecast PSNR << copy-last PSNR: pixel generation is the wrong objective for endoscopic dynamics (blur + unpredictable appearance); contrast with representation-space JEPA forecast (Table 2)."
+}

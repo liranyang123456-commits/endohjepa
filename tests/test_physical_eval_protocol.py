@@ -5,7 +5,12 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from endoworld.world.physical_actions import PhysicalActionDataset, PhysicalSequence
+from endoworld.world.physical_actions import (
+    PhysicalActionDataset,
+    PhysicalSequence,
+    se3_exp,
+    se3_log,
+)
 
 
 def test_c3vd_z_depth_backprojection():
@@ -50,6 +55,17 @@ def test_navigation_strict_future_and_pose_error():
         actions=torch.zeros(1, 6),
     )
     assert _public_sequence_id(sequence) == "SCARED/dataset_7/keyframe_3"
+
+
+def test_se3_log_is_finite_and_roundtrips_near_pi():
+    axis = np.array([1.0, -2.0, 3.0])
+    axis /= np.linalg.norm(axis)
+    for angle in (np.pi, np.pi - 1e-7):
+        twist = np.concatenate([np.array([0.2, -0.1, 0.3]), angle * axis])
+        transform = se3_exp(twist)
+        recovered = se3_log(transform)
+        assert np.isfinite(recovered).all()
+        assert np.allclose(se3_exp(recovered), transform, atol=1e-7)
 
 
 def test_derangement_has_no_fixed_points():

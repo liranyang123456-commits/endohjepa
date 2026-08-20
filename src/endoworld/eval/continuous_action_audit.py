@@ -59,7 +59,7 @@ def audit(args: argparse.Namespace) -> dict:
         "history": args.history,
         "horizon": args.horizon,
         "n_windows": len(dataset),
-        "n_test_sequences": len(
+        "n_audit_sequences": len(
             {
                 dataset.sequences[sequence_index].sequence_id
                 for sequence_index, _ in dataset.windows
@@ -68,15 +68,17 @@ def audit(args: argparse.Namespace) -> dict:
         "batch_shuffled": {
             **batch_shuffled,
             "negative_protocol": (
-                "one deterministic random permutation within each evaluation "
-                "batch; negatives can come from another sequence"
+                "one deterministic deranged permutation within each evaluation "
+                "batch (no fixed points); negatives can come from another sequence"
             ),
         },
         "fixed_same_sequence_bank": {
             **fixed_bank,
             "negative_protocol": (
-                f"{args.negatives} deterministic same-sequence actions sampled "
-                "within the evaluator's local hard-negative radius"
+                f"up to {args.negatives} deterministic distinct same-sequence "
+                "actions sampled without replacement within the evaluator's "
+                "local hard-negative radius; all eligible actions are used "
+                "when fewer are available"
             ),
         },
         "dependence_note": (

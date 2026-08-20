@@ -3,16 +3,17 @@ GRAPHICAL ABSTRACT (design brief + caption)
 Caption:
 "Endo-HJEPA studies latent prediction across laparoscopy, GI
 endoscopy and bronchoscopy without pixel decoding. A frozen V-JEPA 2 encoder
-produces spatiotemporal tokens; a residual L1 forecaster is the validated
-forecast model, while a separately audited SE(3)-conditioned branch evaluates
+produces spatiotemporal tokens; a residual L1 forecaster is the evaluated
+forecast model, while a separately audited deterministic SE(3)-conditioned branch evaluates
 observed camera-motion associations and an oracle-goal retrieval proxy.
-The SCARED audit gives 87.0% deranged-batch and 91.3% fixed-bank pair wins.
-Near-wall risk (AUC 0.523) and robot control are not validated."
+The SCARED audit gives 88.5% deranged-batch and 92.2% fixed-bank pair wins.
+Near-wall risk does not meet its evaluation gate (AUC 0.523), and robot control
+is not evaluated."
 
 Layout (single column, left-to-right pipeline):
 [3 scope icons: laparoscope / GI scope / bronchoscope]
    -> [frozen V-JEPA 2 ViT-L encoder] -> dense tokens
-   -> [validated L1 residual; L2 implemented but not ablated]
+   -> [evaluated L1 residual; L2 implemented but not ablated]
    -> [audited SE(3)-conditioned branch]
    -> outputs: latent forecast | audited action association | retrieval diagnostic
 

@@ -548,7 +548,7 @@ def hierarchical_predictor(ax, cy):
         top - 0.62,
         1.12,
         "L1: pooled causal residual",
-        "GPT-style causal transformer\nhorizon 4 tubelets\nfrozen-teacher targets",
+        "decoder-style causal transformer\nhorizon 4; domain embedding $e_d$\nfrozen-teacher targets",
         C_FC,
     )
     subbox(
@@ -616,11 +616,11 @@ def forecasting_capability(ax, cy):
     ax.text(
         cx,
         bottom + 0.16,
-        f"cosine ${FORECAST['causal_l1']['cos']:.3f}$ vs "
+        f"bidirectional: ${FORECAST['causal_l1']['cos']:.3f}$ vs "
         f"${PERSISTENCE_COS:.3f}$ persistence\n"
-        "shared 750-clip validation protocol\n"
-        "monotone gain, plateau at $13{,}552$ clips\n"
-        "video-level split, held-out validation",
+        "750-clip validation through 6k\n"
+        "past-only: 0.958 vs 0.910 persistence\n"
+        "13,552 uses a different val cache",
         ha="center",
         va="bottom",
         fontsize=7.2,
@@ -701,7 +701,7 @@ def shared_encoder(ax):
     ax.text(
         cx,
         ENC_BOT + 0.10,
-        "$+$ domain embedding $e_d$\none encoder for all three domains",
+        "shared frozen weights\none encoder for all three domains",
         ha="center",
         va="bottom",
         fontsize=6.9,
@@ -733,7 +733,7 @@ def main():
         ROW_PHYS,
         "Tubelet-aligned SE(3) actions",
         "$u_t=\\log(T_t^{-1}T_{t+1})$, camera frame\n"
-        "one twist per 2-frame tubelet\ndepth gives near-wall risk labels",
+        "one twist per 4 native frames\ndepth gives near-wall risk labels",
         SOFT_PHYS,
         C_PHYS,
         glyph_se3,
@@ -744,7 +744,7 @@ def main():
         MOD_R,
         ROW_PHYS,
         "SE(3) latent dynamics",
-        "block-causal action path\nprobabilistic ensemble, $\\mu,\\Sigma$\n"
+        "deterministic block-causal path\npredicted pooled latent, $\\hat{z}$\n"
         "risk head unused (AUC 0.523 fail)",
         SOFT_PHYS,
         C_PHYS,
@@ -817,7 +817,7 @@ def main():
     ax.text(
         mod_cx - 0.10,
         BRANCH_Y + 0.09,
-        "same frozen tokens",
+        "same encoder weights\nprotocol-specific tokens",
         ha="right",
         va="bottom",
         fontsize=6.8,
@@ -827,10 +827,10 @@ def main():
 
     # ---- audit gates --------------------------------------------------------
     gates = [
-        "Input-sensitivity tests\nhistory / action / domain",
+        "Input-sensitivity tests\nhistory/action; domain where present",
         "C3VD depth-warp diagnostic\nconvention not validated",
         "Action negatives\nbatch shuffle / fixed bank",
-        "Video/patient-grouped splits\nlogged audit-set contacts",
+        "Sequence-grouped splits\nSTIR patient grouping; logged audit contacts",
     ]
     width = (RES_R - IN_L - 3 * 0.28) / 4
     for index, gate in enumerate(gates):
@@ -875,7 +875,7 @@ def main():
     ax.text(
         IN_L,
         9.33,
-        "validated across three domains",
+        "evaluated across three domains",
         ha="left",
         va="bottom",
         fontsize=7.6,
@@ -905,7 +905,7 @@ def main():
     ax.text(
         IN_L,
         0.80,
-        "Correctness audits applied to both lanes",
+        "Correctness audits across the study",
         ha="left",
         va="bottom",
         fontsize=8.4,

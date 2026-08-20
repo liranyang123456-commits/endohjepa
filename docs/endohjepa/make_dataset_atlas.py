@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import csv
+import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -19,7 +21,9 @@ from dataset_names import display  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "manifests" / "sequences.csv"
+CENSUS = ROOT / "manifests" / "domain_census.json"
 OUT = Path(__file__).resolve().parent / "figures"
+PROVENANCE = Path(__file__).resolve().parent / "dataset_atlas_provenance.json"
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 VIDEO_SUFFIXES = {".mp4", ".avi", ".mov", ".mkv"}
 REJECT = (
@@ -48,8 +52,8 @@ ROLES = {
     "Kvasir-Capsule": "forecast",
     "Kvasir-Instrument": "instrument",
     "MIS_own": "forecast",
-    "SCARED": "pose + depth",
-    "STIR": "deformation",
+    "SCARED": "forecast + pose/depth",
+    "STIR": "forecast + deformation",
     "Stereo_Lap": "RGB-D forecast",
     "SurgT": "tracking video",
     "TrackVes": "tracking video",
@@ -60,15 +64,24 @@ ROLES = {
 DOMAIN_COLORS = {"gi": "#4D8B8B", "laparo": "#557FA8", "bronch": "#9A7A55"}
 
 
-def _video_frame(path: Path) -> np.ndarray | None:
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _video_frame(path: Path) -> tuple[np.ndarray | None, int | None]:
     capture = cv2.VideoCapture(str(path))
     count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-    capture.set(cv2.CAP_PROP_POS_FRAMES, max(count // 2, 0))
+    frame_index = max(count // 2, 0)
+    capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
     ok, frame = capture.read()
     capture.release()
     if not ok:
-        return None
-    return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        return None, None
+    return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), frame_index
 
 
 def _image(path: Path) -> np.ndarray | None:
@@ -110,7 +123,9 @@ def _candidates(row: dict[str, str]) -> list[Path]:
     return list(dict.fromkeys(paths))
 
 
-def _representative(rows: list[dict[str, str]]) -> tuple[np.ndarray, dict[str, str]]:
+def _representative(
+    rows: list[dict[str, str]],
+) -> tuple[np.ndarray, dict[str, str], Path, float, int | None]:
     ordered = sorted(
         rows,
         key=lambda row: (
@@ -123,11 +138,10 @@ def _representative(rows: list[dict[str, str]]) -> tuple[np.ndarray, dict[str, s
         for path in _candidates(row):
             if not path.exists():
                 continue
-            image = (
-                _video_frame(path)
-                if path.suffix.lower() in VIDEO_SUFFIXES
-                else _image(path)
-            )
+            if path.suffix.lower() in VIDEO_SUFFIXES:
+                image, decoded_frame = _video_frame(path)
+            else:
+                image, decoded_frame = _image(path), None
             if image is not None and image.size:
                 small = cv2.resize(image, (96, 96)).astype(np.float32)
                 gray = small.mean(axis=-1)
@@ -138,13 +152,14 @@ def _representative(rows: list[dict[str, str]]) -> tuple[np.ndarray, dict[str, s
                     + 15.0 * float((gray > 12).mean())
                 )
                 if best is None or score > best[0]:
-                    best = (score, image, row)
+                    best = (score, image, row, path, decoded_frame)
     if best is not None:
-        return best[1], best[2]
+        return best[1], best[2], best[3], best[0], best[4]
     raise RuntimeError(f"no readable visual asset for {rows[0]['dataset']}")
 
 
 def main():
+    census = json.loads(CENSUS.read_text(encoding="utf-8"))
     by_dataset: dict[str, list[dict[str, str]]] = {}
     with MANIFEST.open(newline="", encoding="utf-8-sig") as handle:
         for row in csv.DictReader(handle):
@@ -156,8 +171,19 @@ def main():
         raise RuntimeError(f"atlas role map mismatch: {set(names) ^ set(ROLES)}")
 
     fig, axes = plt.subplots(4, 5, figsize=(14.2, 10.0))
+    selections = {}
     for axis, name in zip(axes.flat, names):
-        image, row = _representative(by_dataset[name])
+        image, row, path, score, decoded_frame = _representative(by_dataset[name])
+        selections[name] = {
+            "path": str(path),
+            "source_sha256": _sha256(path),
+            "split": row["split"],
+            "asset_type": (
+                "video" if path.suffix.lower() in VIDEO_SUFFIXES else "image"
+            ),
+            "decoded_frame_index": decoded_frame,
+            "visibility_score": score,
+        }
         axis.imshow(image)
         axis.axis("off")
         domain = row["domain"]
@@ -187,7 +213,8 @@ def main():
     summary_axis.text(
         0.5,
         0.63,
-        "19 datasets\n1,707 sequences\n1.07M decoded frames",
+        f"{len(names)} datasets\n{census['n_sequences']:,} manifest units\n"
+        f"{census['n_frames'] / 1e6:.2f}M decoded frames",
         ha="center",
         va="center",
         fontsize=11,
@@ -228,6 +255,27 @@ def main():
         dpi=220,
         bbox_inches="tight",
         facecolor="white",
+    )
+    PROVENANCE.write_text(
+        json.dumps(
+            {
+                "figure": "figures/figure9_dataset_atlas.pdf",
+                "manifest": str(MANIFEST),
+                "manifest_sha256": hashlib.sha256(MANIFEST.read_bytes()).hexdigest(),
+                "census": str(CENSUS),
+                "n_datasets": len(names),
+                "n_manifest_units": census["n_sequences"],
+                "n_frames": census["n_frames"],
+                "selection_rule": (
+                    "image assets: highest deterministic tissue-visibility score "
+                    "among five fixed positions in up to four split-prioritised "
+                    "manifest units; video assets: decoded midpoint frame"
+                ),
+                "selections": selections,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
     )
     print(f"[atlas] wrote {len(names)} datasets")
 

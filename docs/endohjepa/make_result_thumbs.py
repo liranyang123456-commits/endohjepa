@@ -25,6 +25,7 @@ Selected indices and per-pair statistics are written to
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -46,6 +47,23 @@ FORECAST_ROWS = [
     ("gi", "Kvasir-Capsule"),
     ("bronch", "ION_bronch"),
 ]
+
+
+def _sha256(path: Path | str) -> str:
+    path = Path(path)
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _public_path(path: Path | str) -> str:
+    path = Path(path)
+    try:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def _read(path: str) -> np.ndarray:
@@ -134,20 +152,22 @@ def forecast_thumbs() -> list[dict]:
 
     records = []
     for tag, name in FORECAST_ROWS:
-        pool = torch.tensor(
+        dataset_pool = torch.tensor(
             [i for i, clip in enumerate(clips) if clip.dataset == name],
             dtype=torch.long,
         )
-        better = pool[model_error[pool] < persistence_error[pool]]
-        pool = better if len(better) else pool
+        better = dataset_pool[
+            model_error[dataset_pool] < persistence_error[dataset_pool]
+        ]
         # Prefer a full endoscopic view over device-console composites.
+        eligible = better.tolist() if len(better) else dataset_pool.tolist()
         ranked = sorted(
-            pool.tolist(),
+            eligible,
             key=lambda i: tissue_score(_read(clips[i].frame_paths()[2 * history - 1])),
             reverse=True,
         )
         chosen = ranked[0]
-        others = pool[pool != chosen]
+        others = dataset_pool[dataset_pool != chosen]
         if len(others):
             nearest = int(
                 torch.cdist(prediction[chosen, -1][None], future[others, -1]).argmin()
@@ -165,15 +185,20 @@ def forecast_thumbs() -> list[dict]:
             {
                 "row": tag,
                 "dataset": name,
-                "n_clips": int(len(pool)),
+                "n_dataset_clips": int(len(dataset_pool)),
+                "n_forecast_beats_persistence": int(len(better)),
                 "selected_cache_index": int(chosen),
                 "retrieved_cache_index": int(retrieved),
+                "observed_source": _public_path(observed),
+                "observed_source_sha256": _sha256(observed),
+                "retrieved_source": _public_path(target),
+                "retrieved_source_sha256": _sha256(target),
                 "cos_model": float(model_cos[chosen]),
                 "mse_model": float(model_error[chosen]),
                 "mse_persistence": float(persistence_error[chosen]),
                 "retrieval_scope": scope,
                 "selection": "highest tissue-visibility score among clips where "
-                "the forecast beats persistence",
+                "the forecast beats persistence (or all dataset clips if none)",
             }
         )
     return records
@@ -187,6 +212,8 @@ def physical_thumbs() -> dict:
         ContinuousDynamicsConfig,
     )
     from endoworld.world.physical_actions import PhysicalActionDataset, load_sequences
+    from endoworld.world.scared_actions import find_scared_rgb
+    from endoworld.world.train_continuous_actions import _derangement
 
     sys.path.insert(0, str(HERE))
     from make_qualitative_results import _nearest_local, _read_frame
@@ -196,15 +223,15 @@ def physical_thumbs() -> dict:
     )
     dataset = PhysicalActionDataset(sequences, history=4, horizon=4, split="test")
     checkpoint = torch.load(
-        ROOT / "outputs" / "continuous_actions_v2" / "continuous_dynamics.pt",
+        ROOT / "outputs" / "continuous_actions_v2_seeded" / "continuous_dynamics.pt",
         map_location="cpu",
         weights_only=False,
     )
     model = ContinuousActionDynamics(ContinuousDynamicsConfig(**checkpoint["config"]))
-    model.load_state_dict(checkpoint["model"], strict=False)
+    model.load_state_dict(checkpoint["model"])
     model.eval()
 
-    generator = torch.Generator().manual_seed(7)
+    generator = torch.Generator().manual_seed(0)
     scared = [
         i
         for i, (sequence_index, _) in enumerate(dataset.windows)
@@ -212,13 +239,13 @@ def physical_thumbs() -> dict:
     ]
     candidates = []
     with torch.no_grad():
-        for offset in range(0, len(scared), 64):
-            indices = scared[offset : offset + 64]
+        for offset in range(0, len(scared), 32):
+            indices = scared[offset : offset + 32]
             history = torch.stack([dataset[i]["history"] for i in indices])
             actions = torch.stack([dataset[i]["actions"] for i in indices])
             future = torch.stack([dataset[i]["future"] for i in indices])
             real = model(history, actions)
-            permutation = torch.randperm(len(indices), generator=generator)
+            permutation = _derangement(len(indices), generator)
             shuffled = model(history, actions[permutation])
             real_error = (real - future).square().mean(dim=(1, 2))
             shuffled_error = (shuffled - future).square().mean(dim=(1, 2))
@@ -258,6 +285,10 @@ def physical_thumbs() -> dict:
     sequence_index, start = dataset.windows[chosen["index"]]
     sequence = dataset.sequences[sequence_index]
     current = start + dataset.history - 1
+    keyframe = Path(sequence.sequence_id.split("scared:", 1)[1])
+    video, _ = find_scared_rgb(keyframe)
+    if video is None:
+        raise FileNotFoundError(f"no rgb.mp4 for {keyframe}")
     _save(_read_frame(sequence.sequence_id, current), "_fig1_in_scared.png")
     _save(_read_frame(sequence.sequence_id, chosen["real_nearest"]), "_fig1_se3.png")
     return {
@@ -266,9 +297,15 @@ def physical_thumbs() -> dict:
         "sequence_id": sequence.sequence_id,
         "observed_latent_index": int(current),
         "retrieved_latent_index": int(chosen["real_nearest"]),
+        "observed_source": _public_path(video),
+        "observed_source_frame": 4 * int(current) + 30,
+        "observed_source_sha256": _sha256(video),
+        "retrieved_source": _public_path(video),
+        "retrieved_source_frame": 4 * int(chosen["real_nearest"]) + 30,
+        "retrieved_source_sha256": _sha256(video),
         "real_mse": chosen["real_error"],
-        "shuffled_mse": chosen["shuffled_error"],
-        "selection": "median real-vs-shuffled gain among eligible SCARED windows",
+        "deranged_mse": chosen["shuffled_error"],
+        "selection": ("median real-vs-deranged gain among eligible SCARED windows"),
     }
 
 
@@ -278,7 +315,68 @@ def main() -> None:
     (HERE / "figure1_thumb_selection.json").write_text(
         json.dumps({"thumbnails": records}, indent=2), encoding="utf-8"
     )
+    physical_cache = ROOT / "outputs" / "physical_actions_v2" / "sequences.pt"
+    physical_checkpoint = (
+        ROOT / "outputs" / "continuous_actions_v2_seeded" / "continuous_dynamics.pt"
+    )
+    risk_checkpoint = (
+        ROOT / "outputs" / "probabilistic_risk_v2_corrected" / "probabilistic_risk.pt"
+    )
+    thumbnail_names = [
+        "_fig1_in_laparo.png",
+        "_fig1_out_laparo.png",
+        "_fig1_in_gi.png",
+        "_fig1_out_gi.png",
+        "_fig1_in_bronch.png",
+        "_fig1_out_bronch.png",
+        "_fig1_in_scared.png",
+        "_fig1_se3.png",
+    ]
+    provenance = {
+        "figure": [
+            "figures/figure1_pipeline.pdf",
+            "figures/figure1_pipeline.png",
+        ],
+        "render_dpi": 220,
+        "physical_assets": {
+            "cache": _public_path(physical_cache),
+            "cache_sha256": _sha256(physical_cache),
+            "deterministic_action_cem_checkpoint": _public_path(physical_checkpoint),
+            "deterministic_action_cem_checkpoint_sha256": _sha256(physical_checkpoint),
+            "separate_probabilistic_risk_checkpoint": _public_path(risk_checkpoint),
+            "separate_probabilistic_risk_checkpoint_sha256": _sha256(risk_checkpoint),
+            "risk_status": "optional/inactive; failed documented AUC gate",
+        },
+        "thumbnail_selection": {
+            "protocol": {
+                "forecast_cache": _public_path(CACHE),
+                "forecast_cache_sha256": _sha256(CACHE),
+                "forecast_checkpoint": _public_path(CHECKPOINT),
+                "forecast_checkpoint_sha256": _sha256(CHECKPOINT),
+                "physical_cache": _public_path(physical_cache),
+                "physical_cache_sha256": _sha256(physical_cache),
+                "physical_checkpoint": _public_path(physical_checkpoint),
+                "physical_checkpoint_sha256": _sha256(physical_checkpoint),
+                "physical_negative_protocol": (
+                    "deterministic no-fixed-point batch derangement, "
+                    "batch size 32, seed 0"
+                ),
+            },
+            "thumbnails": records,
+        },
+        "rendered_thumbnails": [
+            {
+                "file": f"figures/{name}",
+                "sha256": _sha256(FIG / name),
+            }
+            for name in thumbnail_names
+        ],
+    }
+    (HERE / "figure1_provenance.json").write_text(
+        json.dumps(provenance, indent=2), encoding="utf-8"
+    )
     print("[thumbs] wrote figure1_thumb_selection.json")
+    print("[thumbs] wrote figure1_provenance.json")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,9 @@
 """Leave-one-case-out grouped CV for the continuous SE(3) dynamics.
 
-The canonical test set (dataset_7 + the held-out C3VD trajectory) was examined
-during the audit and is frozen for model development. All architecture/loss
-choices are made on grouped cross-validation over the SCARED *training* cases;
-the frozen test set is evaluated at most once after a variant is locked.
+All architecture and loss choices are evaluated on grouped cross-validation
+over the SCARED training cases. Dataset 6 remains the validation case used by
+the separate training entry point; dataset 7 is a previously contacted audit
+partition and is not used by this cross-validation routine.
 
 Example:
     python -m endoworld.world.train_grouped_cv \
@@ -48,6 +48,7 @@ def _train_fold(
     seed: int,
 ) -> dict:
     torch.manual_seed(seed)
+    negative_rng = np.random.default_rng(seed)
     model = ContinuousActionDynamics(cfg).to(device)
     model.set_action_stats(mean.to(device), std.to(device))
     train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
@@ -64,7 +65,11 @@ def _train_fold(
             negative_actions = None
             if args.negatives == "local" and args.counterfactual_weight > 0:
                 negative_actions = _local_negative_actions(
-                    batch, train_data, radius=args.negative_radius, device=device
+                    batch,
+                    train_data,
+                    radius=args.negative_radius,
+                    device=device,
+                    rng=negative_rng,
                 )
             losses = model.losses(
                 history,
@@ -91,6 +96,12 @@ def _train_fold(
     if best_state is not None:
         model.load_state_dict(best_state)
     return {
+        "seed": seed,
+        "action_normalisation": {
+            "scope": "fold training cases only",
+            "mean": mean.tolist(),
+            "std": std.tolist(),
+        },
         "canonical": evaluate(model, val_loader, device),
         "fixed_bank": evaluate_fixed_bank(
             model, val_data, device, n_negatives=args.bank_negatives, seed=seed
@@ -112,13 +123,6 @@ def main() -> dict:
     )
     if len(cases) < 2:
         raise RuntimeError("grouped CV needs at least two SCARED training cases")
-    action_mean, action_std = None, None
-    train_actions = torch.cat([s.actions for s in train_sequences])
-    action_mean, action_std = (
-        train_actions.mean(0),
-        train_actions.std(0).clamp_min(1e-6),
-    )
-
     cfg = ContinuousDynamicsConfig(
         latent_dim=sequences[0].latents.size(-1),
         hidden_dim=args.hidden,
@@ -141,6 +145,9 @@ def main() -> dict:
         if len(train_data) < 32 or len(val_data) < 8:
             print(f"[cv] skip {held_case}: {len(train_data)}/{len(val_data)} windows")
             continue
+        fold_actions = torch.cat([sequence.actions for sequence in fold_train])
+        action_mean = fold_actions.mean(0)
+        action_std = fold_actions.std(0).clamp_min(1e-6)
         print(
             f"[cv] fold {held_case}: train={len(train_data)} val={len(val_data)}",
             flush=True,
@@ -159,10 +166,12 @@ def main() -> dict:
     wins = [f["fixed_bank"]["pair_win_fraction"] for f in folds.values()]
     r2 = [f["canonical"]["inverse_action_r2"] for f in folds.values()]
     report = {
-        "protocol": "leave-one-case-out grouped CV over SCARED training cases; "
-        "frozen test set untouched",
+        "protocol": "leave-one-case-out grouped CV over four SCARED training "
+        "cases; action normalisation fitted independently on each fold's "
+        "training cases; dataset_7 audit partition excluded",
         "data": str(args.data),
         "negatives": args.negatives,
+        "seed": args.seed,
         "cases": cases,
         "folds": folds,
         "macro_pair_win_fraction": float(np.mean(wins)),

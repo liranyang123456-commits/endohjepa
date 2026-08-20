@@ -32,6 +32,7 @@ from endoworld.world.physical_actions import (  # noqa: E402
     load_sequences,
 )
 from endoworld.world.scared_actions import find_scared_rgb  # noqa: E402
+from endoworld.world.train_continuous_actions import _derangement  # noqa: E402
 
 
 def _sha256(path: Path) -> str:
@@ -72,34 +73,31 @@ def _nearest_local(sequence, prediction, current, radius=16):
 def main():
     data_path = ROOT / "outputs" / "physical_actions_v2" / "sequences.pt"
     checkpoint_path = (
-        ROOT / "outputs" / "continuous_actions_v2" / "continuous_dynamics.pt"
+        ROOT / "outputs" / "continuous_actions_v2_seeded" / "continuous_dynamics.pt"
     )
     output = Path(__file__).resolve().parent / "figures" / "figure8_qualitative.pdf"
     sequences = load_sequences(data_path)
     dataset = PhysicalActionDataset(sequences, history=4, horizon=4, split="test")
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     model = ContinuousActionDynamics(ContinuousDynamicsConfig(**checkpoint["config"]))
-    # The counterfactual checkpoint predates the zero-initialised
-    # action_delta_head; strict=False leaves it at zero, reproducing the
-    # reported model exactly.
-    model.load_state_dict(checkpoint["model"], strict=False)
+    model.load_state_dict(checkpoint["model"])
     model.eval()
 
     candidates = []
-    generator = torch.Generator().manual_seed(7)
+    generator = torch.Generator().manual_seed(0)
     scared_indices = [
         i
         for i, (sequence_index, _) in enumerate(dataset.windows)
         if dataset.sequences[sequence_index].dataset == "SCARED"
     ]
     with torch.no_grad():
-        for offset in range(0, len(scared_indices), 64):
-            indices = scared_indices[offset : offset + 64]
+        for offset in range(0, len(scared_indices), 32):
+            indices = scared_indices[offset : offset + 32]
             history = torch.stack([dataset[i]["history"] for i in indices])
             actions = torch.stack([dataset[i]["actions"] for i in indices])
             future = torch.stack([dataset[i]["future"] for i in indices])
             real_prediction = model(history, actions)
-            permutation = torch.randperm(len(indices), generator=generator)
+            permutation = _derangement(len(indices), generator)
             shuffled_prediction = model(history, actions[permutation])
             real_error = (real_prediction - future).square().mean(dim=(1, 2))
             shuffled_error = (shuffled_prediction - future).square().mean(dim=(1, 2))
@@ -139,14 +137,14 @@ def main():
 
     # Symmetric layout: both retrievals get an error map on a shared scale, so
     # the real-versus-shuffled comparison is legible rather than asserted.
-    fig, axes = plt.subplots(3, 6, figsize=(15.4, 7.6))
+    fig, axes = plt.subplots(3, 6, figsize=(15.4, 7.6), layout="constrained")
     titles = [
         "Last observed frame",
         f"Ground truth $t{{+}}{dataset.horizon}$",
         "Real-action retrieval",
-        "Shuffled-action retrieval",
+        "Deranged-action retrieval",
         "|real $-$ truth|",
-        "|shuffled $-$ truth|",
+        "|deranged $-$ truth|",
     ]
     for axis, title in zip(axes[0], titles):
         axis.set_title(title, fontsize=9.5, fontweight="bold")
@@ -190,7 +188,7 @@ def main():
             -0.04,
             0.5,
             f"Case {row_index + 1}\nlatent MSE\nreal {result['real_error']:.3f}\n"
-            f"shuffled {result['shuffled_error']:.3f}",
+            f"deranged {result['shuffled_error']:.3f}",
             transform=axes[row_index, 0].transAxes,
             ha="right",
             va="center",
@@ -231,21 +229,20 @@ def main():
             {
                 "case": row_index + 1,
                 "real_step": real_nearest - current,
-                "shuffled_step": shuffled_nearest - current,
+                "deranged_step": shuffled_nearest - current,
                 "real_mae": float(real_error_map.mean()),
-                "shuffled_mae": float(shuffled_error_map.mean()),
+                "deranged_mae": float(shuffled_error_map.mean()),
                 "real_latent_mse": result["real_error"],
-                "shuffled_latent_mse": result["shuffled_error"],
+                "deranged_latent_mse": result["shuffled_error"],
             }
         )
 
     fig.suptitle(
         "Real SCARED qualitative retrieval "
-        "(25th/50th/75th percentile positive-action cases)",
+        "(25th/50th/75th percentile positive-gain cases)",
         fontsize=12,
         fontweight="bold",
     )
-    fig.tight_layout(rect=(0, 0, 1, 0.955))
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, bbox_inches="tight", facecolor="white")
     fig.savefig(
@@ -257,8 +254,14 @@ def main():
         "checkpoint_sha256": _sha256(checkpoint_path),
         "cache": str(data_path.relative_to(ROOT)),
         "cache_sha256": _sha256(data_path),
-        "split": "SCARED test windows",
-        "negative_protocol": "deterministic batch shuffle, seed 7",
+        "split": "previously contacted SCARED audit windows",
+        "negative_protocol": (
+            "deterministic no-fixed-point batch derangement, batch size 32, seed 0"
+        ),
+        "retrieval_candidates": (
+            "same-sequence latent offsets 0 through 16 relative to the current "
+            "latent, truncated at sequence end; offset 0 is allowed"
+        ),
         "selection": "25th/50th/75th percentile latent-MSE gain among eligible positive cases",
         "n_candidates": len(candidates),
         "n_eligible": len(eligible),
@@ -269,12 +272,12 @@ def main():
                     dataset.windows[result["index"]][0]
                 ].sequence_id,
                 "real_latent_mse": float(result["real_error"]),
-                "shuffled_latent_mse": float(result["shuffled_error"]),
+                "deranged_latent_mse": float(result["shuffled_error"]),
                 "real_retrieved_step": int(
                     result["real_nearest"]
                     - (dataset.windows[result["index"]][1] + dataset.history - 1)
                 ),
-                "shuffled_retrieved_step": int(
+                "deranged_retrieved_step": int(
                     result["shuffled_nearest"]
                     - (dataset.windows[result["index"]][1] + dataset.history - 1)
                 ),
@@ -283,10 +286,10 @@ def main():
                     for row in summary
                     if row["real_latent_mse"] == result["real_error"]
                 ),
-                "shuffled_mae": next(
-                    row["shuffled_mae"]
+                "deranged_mae": next(
+                    row["deranged_mae"]
                     for row in summary
-                    if row["shuffled_latent_mse"] == result["shuffled_error"]
+                    if row["deranged_latent_mse"] == result["shuffled_error"]
                 ),
             }
             for result in selected
@@ -298,8 +301,8 @@ def main():
     for row in summary:
         print(
             "[qualitative] case {case}: real t+{real_step} (MAE {real_mae:.1f}) "
-            "vs shuffled t+{shuffled_step} (MAE {shuffled_mae:.1f}); "
-            "latent MSE {real_latent_mse:.3f} vs {shuffled_latent_mse:.3f}".format(
+            "vs deranged t+{deranged_step} (MAE {deranged_mae:.1f}); "
+            "latent MSE {real_latent_mse:.3f} vs {deranged_latent_mse:.3f}".format(
                 **row
             )
         )

@@ -1,0 +1,130 @@
+{
+  "results/forecast_scale_500.json": {
+    "working_tree_source": "outputs/scale_500/val_metrics.json",
+    "sha256": "16afa0ecc8ae79ec41c2530980ea66c53d81c4d4c8bbd828fd7d3cb68a4e65c1"
+  },
+  "results/forecast_scale_1000.json": {
+    "working_tree_source": "outputs/scale_1000/val_metrics.json",
+    "sha256": "690e0bf2c465a1e04cad69a96d102c45ba9433c1463ce7f58dccbaf32ed6dceb"
+  },
+  "results/forecast_scale_2000.json": {
+    "working_tree_source": "outputs/scale_2000/val_metrics.json",
+    "sha256": "526beefc16e93e1ebf07d1449d47174688dcc680edc724c6f37f1e5b90651605"
+  },
+  "results/forecast_scale_4000.json": {
+    "working_tree_source": "outputs/scale_4000/val_metrics.json",
+    "sha256": "81c52292fe9d81009da610994c0a3b7f2b5d75558616f050adcc85b6804b2eae"
+  },
+  "results/forecast_scale_6000_causal.json": {
+    "working_tree_source": "outputs/scale_6000_causal/val_metrics.json",
+    "sha256": "1f59e99ef57dbb5774d2379d6732e2fd8d28fa3f3bf75a31a8cf3e35252f542c"
+  },
+  "results/forecast_stats_vs_gru.json": {
+    "working_tree_source": "outputs/scale_6000_causal/stats_vs_gru.json",
+    "sha256": "e763b2f22279c56561aa4dec8966a9d568fbd61fc9571dc811ffe990bb116f36"
+  },
+  "results/forecast_stats_vs_mamba.json": {
+    "working_tree_source": "outputs/scale_6000_causal/stats_vs_mamba.json",
+    "sha256": "21e738922458cbe32e6ceb351925635b22e83ce266a9d17d382766ddc9efc46b"
+  },
+  "results/forecast_per_dataset.json": {
+    "working_tree_source": "outputs/scale_6000_causal/per_dataset.json",
+    "sha256": "15345b7c1aaeb3ae51c923b76b766d969183e4e2ed107fdfe3a082f53e628ddd"
+  },
+  "results/forecast_scale_13552_causal.json": {
+    "working_tree_source": "outputs/scale_15000_causal/val_metrics.json",
+    "sha256": "614ad4878501488b89c3b9a9475cb85691b47a069c65ea4a389085c930d8266b"
+  },
+  "results/past_only_forecast_audit.json": {
+    "working_tree_source": "outputs/past_only_forecast/audit.json",
+    "sha256": "21779398233c8deb747f4c434afeb0c9bfcfff0ed6ec28b10741b58815d31ce4"
+  },
+  "results/past_only_forecast_audit_6000.json": {
+    "working_tree_source": "outputs/past_only_forecast/audit_6000.json",
+    "sha256": "bca5a99a06b4093e306f83ac25e0934dfc237ec4b653798a7ccbc0ecbee992dd"
+  },
+  "results/cross_domain_zero_shot.json": {
+    "working_tree_source": "outputs/t16_transfer_laparo/eval_ckpt.json",
+    "sha256": "d98919447b7c515c704c2121694dead07743810b323880cf7b1f798bf598398f"
+  },
+  "results/cross_domain_fewshot_gi.json": {
+    "working_tree_source": "outputs/t16_transfer_laparo/fewshot_gi.json",
+    "sha256": "6b86f2a01cb5992208bf9072a9ac35fdbd7c310d2dd96f43f743ac6caf4b8eb7"
+  },
+  "results/cross_domain_fewshot_bronch.json": {
+    "working_tree_source": "outputs/t16_transfer_laparo/fewshot_bronch.json",
+    "sha256": "8d12c6a9b10b3ce106f908f578cc649badcb9d9489ce4dd5450100497148377b"
+  },
+  "results/cholect50_challenge_probe_multiseed.json": {
+    "working_tree_source": "outputs/vjepa2_adapted/cholect50_probe_multiseed.json",
+    "sha256": "109424a12c106fcf9b0434588f41b2accd33b268b956269b33427f30a03385e0"
+  },
+  "results/cholect50_probe_crossval.json": {
+    "working_tree_source": "outputs/vjepa2_adapted/cholect50_probe_crossval.json",
+    "sha256": "674ed984b806b36c670cce32e4d50bcae8b80b251037759370a806912e00f6d5"
+  },
+  "results/cholect50_dense_probe_crossval.json": {
+    "working_tree_source": "outputs/vjepa2_adapted/cholect50_dense_probe_crossval.json",
+    "sha256": "45766de42e4a5d103b9ebfcb87193ff60508e26970d0ba2a69b2e4b064101a82"
+  },
+  "results/cholect50_finetune_mil_crossval.json": {
+    "working_tree_source": "outputs/vjepa2_adapted/cholect50_finetune_mil_crossval.json",
+    "sha256": "37ff0fd5fcdcba54590ef52bb06466e0d06fdb45e095da07931fe0d9a8447e75"
+  },
+  "results/semantic_action_nmi.json": {
+    "working_tree_source": "outputs/p2000_full_causal/action_triplet_align.json",
+    "sha256": "2ff68269f1e56edd9ecc0ebd2249b82f7d85c7cf89e3b908649e009ed5b864bf"
+  },
+  "results/physical_pose_nmi.json": {
+    "working_tree_source": "outputs/p2000_full_causal/pose_latent_align.json",
+    "sha256": "3755fcd89f8f5e05faf6114392c58bb70f217a41da6aee92b8a56a9a17a35f9b"
+  },
+  "results/pixel_cnn_baseline.json": {
+    "working_tree_source": "outputs/vjepa2_adapted/pixel_baseline.json",
+    "sha256": "72653336165d8907af75f4f8bda4f3b39e1c4645fa8c6fc40dc93b03ec42d800"
+  },
+  "results/pixel_diffusion_baseline.json": {
+    "working_tree_source": "outputs/vjepa2_adapted/pixel_diffusion.json",
+    "sha256": "18e9b1ea0c00f943e51aebdb96bc34971deb21c5cb37fc61aebbf941a1401379"
+  },
+  "results/continuous_actions_v2_seeded__action_audit_scared.json": {
+    "working_tree_source": "outputs/continuous_actions_v2_seeded/action_audit_scared.json",
+    "sha256": "7fe4eb81d6b5bde3dbacee780fe89364ce68ecc1f67be1f1bd759c80ff686bd9"
+  },
+  "results/continuous_actions_v2_seeded__development_metrics.json": {
+    "working_tree_source": "outputs/continuous_actions_v2_seeded/metrics.json",
+    "sha256": "e32039592a6f61e8e49735a2e0c212774f43138e77bffae2b4bdf20f42166259"
+  },
+  "results/continuous_actions_v2_cv_seeded__grouped_cv_report.json": {
+    "working_tree_source": "outputs/continuous_actions_v2_cv_seeded/grouped_cv_report.json",
+    "sha256": "5b1324cf65a334a85be06b8cea6498f6caafe0a948c982733f191f7ffbbe8420"
+  },
+  "results/navigation_scared_proxy.json": {
+    "working_tree_source": "outputs/physical_navigation_v2_seeded/report_scared_proxy.json",
+    "sha256": "9b1e52b3948e73e4004b69710a969c998bdf9f0b3a9eea8f36689db002fb1a59"
+  },
+  "results/probabilistic_risk_v2_corrected__metrics.json": {
+    "working_tree_source": "outputs/probabilistic_risk_v2_corrected/metrics.json",
+    "sha256": "4b1ac374f104d095debd36506c5e0cc713fd9ff8adea4b3c103d151ca83959b4"
+  },
+  "results/vjepa2_adapted__stir_finetune_grouped.json": {
+    "working_tree_source": "outputs/vjepa2_adapted/stir_finetune_grouped.json",
+    "sha256": "e110add16b01462355d88340fcf2a0afeee0096560840614a9e7aa8da4151873"
+  },
+  "results/exploratory_slot_action_metrics.json": {
+    "working_tree_source": "outputs/continuous_actions_v2_slots/metrics.json",
+    "sha256": "914f50290da2b6d678adf65403ee7d9c7ecec2db01f7b123f4cad6c1f2519842"
+  },
+  "results/exploratory_factorized_state_metrics.json": {
+    "working_tree_source": "outputs/factorized_state_v2/metrics.json",
+    "sha256": "b7781513fe3482a22ccbe63f0bca723dab43babdb11b6785c3f3f38ee298ce87"
+  },
+  "results/exploratory_noresidual_ablation.json": {
+    "working_tree_source": "outputs/v2res_full_nores_h4/val_metrics.json",
+    "sha256": "60d6bd15ea4c7a455c7fe02ed098a192432ef55d202d7a413e10e069a03eb73c"
+  },
+  "results/exploratory_residual_ablation.json": {
+    "working_tree_source": "outputs/v2res_full_h4/val_metrics.json",
+    "sha256": "d8f8a1eb8d016f632aa413de34b61ea65d4bbf4aac148a2a8bbb0df73fd0ccbd"
+  }
+}

@@ -1,7 +1,10 @@
 {
   "n_calibration": 4432,
   "n_test": 3832,
+  "evaluation_role": "previously contacted SCARED audit partition",
+  "audit_contact_note": "This split was contacted during model auditing; the values are retained as negative audit evidence, not an independent confirmation.",
   "near_wall_threshold": 34.4,
+  "threshold_caveat": "The run record preserves the threshold value but not a pre-data clinical rationale; this is an exploratory label, not a clinical cutoff.",
   "test": {
     "auc": 0.522693787902348,
     "brier": 0.2464299350976944,

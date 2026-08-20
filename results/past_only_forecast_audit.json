@@ -1,0 +1,19 @@
+{
+  "n_train": 2000,
+  "n_val": 250,
+  "epochs": 20,
+  "bidirectional": {
+    "cos_model": 0.9709057211875916,
+    "cos_persistence": 0.9188911318778992,
+    "mse_model": 0.1814253181219101,
+    "mse_persistence": 0.51231849193573
+  },
+  "past_only": {
+    "cos_model": 0.9563764333724976,
+    "cos_persistence": 0.9124882221221924,
+    "mse_model": 0.2757967412471771,
+    "mse_persistence": 0.5499815940856934
+  },
+  "delta_cos": -0.014529287815093994,
+  "interpretation": "past_only - bidirectional cosine on the same clips; a negative delta bounds how much of the headline forecast score came from within-window future attention."
+}

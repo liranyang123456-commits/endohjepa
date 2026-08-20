@@ -3,32 +3,34 @@
     "figures/figure1_pipeline.pdf",
     "figures/figure1_pipeline.png"
   ],
-  "render_dpi": 500,
+  "render_dpi": 220,
   "physical_assets": {
-    "cache": "outputs\\physical_actions_v2\\sequences.pt",
+    "cache": "outputs/physical_actions_v2/sequences.pt",
     "cache_sha256": "e83f81eb53cd1a135f25d717f9e71f547514e12e8982921d24a082fc6f365441",
-    "deterministic_action_cem_checkpoint": "outputs\\continuous_actions_v2\\continuous_dynamics.pt",
-    "deterministic_action_cem_checkpoint_sha256": "ce517073ac681af034ee00e2580c0d09bea71afab02352f6206214c88ffc0571",
-    "separate_probabilistic_risk_checkpoint": "outputs\\probabilistic_risk_v2_corrected\\probabilistic_risk.pt",
+    "deterministic_action_cem_checkpoint": "outputs/continuous_actions_v2_seeded/continuous_dynamics.pt",
+    "deterministic_action_cem_checkpoint_sha256": "82dca6f39f8d281f3aa281fedd3538bb61b4d45dc1b461eb7e947028b6d28b87",
+    "separate_probabilistic_risk_checkpoint": "outputs/probabilistic_risk_v2_corrected/probabilistic_risk.pt",
     "separate_probabilistic_risk_checkpoint_sha256": "f05b73a53ea92b5657d96cb875214cec141fd7b46cb9411a5ff76eda0fa0d7b8",
-    "risk_status": "optional/inactive; failed prespecified AUC gate"
+    "risk_status": "optional/inactive; failed documented AUC gate"
   },
   "thumbnail_selection": {
     "protocol": {
-      "forecast_cache": "outputs\\cache_15000_pool\\latents_cache.pt",
+      "forecast_cache": "outputs/cache_15000_pool/latents_cache.pt",
       "forecast_cache_sha256": "68bd3ca529c6c15df620a9481fdaaf8553d7b48c8f8b5b64b74381f6bc79d05f",
-      "forecast_checkpoint": "outputs\\scale_15000_causal\\endohjepa.pt",
+      "forecast_checkpoint": "outputs/scale_15000_causal/endohjepa.pt",
       "forecast_checkpoint_sha256": "c32237c2dcbb77a35604cca4dcb42ec5d69f199401cf20ce9bc8273e25cbaa24",
-      "physical_cache": "outputs\\physical_actions_v2\\sequences.pt",
+      "physical_cache": "outputs/physical_actions_v2/sequences.pt",
       "physical_cache_sha256": "e83f81eb53cd1a135f25d717f9e71f547514e12e8982921d24a082fc6f365441",
-      "physical_checkpoint": "outputs\\continuous_actions_v2\\continuous_dynamics.pt",
-      "physical_checkpoint_sha256": "ce517073ac681af034ee00e2580c0d09bea71afab02352f6206214c88ffc0571"
+      "physical_checkpoint": "outputs/continuous_actions_v2_seeded/continuous_dynamics.pt",
+      "physical_checkpoint_sha256": "82dca6f39f8d281f3aa281fedd3538bb61b4d45dc1b461eb7e947028b6d28b87",
+      "physical_negative_protocol": "deterministic no-fixed-point batch derangement, batch size 32, seed 0"
     },
     "thumbnails": [
       {
         "row": "laparo",
         "dataset": "CholecT50",
-        "n_clips": 228,
+        "n_dataset_clips": 231,
+        "n_forecast_beats_persistence": 228,
         "selected_cache_index": 1512,
         "retrieved_cache_index": 1328,
         "observed_source": "datasets/CholecT50/CholecT50/videos/VID10/001004.png",
@@ -39,12 +41,13 @@
         "mse_model": 0.20734211802482605,
         "mse_persistence": 0.5315830707550049,
         "retrieval_scope": "nearest terminal latent from another clip of the same dataset",
-        "selection": "highest tissue-visibility score among clips where the forecast beats persistence"
+        "selection": "highest tissue-visibility score among clips where the forecast beats persistence (or all dataset clips if none)"
       },
       {
         "row": "gi",
         "dataset": "Kvasir-Capsule",
-        "n_clips": 560,
+        "n_dataset_clips": 560,
+        "n_forecast_beats_persistence": 560,
         "selected_cache_index": 259,
         "retrieved_cache_index": 484,
         "observed_source": "datasets/Kvasir-Capsule/kvasir-capsule-labeled-videos/labelled_videos/fb86bc87d3874cd7_frames/frame_001614.jpg",
@@ -55,12 +58,13 @@
         "mse_model": 0.11881563067436218,
         "mse_persistence": 0.2697542905807495,
         "retrieval_scope": "nearest terminal latent from another clip of the same dataset",
-        "selection": "highest tissue-visibility score among clips where the forecast beats persistence"
+        "selection": "highest tissue-visibility score among clips where the forecast beats persistence (or all dataset clips if none)"
       },
       {
         "row": "bronch",
         "dataset": "ION_bronch",
-        "n_clips": 252,
+        "n_dataset_clips": 252,
+        "n_forecast_beats_persistence": 252,
         "selected_cache_index": 35,
         "retrieved_cache_index": 515,
         "observed_source": "datasets/ION_bronch/case_007/anonymised_sequence/frame_001919.jpg",
@@ -71,58 +75,58 @@
         "mse_model": 0.06824631989002228,
         "mse_persistence": 0.35954779386520386,
         "retrieval_scope": "nearest terminal latent from another clip of the same dataset",
-        "selection": "highest tissue-visibility score among clips where the forecast beats persistence"
+        "selection": "highest tissue-visibility score among clips where the forecast beats persistence (or all dataset clips if none)"
       },
       {
         "row": "scared",
         "dataset": "SCARED",
         "sequence_id": "datasets/SCARED/dataset_7/keyframe_4",
-        "observed_latent_index": 526,
-        "retrieved_latent_index": 530,
+        "observed_latent_index": 118,
+        "retrieved_latent_index": 121,
         "observed_source": "datasets/SCARED/dataset_7/keyframe_4/data/rgb.mp4",
-        "observed_source_frame": 2134,
+        "observed_source_frame": 502,
         "observed_source_sha256": "4513944c5cfc06fdadea6fc48638c07e845b742e0ca261a9f04d9a003b31a0be",
         "retrieved_source": "datasets/SCARED/dataset_7/keyframe_4/data/rgb.mp4",
-        "retrieved_source_frame": 2150,
+        "retrieved_source_frame": 514,
         "retrieved_source_sha256": "4513944c5cfc06fdadea6fc48638c07e845b742e0ca261a9f04d9a003b31a0be",
-        "real_mse": 0.16557690501213074,
-        "shuffled_mse": 0.31408679485321045,
-        "selection": "median real-vs-shuffled gain among eligible SCARED windows"
+        "real_mse": 0.18674133718013763,
+        "deranged_mse": 0.27708297967910767,
+        "selection": "median real-vs-deranged gain among eligible SCARED windows"
       }
     ]
   },
   "rendered_thumbnails": [
     {
-      "file": "figures/_fig1_in_bronch.png",
-      "sha256": "51b6846ab7903eb944a8a77884c4ad1e6b0047b52e53c7dc912d85a8629defb9"
-    },
-    {
-      "file": "figures/_fig1_in_gi.png",
-      "sha256": "210e9f19f4a59a2b7b61343d54193e2a5472631906028757f61edfb030d9de4b"
-    },
-    {
       "file": "figures/_fig1_in_laparo.png",
       "sha256": "10d4919e91ab25ad221bd654d57e46b453057b5dc5ac406463458015d95bad4d"
-    },
-    {
-      "file": "figures/_fig1_in_scared.png",
-      "sha256": "6f1aefd7f18535d8f951e277396917542835d608b774c5c0debc9e2252cb818f"
-    },
-    {
-      "file": "figures/_fig1_out_bronch.png",
-      "sha256": "dfb1f09290a42e106d84211d84726f66d5a0d7723a3128dd624b03c67f573180"
-    },
-    {
-      "file": "figures/_fig1_out_gi.png",
-      "sha256": "8bc81db621dd51a9d7ae787f16e2949b6a4e73e45eff89188ad9271c184e038f"
     },
     {
       "file": "figures/_fig1_out_laparo.png",
       "sha256": "77532a90ac14b8e5803bd72e8dc858eb7b49b4549d69a48c60149dbeb63981b0"
     },
     {
+      "file": "figures/_fig1_in_gi.png",
+      "sha256": "210e9f19f4a59a2b7b61343d54193e2a5472631906028757f61edfb030d9de4b"
+    },
+    {
+      "file": "figures/_fig1_out_gi.png",
+      "sha256": "8bc81db621dd51a9d7ae787f16e2949b6a4e73e45eff89188ad9271c184e038f"
+    },
+    {
+      "file": "figures/_fig1_in_bronch.png",
+      "sha256": "51b6846ab7903eb944a8a77884c4ad1e6b0047b52e53c7dc912d85a8629defb9"
+    },
+    {
+      "file": "figures/_fig1_out_bronch.png",
+      "sha256": "dfb1f09290a42e106d84211d84726f66d5a0d7723a3128dd624b03c67f573180"
+    },
+    {
+      "file": "figures/_fig1_in_scared.png",
+      "sha256": "29a34c8cc2ea0d08068c68b1cd7eccaabe3fd7801ac8c3d30a20284b57c17e8f"
+    },
+    {
       "file": "figures/_fig1_se3.png",
-      "sha256": "b21a09415eb4285cc643b8d5d003c8acf4f5f9d46611739d045a6855ba143342"
+      "sha256": "1e60c888f6e0f7eba96ea26b146e3650d4279230818b0868fc67adbeb2589143"
     }
   ]
 }

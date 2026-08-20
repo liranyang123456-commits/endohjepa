@@ -340,51 +340,51 @@
         },
         "note": "Canonical evaluate() protocol (batch 32, permutation seed 0). Aggregate 73.8% is dominated by SCARED; the single held-out C3VD trajectory is near chance."
       },
-      "audit_caveat": "Three variants (real, real_cf, real_skip) were compared on this test set during the audit; the reported variant has the highest test win, so treat as audit evidence, not a frozen-protocol confirmation.",
+      "audit_caveat": "Three variants (real, real_cf, real_skip) were compared on this contacted audit set; the reported variant has the highest audit win, so it is retained only as development/audit evidence.",
       "interpretation": "Continuous SE(3) contains measurable physical signal and reduces mean error versus shuffled actions, but action sensitivity is not reliable enough for the planning branch."
     },
     "continuous_action_v2": {
-      "source": "outputs/continuous_actions_v2/action_audit_scared.json + grouped_cv_report.json",
+      "source": "outputs/continuous_actions_v2_seeded/action_audit_scared.json + outputs/continuous_actions_v2_cv_seeded/grouped_cv_report.json",
       "cache": "outputs/physical_actions_v2/sequences.pt (mono-cropped, past-only 8-tubelet lookback, window-end pose alignment)",
       "protocol": "SCARED audit-selected action-sensitivity evidence: batch-shuffled and fixed same-sequence negative protocols are reported separately; overlapping windows are descriptive.",
       "grouped_cv": {
-        "macro_pair_win_fraction": 0.8887,
-        "min_fold_pair_win_fraction": 0.8414,
-        "macro_inverse_action_r2": 0.4319,
+        "macro_pair_win_fraction": 0.8837850396157644,
+        "min_fold_pair_win_fraction": 0.8298848331056022,
+        "macro_inverse_action_r2": 0.41290104389190674,
         "n_folds": 4,
-        "passed": false,
-        "status": "archived development estimate",
-        "reason": "The grouped-CV export predates the final derangement and without-replacement negative-bank evaluator."
+        "passed": true,
+        "status": "development estimate; audit partition excluded",
+        "reason": "Rerun with fold-local action normalisation, a seeded local-negative generator and the final without-replacement fixed-bank evaluator."
       },
       "validation": {
         "n": 1108,
-        "real_action_win_fraction": 0.7933,
-        "fixed_bank_pair_win_fraction": 0.8588,
-        "inverse_action_r2": 0.4373
+        "real_action_win_fraction": 0.8357400722021661,
+        "fixed_bank_pair_win_fraction": 0.853158844765343,
+        "inverse_action_r2": 0.45879673957824707
       },
-      "frozen_test": {
+      "archived_mixed_audit": {
         "status": "archived mixed record; do not use as current evidence",
         "reason": "The 83.1% combined SCARED+C3VD value contains a pre-diagnostic C3VD variant and does not share one current external-coordinate protocol."
       },
       "scared_action_audit": {
-        "source": "outputs/continuous_actions_v2/action_audit_scared.json",
+        "source": "outputs/continuous_actions_v2_seeded/action_audit_scared.json",
         "n_windows": 958,
-        "n_test_sequences": 4,
+        "n_audit_sequences": 4,
         "batch_shuffled": {
           "n": 958,
-          "mse_real_actions": 0.14272546663973676,
-        "mse_shuffled_actions": 0.232441995813976,
-        "real_action_win_fraction": 0.8695198329853863,
-          "inverse_action_r2": 0.5101000666618347,
+          "mse_real_actions": 0.15230577301412884,
+          "mse_shuffled_actions": 0.22277160450458403,
+          "real_action_win_fraction": 0.8851774530271399,
+          "inverse_action_r2": 0.545623242855072,
         "negative_protocol": "one deterministic deranged permutation within each evaluation batch (no fixed points); negatives can come from another sequence"
         },
         "fixed_same_sequence_bank": {
           "n": 958,
           "n_negatives": 10,
-          "mse_real_actions": 0.14272546663973676,
-          "mse_negative_actions": 0.2646185558615933,
-          "pair_win_fraction": 0.9129436325678497,
-          "all_negative_win_fraction": 0.6649269311064718,
+          "mse_real_actions": 0.15230577264082207,
+          "mse_negative_actions": 0.2438705965188295,
+          "pair_win_fraction": 0.9218162839248434,
+          "all_negative_win_fraction": 0.6638830897703549,
           "negative_protocol": "up to 10 deterministic, distinct same-sequence actions sampled without replacement within radius 64; if fewer candidates exist, all eligible candidates are used"
         },
         "dependence_note": "Windows overlap within each sequence. Window-level fractions are descriptive; they are not independent case-level inference.",
@@ -427,24 +427,24 @@
       "note": "Audit-selected SCARED evidence is reported by negative protocol; it is not an independent confirmation test."
     },
     "navigation_v2": {
-      "source": "outputs/physical_navigation_v2/report_scared_proxy.json",
+      "source": "outputs/physical_navigation_v2_seeded/report_scared_proxy.json",
       "protocol": "single-shot oracle-goal latent-retrieval proxy; not receding-horizon or executed navigation",
       "n_trials": 200,
       "n_sequences": 4,
       "retrieval_candidates": "strictly future same-sequence indices; current state excluded",
-      "proxy_win_fraction": 0.98,
+      "proxy_win_fraction": 0.975,
       "proxy_win_fraction_window_bootstrap95": [
-        0.96,
+        0.95,
         0.995
       ],
-      "retrieval_translation_error_reduction_fraction": 0.5370629907976554,
+      "retrieval_translation_error_reduction_fraction": 0.438430165287958,
       "retrieval_translation_reduction_window_bootstrap95": [
-        0.47989772346877135,
-        0.590349128557253
+        0.38443893050123895,
+        0.48886745574940055
       ],
-      "retrieval_translation_error_mean": 1.7424931650380677,
+      "retrieval_translation_error_mean": 2.11374675004561,
       "persistence_translation_error_mean": 3.7639962465745382,
-      "command_translation_error_mean": 2.740038106810987,
+      "command_translation_error_mean": 2.8451240090536833,
       "navigation_validated": false,
       "dependence_note": "Windows from the same sequence/keyframe overlap; bootstrap intervals are descriptive window-resampling summaries, not case-level inference. Because retrieval is forced to a future recorded state and uses an oracle target latent, the high proxy win is a sanity check rather than navigation efficacy."
     },
@@ -452,7 +452,9 @@
       "source": "outputs/probabilistic_risk_v2_corrected/metrics.json",
       "protocol": "three-member probabilistic dynamics and calibrated near-wall head retrained after correcting the v2 SCARED label mapping from 31+4k to 30+4k native frames",
       "n_test_transitions": 3832,
+      "audit_contact_note": "The internal test split is the previously contacted SCARED audit partition; these values are negative audit evidence, not an independent confirmation.",
       "near_wall_threshold": 34.4,
+      "threshold_caveat": "The run record preserves the threshold value but not a pre-data clinical rationale; this is an exploratory label, not a clinical cutoff.",
       "test": {
         "auc": 0.522693787902348,
         "brier": 0.2464299350976944,
@@ -466,7 +468,7 @@
         "min_transitions": 500
       },
       "passed": false,
-      "interpretation": "Corrected-label risk remains below the prespecified AUC gate and is not used for the reported CEM retrieval proxy."
+      "interpretation": "Corrected-label risk remains below the documented AUC gate and is not used for the reported CEM retrieval proxy."
     },
     "risk_dense_v2": {
       "source": "outputs/dense_risk_v2/metrics.json + metrics_relative.json",
@@ -485,7 +487,7 @@
     },
     "multiseed_v2": {
       "source": "outputs/continuous_actions_v2{,_seed1,_seed2}/metrics.json",
-      "protocol": "3 training seeds, development evaluation on validation split (frozen test untouched)",
+      "protocol": "3 training seeds, development evaluation on the validation split; the contacted audit partition was not evaluated in these runs",
       "fixed_bank_pair_win": [
         0.8588,
         0.8654,
@@ -635,14 +637,15 @@
   },
   "hp_sensitivity": {
     "source": "outputs/hp_*/val_metrics.json",
-    "range": [
-      0.977,
-      0.978
-    ]
+    "status": "not used as evidence",
+    "caveat": "Legacy files do not jointly record the cache identity, seed and complete command; no hyperparameter-sensitivity conclusion is reported."
   },
   "per_dataset_6000": {
     "source": "outputs/scale_6000_causal/per_dataset.json",
-    "aligned": true,
+    "length_aligned": true,
+    "domain_order_aligned": true,
+    "clip_identity_verified": false,
+    "alignment_caveat": "The historical cache lacks clip identifiers; within-domain identity relies on deterministic reconstruction from the same manifest, sampler and seed.",
     "n_val": 750,
     "overall": {
       "cos": 0.978,
@@ -733,7 +736,7 @@
     "checkpoint": "outputs/scale_15000_causal/endohjepa.pt",
     "split": "video-level val",
     "n_val": 1631,
-    "purpose": "aggregate labels and honest latent-retrieval visualisation; not pixel generation",
+    "purpose": "aggregate labels and traceable latent-retrieval visualisation; not pixel generation",
     "rows": [
       {
         "dataset": "CholecT50",

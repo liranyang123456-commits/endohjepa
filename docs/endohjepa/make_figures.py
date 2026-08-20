@@ -120,7 +120,7 @@ def fig_scale_horizon_forecast():
 
     f = M["forecast_6000"]
     ax = axes[2]
-    names = ["persist.", "Mamba", "GRU", "causal L1\n(ours)"]
+    names = ["persist.", "Mamba-\ninspired", "GRU", "causal L1\n(ours)"]
     vals = [
         f["persistence"]["cos"],
         f["mamba"]["cos"],
@@ -327,9 +327,9 @@ def fig_aux():
     ax = axes[0]
     pix = M["pixel"]
     names = [
-        "Copy last\n(CNN proto.)",
+        "Copy last\n(CNN)",
         "CNN\nnext-frame",
-        "Copy last\n(diff. proto.)",
+        "Copy last\n(DDPM)",
         "DDPM\nnext-frame",
     ]
     vals = [
@@ -343,6 +343,7 @@ def fig_aux():
     ax.set_ylabel("PSNR (dB)")
     ax.set_title("(a) Pixel generation vs copy-last")
     ax.set_ylim(0, 36)
+    ax.tick_params(axis="x", labelsize=7)
     for i, v in enumerate(vals):
         ax.text(i, v + 0.6, f"{v:.1f}", ha="center", fontsize=8)
     ax.grid(axis="y", alpha=0.25)
@@ -366,8 +367,8 @@ def fig_aux():
     ax.bar(
         ["Before STIR", "After STIR"], [s["before"], s["after"]], color=[C_PERS, C_OURS]
     )
-    ax.set_ylabel("Token chamfer")
-    ax.set_title("(c) STIR deformation regulariser")
+    ax.set_ylabel("Latent feature-set distance")
+    ax.set_title("(c) STIR endpoint regulariser")
     ax.grid(axis="y", alpha=0.25)
     for i, v in enumerate([s["before"], s["after"]]):
         ax.text(i, v + 1.5, f"{v:.1f}", ha="center", fontsize=8)
@@ -382,12 +383,13 @@ def fig_per_dataset(path: Path | None = None):
         path,
         ROOT / "outputs/scale_6000_causal/per_dataset.json",
         ROOT / "results/scale_6000_causal__per_dataset.json",
+        ROOT / "results/forecast_per_dataset.json",
     ]
     src = next((p for p in cands if p is not None and p.is_file()), None)
     if src is None:
         raise FileNotFoundError(
-            "Figure 7 requires outputs/scale_6000_causal/per_dataset.json; "
-            "refusing to substitute a legacy result."
+            "Figure 7 requires the declared 6k per-dataset report; refusing "
+            "to substitute a legacy result."
         )
     rep = json.loads(src.read_text(encoding="utf-8"))
     rows = sorted(rep["by_dataset"].values(), key=lambda r: -r["n"])

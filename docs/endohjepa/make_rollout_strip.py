@@ -1,7 +1,7 @@
-"""Multi-step rollout on held-out SCARED: qualitative strip plus aggregate drift.
+"""Multi-step rollout on the contacted SCARED audit partition.
 
 Endo-HJEPA has no pixel decoder, so a rollout step is visualised by the nearest
-real frame of the same held-out sequence (retrieval, not generation). Two
+real frame of the same audit sequence (retrieval, not generation). Two
 consequences follow and both are shown here.
 
 First, consecutive SCARED frames are visually almost identical, so a strip of
@@ -12,13 +12,14 @@ reader can actually compare.
 
 Second, a single pair of examples cannot support a claim about rollout
 behaviour. The right-hand panel therefore reports the mean recovered index per
-horizon over every held-out SCARED window, against the ground truth and against
+horizon over every SCARED audit window, against the ground truth and against
 the persistence retrieval, which makes the systematic lag of the rollout
 visible instead of leaving it to be inferred from two strips.
 
-Cases are selected by the mean absolute index error of their rollout, at the
-25th and 50th percentile of the held-out distribution, so they are
-representative rather than favourable.
+Cases are selected by the mean absolute index error of their rollout at the
+25th and 50th percentiles of the contacted audit distribution. They are
+illustrative lower-quartile and median windows, not independent representative
+cases.
 
     python docs/endohjepa/make_rollout_strip.py
 """
@@ -107,12 +108,12 @@ def main():
     )
     dataset = PhysicalActionDataset(sequences, history=4, horizon=4, split="test")
     checkpoint = torch.load(
-        ROOT / "outputs" / "continuous_actions_v2" / "continuous_dynamics.pt",
+        ROOT / "outputs" / "continuous_actions_v2_seeded" / "continuous_dynamics.pt",
         map_location="cpu",
         weights_only=False,
     )
     model = ContinuousActionDynamics(ContinuousDynamicsConfig(**checkpoint["config"]))
-    model.load_state_dict(checkpoint["model"], strict=False)
+    model.load_state_dict(checkpoint["model"])
     model.eval()
 
     horizon = dataset.horizon
@@ -199,19 +200,16 @@ def main():
     summary = figure.add_subplot(grid[:, 6])
     steps = np.arange(1, horizon + 1)
     mean_model = model_steps.mean(axis=0)
-    standard_error = model_steps.std(axis=0) / np.sqrt(len(model_steps))
     summary.plot(
         steps, steps, "-o", color="#3F7A5A", lw=1.8, ms=5, label="ground truth"
     )
-    summary.errorbar(
+    summary.plot(
         steps,
         mean_model,
-        yerr=standard_error,
-        fmt="-o",
+        "-o",
         color="#2F5D8A",
         lw=1.8,
         ms=5,
-        capsize=3,
         label="model rollout",
     )
     summary.plot(
@@ -266,17 +264,25 @@ def main():
     )
     data_path = ROOT / "outputs" / "physical_actions_v2" / "sequences.pt"
     checkpoint_path = (
-        ROOT / "outputs" / "continuous_actions_v2" / "continuous_dynamics.pt"
+        ROOT / "outputs" / "continuous_actions_v2_seeded" / "continuous_dynamics.pt"
     )
     provenance = {
-        "figure": "figure11_rollout_strip.pdf",
-        "checkpoint": str(checkpoint_path.relative_to(ROOT)),
+        "figure": "figures/figure11_rollout_strip.pdf",
+        "checkpoint": checkpoint_path.relative_to(ROOT).as_posix(),
         "checkpoint_sha256": _sha256(checkpoint_path),
-        "cache": str(data_path.relative_to(ROOT)),
+        "cache": data_path.relative_to(ROOT).as_posix(),
         "cache_sha256": _sha256(data_path),
-        "split": "SCARED test windows",
+        "split": "previously contacted SCARED audit windows",
+        "retrieval_candidates": (
+            "same-sequence latent offsets 0 through 23 relative to the current "
+            "latent, truncated at sequence end; offset 0 is allowed"
+        ),
         "selection": "25th/50th percentile rollout index error",
         "n_windows": len(records),
+        "mean_retrieved_offset_by_step": mean_model.tolist(),
+        "uncertainty_display": (
+            "none: overlapping windows are not treated as independent units"
+        ),
         "mean_index_error": float(errors.mean()),
         "persistence_index_error": float(persistence_error.mean()),
         "win_fraction": float((errors < persistence_error).mean()),

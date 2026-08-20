@@ -9,7 +9,7 @@ from __future__ import annotations
 
 DISPLAY_NAMES = {
     "C3VD": "C3VD",
-    "Cholec80-Boxes": "Cholec80",
+    "Cholec80-Boxes": "Cholec80-Boxes",
     "CholecSeg8k": "CholecSeg8k",
     "CholecT50": "CholecT50",
     "EndoNeRF": "EndoNeRF",
@@ -22,7 +22,7 @@ DISPLAY_NAMES = {
     "MIS_own": "In-house MIS",
     "SCARED": "SCARED",
     "STIR": "STIR",
-    "Stereo_Lap": "Stereo laparoscopy",
+    "Stereo_Lap": "Hamlyn stereo laparoscopy",
     "SurgT": "SurgT",
     "TrackVes": "TrackVes",
     "endoscapes": "Endoscapes",

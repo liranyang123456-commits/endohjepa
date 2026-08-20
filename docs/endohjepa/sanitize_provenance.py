@@ -22,6 +22,16 @@ FILES = [
 DRIVE_PATH = re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]")
 
 
+def _is_private_or_absolute_path(value: str) -> bool:
+    normal = value.replace("\\", "/")
+    return (
+        DRIVE_PATH.search(value) is not None
+        or normal.startswith("/home/")
+        or normal.startswith("/Users/")
+        or "datasets/ion_bronch/" in normal.lower()
+    )
+
+
 def _public_path(value: str, dataset: str | None = None) -> str:
     normal = value.replace("\\", "/")
     lower = normal.lower()
@@ -51,9 +61,7 @@ def _sanitize(node: Any, dataset: str | None = None) -> Any:
         for key, value in node.items():
             key = key.replace("Datasets/SCARED", "datasets/SCARED")
             public_key = (
-                _public_path(key, local_dataset)
-                if DRIVE_PATH.search(key)
-                else key
+                _public_path(key, local_dataset) if DRIVE_PATH.search(key) else key
             )
             if key == "manifest_sequence_id" and local_dataset == "ION_bronch":
                 case = re.search(r"case_\d+", str(value))
@@ -62,11 +70,7 @@ def _sanitize(node: Any, dataset: str | None = None) -> Any:
                     if case
                     else "case_XXX/anonymised_sequence"
                 )
-            elif isinstance(value, str) and (
-                DRIVE_PATH.search(value)
-                or value.startswith("/home/")
-                or value.startswith("/Users/")
-            ):
+            elif isinstance(value, str) and _is_private_or_absolute_path(value):
                 cleaned[public_key] = _public_path(value, local_dataset)
             else:
                 cleaned[public_key] = _sanitize(value, local_dataset)
@@ -75,11 +79,7 @@ def _sanitize(node: Any, dataset: str | None = None) -> Any:
         return [_sanitize(value, dataset) for value in node]
     if isinstance(node, str):
         node = node.replace("Datasets/SCARED", "datasets/SCARED")
-        if (
-            DRIVE_PATH.search(node)
-            or node.startswith("/home/")
-            or node.startswith("/Users/")
-        ):
+        if _is_private_or_absolute_path(node):
             return _public_path(node, dataset)
     return node
 

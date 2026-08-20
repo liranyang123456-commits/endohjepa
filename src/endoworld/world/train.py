@@ -519,7 +519,7 @@ def build_argparser():
         "--l1-causal",
         action="store_true",
         default=True,
-        help="use autoregressive causal (GPT-style) L1 predictor (default, best)",
+        help="use autoregressive decoder-style causal L1 predictor (default)",
     )
     ap.add_argument(
         "--no-l1-causal",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import runpy
 from argparse import Namespace
 from pathlib import Path
 
@@ -149,3 +150,26 @@ def test_best_state_snapshot_does_not_share_cpu_storage():
         model.weight.add_(1.0)
     assert torch.equal(snapshot["weight"], original)
     assert not torch.equal(snapshot["weight"], model.weight)
+
+
+def test_provenance_sanitizer_redacts_relative_private_paths():
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "docs"
+        / "endohjepa"
+        / "sanitize_provenance.py"
+    )
+    sanitize = runpy.run_path(str(script))["_sanitize"]
+    cleaned = sanitize(
+        {
+            "dataset": "ION_bronch",
+            "path": (
+                "datasets/ION_bronch/case_007/intraop_00/"
+                "Procedure-20211230/private_folder/frame_001919.jpg"
+            ),
+        }
+    )
+    assert cleaned["path"] == (
+        "datasets/ION_bronch/case_007/anonymised_sequence/frame_001919.jpg"
+    )
+    assert "Procedure-" not in cleaned["path"]

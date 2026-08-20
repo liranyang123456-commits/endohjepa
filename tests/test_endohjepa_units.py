@@ -20,7 +20,10 @@ from endoworld.world.factorized_state import (
     FactorizedStateAdapter,
     FactorizedStateConfig,
 )
-from endoworld.world.continuous_dynamics import ContinuousDynamicsConfig
+from endoworld.world.continuous_dynamics import (
+    ContinuousActionDynamics,
+    ContinuousDynamicsConfig,
+)
 from endoworld.world.probabilistic_dynamics import (
     DynamicsEnsemble,
     RiskCalibrator,
@@ -126,6 +129,51 @@ def test_hierarchical_predictors_use_context_and_actions():
         if p.grad is not None
     )
     assert enc_grad > 0
+
+
+def test_continuous_dynamics_uses_history_actions_and_block_causality():
+    cfg = ContinuousDynamicsConfig(
+        latent_dim=16,
+        hidden_dim=32,
+        n_heads=4,
+        n_layers=2,
+        history=3,
+        horizon=3,
+        dropout=0.0,
+    )
+    model = ContinuousActionDynamics(cfg).eval()
+    history = torch.randn(2, 3, 16)
+    actions = torch.zeros(2, 3, 6)
+
+    prediction = model(history, actions)
+    assert not torch.allclose(prediction, model(history + 0.5, actions))
+
+    changed_first = actions.clone()
+    changed_first[:, 0, 0] = 1.0
+    assert not torch.allclose(prediction, model(history, changed_first))
+
+    changed_last = actions.clone()
+    changed_last[:, -1, 0] = 1.0
+    changed_last_prediction = model(history, changed_last)
+    assert torch.allclose(
+        prediction[:, :-1], changed_last_prediction[:, :-1], atol=1e-6
+    )
+    assert not torch.allclose(prediction[:, -1], changed_last_prediction[:, -1])
+
+    model.zero_grad(set_to_none=True)
+    model(history, changed_first).square().mean().backward()
+    action_grad = sum(
+        float(parameter.grad.abs().sum())
+        for parameter in model.action_proj.parameters()
+        if parameter.grad is not None
+    )
+    encoder_grad = sum(
+        float(parameter.grad.abs().sum())
+        for parameter in model.encoder.parameters()
+        if parameter.grad is not None
+    )
+    assert action_grad > 0
+    assert encoder_grad > 0
 
 
 def test_physical_action_alignment_and_video_split():

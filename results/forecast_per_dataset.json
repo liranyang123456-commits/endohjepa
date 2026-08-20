@@ -1,0 +1,140 @@
+{
+  "paper": "Endo-HJEPA",
+  "ckpt": "outputs/scale_6000_causal/endohjepa.pt",
+  "latents": "outputs/scale_6000_causal/latents_cache.pt",
+  "split": "val",
+  "n_used": 750,
+  "n_cache": 750,
+  "n_clips_rebuilt": 750,
+  "length_aligned": true,
+  "domain_order_aligned": true,
+  "clip_identity_verified": false,
+  "history": 4,
+  "horizon": 4,
+  "overall": {
+    "n": 750,
+    "cos_model": 0.977611780166626,
+    "cos_persist": 0.915749192237854,
+    "mse_model": 0.13903139531612396,
+    "mse_persist": 0.5320743322372437
+  },
+  "by_dataset": {
+    "CholecT50": {
+      "n": 89,
+      "cos_model": 0.963235080242157,
+      "cos_persist": 0.8937784433364868,
+      "mse_model": 0.2197248935699463,
+      "mse_persist": 0.6632208824157715,
+      "dataset": "CholecT50",
+      "domain": "laparo"
+    },
+    "HyperKvasir": {
+      "n": 44,
+      "cos_model": 0.9703689217567444,
+      "cos_persist": 0.9239273071289062,
+      "mse_model": 0.17011529207229614,
+      "mse_persist": 0.4440910220146179,
+      "dataset": "HyperKvasir",
+      "domain": "gi"
+    },
+    "ION_bronch": {
+      "n": 250,
+      "cos_model": 0.9884445071220398,
+      "cos_persist": 0.9176707863807678,
+      "mse_model": 0.06895056366920471,
+      "mse_persist": 0.495832234621048,
+      "dataset": "ION_bronch",
+      "domain": "bronch"
+    },
+    "Kvasir-Capsule": {
+      "n": 206,
+      "cos_model": 0.9776965975761414,
+      "cos_persist": 0.9405032396316528,
+      "mse_model": 0.14913243055343628,
+      "mse_persist": 0.40402674674987793,
+      "dataset": "Kvasir-Capsule",
+      "domain": "gi"
+    },
+    "SCARED": {
+      "n": 1,
+      "cos_model": 0.9262151122093201,
+      "cos_persist": 0.8517696261405945,
+      "mse_model": 0.44837021827697754,
+      "mse_persist": 0.9632511138916016,
+      "dataset": "SCARED",
+      "domain": "laparo"
+    },
+    "STIR": {
+      "n": 1,
+      "cos_model": 0.9593909978866577,
+      "cos_persist": 0.9284905791282654,
+      "mse_model": 0.23374685645103455,
+      "mse_persist": 0.4152160584926605,
+      "dataset": "STIR",
+      "domain": "laparo"
+    },
+    "Stereo_Lap": {
+      "n": 75,
+      "cos_model": 0.9819037318229675,
+      "cos_persist": 0.889213502407074,
+      "mse_model": 0.11495254933834076,
+      "mse_persist": 0.7129671573638916,
+      "dataset": "Stereo_Lap",
+      "domain": "laparo"
+    },
+    "endoscapes": {
+      "n": 72,
+      "cos_model": 0.9609655737876892,
+      "cos_persist": 0.8925459980964661,
+      "mse_model": 0.24153251945972443,
+      "mse_persist": 0.7066333889961243,
+      "dataset": "endoscapes",
+      "domain": "laparo"
+    },
+    "endovis2017_full": {
+      "n": 5,
+      "cos_model": 0.9645728468894958,
+      "cos_persist": 0.9088810086250305,
+      "mse_model": 0.19829270243644714,
+      "mse_persist": 0.5172421336174011,
+      "dataset": "endovis2017_full",
+      "domain": "laparo"
+    },
+    "endovis2018_full": {
+      "n": 7,
+      "cos_model": 0.9610407948493958,
+      "cos_persist": 0.8817834854125977,
+      "mse_model": 0.22695505619049072,
+      "mse_persist": 0.712386965751648,
+      "dataset": "endovis2018_full",
+      "domain": "laparo"
+    }
+  },
+  "by_domain": {
+    "bronch": {
+      "n": 250,
+      "cos_model": 0.9884445071220398,
+      "cos_persist": 0.9176707863807678,
+      "mse_model": 0.06895056366920471,
+      "mse_persist": 0.495832234621048,
+      "domain": "bronch"
+    },
+    "gi": {
+      "n": 250,
+      "cos_model": 0.9764070510864258,
+      "cos_persist": 0.9375860095024109,
+      "mse_model": 0.15282541513442993,
+      "mse_persist": 0.4110780954360962,
+      "domain": "gi"
+    },
+    "laparo": {
+      "n": 250,
+      "cos_model": 0.9679839611053467,
+      "cos_persist": 0.8919910788536072,
+      "mse_model": 0.19531826674938202,
+      "mse_persist": 0.689312756061554,
+      "domain": "laparo"
+    }
+  },
+  "note": "Cache length and domain-ID order are checked against the deterministically rebuilt clip list. The historical cache does not store clip identifiers, so within-domain clip identity cannot be independently verified."
+}

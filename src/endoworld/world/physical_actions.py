@@ -30,6 +30,14 @@ def _so3_log(rotation: np.ndarray) -> np.ndarray:
     )
     if theta < 1e-7:
         return 0.5 * vee
+    if np.pi - theta < 1e-5:
+        symmetric = 0.5 * (rotation + rotation.T)
+        _, eigenvectors = np.linalg.eigh(symmetric)
+        axis = eigenvectors[:, -1]
+        axis /= np.linalg.norm(axis)
+        if float(axis @ vee) < 0.0:
+            axis = -axis
+        return theta * axis
     return theta * vee / (2.0 * np.sin(theta))
 
 
@@ -69,7 +77,7 @@ def se3_log(transform: np.ndarray) -> np.ndarray:
     if theta < 1e-7:
         v_inv = np.eye(3) - 0.5 * omega_hat + (omega_hat @ omega_hat) / 12.0
     else:
-        a = (1.0 / theta**2) - ((1.0 + np.cos(theta)) / (2.0 * theta * np.sin(theta)))
+        a = (1.0 - 0.5 * theta / np.tan(0.5 * theta)) / theta**2
         v_inv = np.eye(3) - 0.5 * omega_hat + a * (omega_hat @ omega_hat)
     return np.concatenate([v_inv @ translation, omega])
 

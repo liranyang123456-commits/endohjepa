@@ -1,0 +1,42 @@
+{
+  "paper": "Endo-HJEPA",
+  "not_ablation_planning": true,
+  "A": "outputs/scale_6000_causal/endohjepa.pt",
+  "B": "outputs/scale_6000_gru/endohjepa.pt",
+  "split": "val",
+  "history": 4,
+  "n_bootstrap": 1000,
+  "correction": "holm",
+  "rows": [
+    {
+      "horizon": 1,
+      "n_clips": 750,
+      "cos_A": 0.981084406375885,
+      "cos_B": 0.9777387976646423,
+      "cos_persist": 0.9425621628761292,
+      "diff_A_minus_B": 0.0033456652890890837,
+      "boot_ci95": [
+        0.002998477063374594,
+        0.0037081682239659126
+      ],
+      "wilcoxon_p": 1.2437326584997329e-84,
+      "holm_p": 1.2437326584997329e-84,
+      "significant_005": true
+    },
+    {
+      "horizon": 4,
+      "n_clips": 750,
+      "cos_A": 0.9776118397712708,
+      "cos_B": 0.9740161895751953,
+      "cos_persist": 0.915749192237854,
+      "diff_A_minus_B": 0.0035956173669546843,
+      "boot_ci95": [
+        0.003206614643568173,
+        0.003976153931580484
+      ],
+      "wilcoxon_p": 2.0312706775886236e-102,
+      "holm_p": 4.062541355177247e-102,
+      "significant_005": true
+    }
+  ]
+}

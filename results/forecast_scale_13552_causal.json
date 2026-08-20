@@ -1,0 +1,10 @@
+{
+  "n_train": 13552,
+  "n_val": 1631,
+  "cache": "outputs/cache_15000_pool/latents_cache.pt",
+  "protocol_note": "different validation cache from the 500-6000 scale points",
+  "cos_model": 0.9783104658126831,
+  "cos_persist": 0.9167717099189758,
+  "mse_model": 0.13501094281673431,
+  "mse_persist": 0.5285488367080688
+}

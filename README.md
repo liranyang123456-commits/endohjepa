@@ -7,8 +7,9 @@ Endo-HJEPA studies latent forecasting across laparoscopic, gastrointestinal and
 bronchoscopic video. It combines a frozen V-JEPA 2 ViT-L encoder, a
 domain-conditioned causal residual forecaster and a separately audited
 continuous SE(3)-conditioned branch. The 19-dataset census contains 1,707
-sequences and 1.07M decoded frames; the main forecast caches use the eligible
-RGB-video subsets.
+local manifest units and 1.07M decoded frames; these units are ingested rows,
+not official video or patient counts. The main forecast caches use eligible
+decoded RGB subsets.
 
 ## Repository layout
 
@@ -21,14 +22,17 @@ src/endoworld/          # the endoworld package
 tests/                  # unit tests (action-path sensitivity, geometry, risk, planner)
 docs/endohjepa/         # paper (endohjepa.tex), figures + generators, metric ledger
 manifests/              # released aggregate census; local manifest is generated from data
-results/                # every JSON cited by docs/endohjepa/verified_metrics.json
+results/                # curated JSON reports supporting current manuscript evidence
 requirements.txt
 ```
 
 ## Reproduce the headline numbers
 
-All numbers in the paper come from `docs/endohjepa/verified_metrics.json`, whose
-entries point at the JSON files under `results/`.
+All numbers in the paper come from `docs/endohjepa/verified_metrics.json`.
+Curated source reports are mirrored under `results/`; invalid debug and
+superseded action reports are excluded. `results/source_map.json` maps every
+released report to the source path named by the manuscript ledger and records
+its SHA-256 digest.
 
 ```bash
 pip install -r requirements.txt   # install torch matching your CUDA separately
@@ -43,8 +47,9 @@ Key entry points:
 | Latent forecast (6k causal L1) | `python -m endoworld.world.train --encoder vjepa2 --ablation l1 --l1-causal --max-clips 6000` |
 | Per-dataset decomposition | `python -m endoworld.eval.per_dataset --ckpt outputs/scale_6000_causal/endohjepa.pt` |
 | Physical cache (v2, mono + past-only) | `python -m endoworld.world.build_physical_actions --encoder vjepa2 --stereo-eye top --past-only` |
-| Continuous SE(3) dynamics | `python -m endoworld.world.train_continuous_actions --data outputs/physical_actions_v2/sequences.pt --negatives local --skip-test` |
-| Oracle-goal retrieval diagnostic | `python -m endoworld.eval.physical_navigation --data outputs/physical_actions_v2/sequences.pt --checkpoint outputs/continuous_actions_v2/continuous_dynamics.pt --trials 200 --normalised-actions` |
+| Continuous SE(3) dynamics | `python -m endoworld.world.train_continuous_actions --data outputs/physical_actions_v2/sequences.pt --out outputs/continuous_actions_v2_seeded --negatives local --skip-test --seed 0` |
+| SCARED action audit | `python -m endoworld.eval.continuous_action_audit --data outputs/physical_actions_v2/sequences.pt --checkpoint outputs/continuous_actions_v2_seeded/continuous_dynamics.pt --out outputs/continuous_actions_v2_seeded/action_audit_scared.json --dataset SCARED --seed 0` |
+| Oracle-goal retrieval diagnostic | `python -m endoworld.eval.physical_navigation --data outputs/physical_actions_v2/sequences.pt --checkpoint outputs/continuous_actions_v2_seeded/continuous_dynamics.pt --out outputs/physical_navigation_v2_seeded/report_scared_proxy.json --trials 200 --normalised-actions --dataset SCARED --seed 0` |
 | C3VD pose-convention gate | `python -m endoworld.eval.c3vd_pose_gate` |
 | CholecT50 dense MIL probe | `python -m endoworld.eval.cholect50_dense_probe` |
 | Paper figures | `python docs/endohjepa/make_figures.py` (reads only `verified_metrics.json`) |
@@ -57,21 +62,27 @@ paper.
 
 ## Headline results (from `verified_metrics.json`)
 
-- Latent forecast, mean over steps 1--4: **0.978 cosine** vs 0.916
-  persistence, 0.974 GRU and 0.971 Mamba on the same 750-clip validation set.
 - The separate past-only sensitivity audit is **0.9578** vs 0.9102 persistence.
-- The audit-selected SCARED action result is **87.0%** deranged-batch wins;
-  a distinct same-sequence bank gives 91.3% pair wins and 66.5%
+- On a separate bidirectional 750-clip validation cache, latent forecast mean
+  over steps 1--4 is **0.978 cosine** vs 0.916 persistence, 0.974 GRU and
+  0.971 for a custom Mamba-inspired gated recurrence.
+- The audit-selected SCARED action result is **88.5%** deranged-batch wins;
+  a distinct same-sequence bank gives 92.2% pair wins and 66.4%
   all-negative wins (958 overlapping windows, four sequences).
-- Corrected near-wall risk fails the prespecified gate: AUC **0.523**.
-- The 98.0% forced-future oracle retrieval result is a structurally advantaged
-  diagnostic, not navigation or robot control.
+- Corrected near-wall risk fails the documented gate: AUC **0.523**.
+- The 97.5% forced-future oracle retrieval result (43.8% lower mean retrieval
+  error than persistence) is a structurally advantaged diagnostic, not
+  navigation or robot control.
 - CholecT50 official 5-fold CV: frozen V-JEPA 2 dense MIL probe 0.719 phase /
   0.586 instrument mAP; this is below task-specific supervised SOTA.
 
 No external SOTA claim is made for latent forecasting because no standard
 multi-domain endoscopic latent-forecast benchmark was identified. C3VD action
 percentages are archived until rerun with the final negative evaluator.
+
+The private-cohort manuscript must not be submitted until the responsible
+institution provides the formal ethics approval/exemption identifier, decision
+date and consent-waiver determination.
 
 ## License
 

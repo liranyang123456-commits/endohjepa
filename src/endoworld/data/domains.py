@@ -4,7 +4,7 @@ Domains:
   laparo   laparoscopic / rigid MIS
   gi       flexible GI endoscopy (gastro/colon) including capsule
   bronch   bronchoscopy / ION navigation
-  mixed    unknown or mixed-orifice
+  mixed    unknown or mixed acquisition setting
 """
 
 from __future__ import annotations

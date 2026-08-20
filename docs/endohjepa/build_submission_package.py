@@ -47,10 +47,11 @@ def main() -> None:
         "highlights.txt",
         "cover_letter.md",
         "declarations.txt",
+        "ION_ETHICS_TEMPLATE.md",
         "graphical_abstract.txt",
         "verified_metrics.json",
         "c3vd_pose_gate.json",
-        "test_freeze.json",
+        "audit_contact_protocol.json",
     ]
     for name in core_files:
         _copy(HERE / name, OUT / name)
@@ -70,14 +71,12 @@ def main() -> None:
         _copy(HERE / "figures" / name, OUT / name)
 
     provenance_files = [
-        "action_retrieval_provenance.json",
         "dataset_atlas_provenance.json",
         "figure1_provenance.json",
         "figure8_qualitative_provenance.json",
         "figure11_rollout_provenance.json",
         "graphical_abstract_provenance.json",
         "qualitative_forecast_15000.json",
-        "recorded_rollout_provenance.json",
     ]
     for name in provenance_files:
         _copy(HERE / name, OUT / "provenance" / name)
@@ -97,6 +96,25 @@ The provenance/ directory and verified_metrics.json provide the auditable
 result records used by the manuscript. Private ION data are not included.
 """
     (OUT / "README_UPLOAD.txt").write_text(readme, encoding="utf-8")
+
+    blockers = []
+    if (
+        "must be supplied by the responsible institution before submission"
+        in manuscript
+    ):
+        blockers.append(
+            "Confirm the private-cohort review committee name, ethics approval "
+            "or exemption identifier, decision date and consent-waiver determination; "
+            "then replace the explicit unresolved statement in endohjepa.tex, "
+            "declarations.txt and the cover letter as applicable."
+        )
+    if blockers:
+        (OUT / "SUBMISSION_BLOCKERS.txt").write_text(
+            "Do not submit until all items below are resolved:\n\n"
+            + "\n".join(f"{index}. {item}" for index, item in enumerate(blockers, 1))
+            + "\n",
+            encoding="utf-8",
+        )
 
     manifest = {
         "package": PACKAGE_NAME,

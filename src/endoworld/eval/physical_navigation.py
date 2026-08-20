@@ -10,7 +10,9 @@ produced by executing the planned action.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -30,6 +32,14 @@ from endoworld.world.probabilistic_dynamics import (
     NearWallRiskHead,
     RiskCalibrator,
 )
+
+
+def _sha256(path: str) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 class _Integrator(torch.nn.Module):
@@ -227,7 +237,7 @@ def evaluate(args):
     rows = []
     for batch in loader:
         history = batch["history"].to(device)
-        # Oracle held-out target for an offline proxy only; it is not a
+        # Oracle future target for an offline proxy only; it is not a
         # deployable navigation goal.
         goal = batch["future"][:, -1].to(device)
         result = continuous_cem(
@@ -291,7 +301,28 @@ def evaluate(args):
     report = {
         "task": "offline single-shot oracle-goal latent-retrieval proxy",
         "planning_mode": "one open-loop CEM optimisation per window",
-        "goal_source": "held-out terminal latent from the recorded trajectory",
+        "goal_source": "future terminal latent from the contacted audit trajectory",
+        "arguments": vars(args),
+        "cem_config": asdict(planner_cfg),
+        "seed": args.seed,
+        "inputs": (
+            {
+                "data": {"path": args.data, "sha256": _sha256(args.data)},
+                "checkpoint": {
+                    "path": args.checkpoint,
+                    "sha256": _sha256(args.checkpoint),
+                },
+            }
+            if not args.smoke
+            else {"data": "synthetic", "checkpoint": "synthetic integrator"}
+        ),
+        "units": {
+            "translation_error": (
+                "native pose translation units (millimetres for the SCARED cache)"
+            ),
+            "rotation_error": "degrees",
+            "indices": "latent/keyframe row indices within the sequence",
+        },
         "pose_metric": (
             "translation/rotation error of the nearest future recorded latent; "
             "not the endpoint of the planned command"
@@ -324,6 +355,11 @@ def evaluate(args):
         "window_dependence_note": (
             "Windows from the same sequence/keyframe overlap; bootstrap intervals "
             "are descriptive window-resampling summaries, not case-level inference."
+        ),
+        "audit_contact_note": (
+            "The SCARED dataset_7 partition was contacted during model auditing. "
+            "These values are descriptive audit evidence, not independent "
+            "confirmation."
         ),
         "rows": rows,
     }
@@ -363,9 +399,17 @@ def build_parser():
     parser.add_argument("--max-uncertainty", type=float, default=2.0)
     parser.add_argument(
         "--normalised-actions",
+        dest="normalised_actions",
         action="store_true",
+        default=True,
         help="sample CEM candidates in the model's normalised "
-        "action space (scaled to training coordinates)",
+        "action space (default; scaled to training coordinates)",
+    )
+    parser.add_argument(
+        "--raw-actions",
+        dest="normalised_actions",
+        action="store_false",
+        help="diagnostic only: sample directly in raw physical-action coordinates",
     )
     parser.add_argument(
         "--dataset",

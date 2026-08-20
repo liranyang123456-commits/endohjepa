@@ -25,6 +25,7 @@ from pathlib import Path
 import torch
 import torch.nn.functional as F
 
+from endoworld.data.domains import DOMAIN_IDS
 from endoworld.data.video_clips import EndoClipDataset, domain_balanced_indices
 from endoworld.eval.world_benchmark import load_predictor, maybe_pool
 from endoworld.world.h_jepa import persistence_baseline
@@ -89,10 +90,12 @@ def main():
         args.manifest, args.n_val, args.seed, args.clip_len, args.stride
     )
     n = min(Z.size(0), len(clips), D.size(0))
-    aligned = n == Z.size(0) and n == len(clips)
+    length_aligned = n == Z.size(0) and n == len(clips) and n == D.size(0)
     Z, D, clips = Z[:n], D[:n], clips[:n]
     names = [c.dataset for c in clips]
     domains = [c.domain for c in clips]
+    rebuilt_domains = torch.tensor([DOMAIN_IDS[domain] for domain in domains])
+    domain_order_aligned = torch.equal(D.detach().cpu().long(), rebuilt_domains.long())
 
     t = Z.size(1)
     history = min(history, t - 1)
@@ -144,14 +147,19 @@ def main():
                 args.manifest, args.n_val, args.seed, args.clip_len, args.stride
             )
         ),
-        "aligned": aligned,
+        "length_aligned": length_aligned,
+        "domain_order_aligned": domain_order_aligned,
+        "clip_identity_verified": False,
         "history": history,
         "horizon": horizon,
         "overall": _forecast_row(pred, persist, z_fut),
         "by_dataset": by_ds,
         "by_domain": by_dom,
-        "note": "aligned=True means Z_val[i] is assumed to match the rebuilt clip list. "
-        "If aligned is False, treat per-dataset rows as approximate.",
+        "note": (
+            "Cache length and domain-ID order are checked against the deterministically "
+            "rebuilt clip list. The historical cache does not store clip identifiers, "
+            "so within-domain clip identity cannot be independently verified."
+        ),
     }
 
     if args.planning and kind == "hjepa":
@@ -168,7 +176,10 @@ def main():
     out = args.out or str(Path(args.ckpt).parent / "per_dataset.json")
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     Path(out).write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print(f"[per-dataset] n={n} aligned={aligned} wrote {out}")
+    print(
+        f"[per-dataset] n={n} length_aligned={length_aligned} "
+        f"domain_order_aligned={domain_order_aligned} wrote {out}"
+    )
     print(f"{'dataset':28s} {'dom':7s} {'n':>4s} {'cos':>6s} {'persist':>7s} {'Δ':>6s}")
     for ds, r in sorted(by_ds.items(), key=lambda kv: (-kv[1]["n"], kv[0])):
         delta = r["cos_model"] - r["cos_persist"]
