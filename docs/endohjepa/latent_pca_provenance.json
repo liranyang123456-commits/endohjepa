@@ -1,0 +1,8 @@
+{
+  "figure": "latent_pca.pdf",
+  "cache": "outputs\\scale_6000_causal\\latents_cache.pt",
+  "cache_sha256": "3084b72f0413518f29c82ff0d3b80b4f736f045db4f3df4763b6571993819f0b",
+  "split": "validation cache",
+  "clip_index": 0,
+  "selection": "fixed first validation-cache item; descriptive only"
+}

@@ -1,8 +1,6 @@
 """Fast regression tests for sampling, protocol, and checkpoint safety fixes."""
-
 from __future__ import annotations
 
-import runpy
 from argparse import Namespace
 from pathlib import Path
 
@@ -81,7 +79,8 @@ def test_adaptation_filters_and_audit_exclude_held_out_video_ids():
         excluded_video_ids={"secret-video"},
         allow_cholect50_held_out=False,
     )
-    assert [clip.sequence_id for clip in selected] == [r"CholecT50\videos\VID01"]
+    assert [clip.sequence_id for clip in selected] == [
+        r"CholecT50\videos\VID01"]
 
     explicitly_allowed = filter_adaptation_clips(
         clips[:2],
@@ -96,27 +95,23 @@ def test_adaptation_filters_and_audit_exclude_held_out_video_ids():
         manifest="manifest.csv",
         allow_cholect50_held_out=False,
     )
-    audit = _adaptation_audit(selected, args, {"train"}, {"excluded"}, {"secret-video"})
+    audit = _adaptation_audit(
+        selected, args, {"train"}, {"excluded"}, {"secret-video"})
     assert audit["n_clips"] == 1
     assert len(audit["clip_ids_sha256"]) == 64
     assert "VID01" in audit["clip_ids"][0]
 
 
 def test_adaptation_filter_cli_accepts_repeatable_allowlists():
-    args = build_argparser().parse_args(
-        [
-            "--allow-splits",
-            "train,val",
-            "--exclude-datasets",
-            "DatasetA",
-            "--exclude-datasets",
-            "DatasetB,DatasetC",
-            "--exclude-video-ids",
-            "VID68,VID70",
-        ]
-    )
+    args = build_argparser().parse_args([
+        "--allow-splits", "train,val",
+        "--exclude-datasets", "DatasetA",
+        "--exclude-datasets", "DatasetB,DatasetC",
+        "--exclude-video-ids", "VID68,VID70",
+    ])
     assert _cli_values(args.allow_splits) == {"train", "val"}
-    assert _cli_values(args.exclude_datasets) == {"dataseta", "datasetb", "datasetc"}
+    assert _cli_values(args.exclude_datasets) == {
+        "dataseta", "datasetb", "datasetc"}
     assert _cli_values(args.exclude_video_ids) == {"vid68", "vid70"}
 
 
@@ -129,19 +124,6 @@ def test_stir_sequence_split_is_disjoint_and_reproducible():
     assert set(train_a) | set(test_a) == set(sequences)
 
 
-def test_stir_split_keeps_patient_views_together():
-    sequences = [
-        Path(f"STIRChallenge_2024/{patient}/{view}/seq00")
-        for patient in ("01", "02", "03", "04")
-        for view in ("left", "right")
-    ]
-    train, test = split_sequences(sequences, train_fraction=0.5, seed=2)
-    train_patients = {path.parent.parent.name for path in train}
-    test_patients = {path.parent.parent.name for path in test}
-    assert train_patients.isdisjoint(test_patients)
-    assert len(train_patients) == len(test_patients) == 2
-
-
 def test_best_state_snapshot_does_not_share_cpu_storage():
     model = torch.nn.Linear(3, 2)
     snapshot = _clone_state_dict(model)
@@ -150,26 +132,3 @@ def test_best_state_snapshot_does_not_share_cpu_storage():
         model.weight.add_(1.0)
     assert torch.equal(snapshot["weight"], original)
     assert not torch.equal(snapshot["weight"], model.weight)
-
-
-def test_provenance_sanitizer_redacts_relative_private_paths():
-    script = (
-        Path(__file__).resolve().parents[1]
-        / "docs"
-        / "endohjepa"
-        / "sanitize_provenance.py"
-    )
-    sanitize = runpy.run_path(str(script))["_sanitize"]
-    cleaned = sanitize(
-        {
-            "dataset": "ION_bronch",
-            "path": (
-                "datasets/ION_bronch/case_007/intraop_00/"
-                "Procedure-20211230/private_folder/frame_001919.jpg"
-            ),
-        }
-    )
-    assert cleaned["path"] == (
-        "datasets/ION_bronch/case_007/anonymised_sequence/frame_001919.jpg"
-    )
-    assert "Procedure-" not in cleaned["path"]

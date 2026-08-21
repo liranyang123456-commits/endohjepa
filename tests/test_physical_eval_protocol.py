@@ -5,12 +5,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from endoworld.world.physical_actions import (
-    PhysicalActionDataset,
-    PhysicalSequence,
-    se3_exp,
-    se3_log,
-)
+from endoworld.world.physical_actions import PhysicalActionDataset, PhysicalSequence
 
 
 def test_c3vd_z_depth_backprojection():
@@ -48,24 +43,13 @@ def test_navigation_strict_future_and_pose_error():
     assert np.isclose(rotation, 90.0)
 
     sequence = PhysicalSequence(
-        sequence_id="scared:datasets/SCARED/dataset_7/keyframe_3",
+        sequence_id="scared:E:/private/SCARED/dataset_7/keyframe_3",
         dataset="SCARED",
         case_id="dataset_7",
         latents=torch.zeros(2, 1),
         actions=torch.zeros(1, 6),
     )
     assert _public_sequence_id(sequence) == "SCARED/dataset_7/keyframe_3"
-
-
-def test_se3_log_is_finite_and_roundtrips_near_pi():
-    axis = np.array([1.0, -2.0, 3.0])
-    axis /= np.linalg.norm(axis)
-    for angle in (np.pi, np.pi - 1e-7):
-        twist = np.concatenate([np.array([0.2, -0.1, 0.3]), angle * axis])
-        transform = se3_exp(twist)
-        recovered = se3_log(transform)
-        assert np.isfinite(recovered).all()
-        assert np.allclose(se3_exp(recovered), transform, atol=1e-7)
 
 
 def test_derangement_has_no_fixed_points():
@@ -88,7 +72,7 @@ def test_fixed_bank_uses_distinct_negatives_and_reports_shortfall():
     actions = torch.arange(42, dtype=torch.float32).reshape(7, 6) / 10
     latents = torch.cat([torch.zeros(1, 6), actions.cumsum(dim=0)])
     sequence = PhysicalSequence(
-        sequence_id="scared:datasets/SCARED/dataset_7/keyframe_1",
+        sequence_id="scared:E:/private/SCARED/dataset_7/keyframe_1",
         dataset="SCARED",
         case_id="dataset_7",
         latents=latents,

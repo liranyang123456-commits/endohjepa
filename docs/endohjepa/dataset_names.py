@@ -4,12 +4,11 @@ Manifest keys are storage identifiers (snake case, internal suffixes). Figures
 and tables must show the published corpus name instead, so every figure script
 routes its labels through :func:`display`.
 """
-
 from __future__ import annotations
 
 DISPLAY_NAMES = {
     "C3VD": "C3VD",
-    "Cholec80-Boxes": "Cholec80-Boxes",
+    "Cholec80-Boxes": "Cholec80",
     "CholecSeg8k": "CholecSeg8k",
     "CholecT50": "CholecT50",
     "EndoNeRF": "EndoNeRF",
@@ -22,7 +21,7 @@ DISPLAY_NAMES = {
     "MIS_own": "In-house MIS",
     "SCARED": "SCARED",
     "STIR": "STIR",
-    "Stereo_Lap": "Hamlyn stereo laparoscopy",
+    "Stereo_Lap": "Stereo laparoscopy",
     "SurgT": "SurgT",
     "TrackVes": "TrackVes",
     "endoscapes": "Endoscapes",

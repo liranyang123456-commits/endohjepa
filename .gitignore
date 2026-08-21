@@ -2,10 +2,10 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 *.log
-*.aux
-*.bbl
-*.blg
-*.out
-*.spl
 .DS_Store
 Thumbs.db
+docs/endohjepa/endohjepa.aux
+docs/endohjepa/endohjepa.bbl
+docs/endohjepa/endohjepa.blg
+docs/endohjepa/endohjepa.out
+docs/endohjepa/endohjepa.spl

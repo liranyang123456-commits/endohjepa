@@ -4,14 +4,12 @@
 Writes PNG+PDF under docs/endohjepa/figures/.
 Every plotted number is read from verified_metrics.json (no hard-coded drift).
 """
-
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
 import matplotlib
-
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,7 +20,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from dataset_names import display  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent.parent
 OUT = HERE / "figures"
 M = json.loads((HERE / "verified_metrics.json").read_text(encoding="utf-8"))
 
@@ -55,43 +52,16 @@ def fig_scale_horizon_forecast():
     ax = axes[0]
     # The last point uses a larger, separately built validation cache. Draw it
     # as an open marker and dashed continuation rather than a homogeneous curve.
-    ax.plot(
-        sc["clips"][:5],
-        sc["cos"][:5],
-        "o-",
-        color=C_OURS,
-        lw=2.0,
-        ms=6,
-        label="Endo-HJEPA (shared 750-val)",
-    )
+    ax.plot(sc["clips"][:5], sc["cos"][:5], "o-", color=C_OURS, lw=2.0, ms=6,
+            label="Endo-HJEPA (shared 750-val)")
     ax.plot(sc["clips"][4:], sc["cos"][4:], "--", color=C_OURS, lw=1.2)
-    ax.plot(
-        sc["clips"][-1],
-        sc["cos"][-1],
-        marker="o",
-        ms=7,
-        markerfacecolor="white",
-        markeredgecolor=C_OURS,
-        markeredgewidth=1.5,
-        linestyle="none",
-        label="13.6k (different 1,631-val)",
-    )
-    ax.axhline(
-        M["forecast_6000"]["gru"]["cos"],
-        color=C_GRU,
-        ls="--",
-        lw=1.4,
-        label="GRU (6k clips)",
-    )
-    ax.axhline(
-        M["forecast_6000"]["persistence"]["cos"],
-        color=C_PERS,
-        ls=":",
-        lw=1.6,
-        label="persistence",
-    )
+    ax.plot(sc["clips"][-1], sc["cos"][-1], marker="o", ms=7,
+            markerfacecolor="white", markeredgecolor=C_OURS, markeredgewidth=1.5,
+            linestyle="none", label="13.6k (different 1,631-val)")
+    ax.axhline(M["forecast_6000"]["gru"]["cos"], color=C_GRU, ls="--", lw=1.4, label="GRU (6k clips)")
+    ax.axhline(M["forecast_6000"]["persistence"]["cos"], color=C_PERS, ls=":", lw=1.6, label="persistence")
     ax.set_xlabel("Training clips (video-level)")
-    ax.set_ylabel("Mean forecast cosine (steps 1--4)")
+    ax.set_ylabel("Forecast cosine ($h{=}4$)")
     ax.set_title("(a) Data-scale curve")
     ax.set_ylim(0.90, 0.99)
     ax.set_xscale("log")
@@ -100,6 +70,14 @@ def fig_scale_horizon_forecast():
     ax.set_xticks(sc["clips"])
     ax.set_xticklabels(["0.5k", "1k", "2k", "4k", "6k", "13.6k"])
     ax.tick_params(axis="x", labelsize=7)
+    past = M["grounded_upgrade"]["past_only_forecast_audit"]
+    ax.text(
+        0.03, 0.08,
+        f"past-only audit (not plotted): "
+        f"{past['past_only_cos_6000']:.4f} vs persist "
+        f"{past['persistence_cos_6000']:.4f}",
+        transform=ax.transAxes, fontsize=6.5, color=C_QUERY)
+
     w = M["wilcoxon_vs_gru"]
     ax = axes[1]
     x = np.arange(2)
@@ -111,7 +89,7 @@ def fig_scale_horizon_forecast():
     ax.bar(x, gru, width, label="GRU", color=C_GRU)
     ax.bar(x + width, pers, width, label="persistence", color=C_PERS)
     ax.set_xticks(x)
-    ax.set_xticklabels(["step 1", "mean steps 1--4"])
+    ax.set_xticklabels(["$h{=}1$", "$h{=}4$"])
     ax.set_ylabel("Forecast cosine")
     ax.set_title("(b) Horizon (750-clip val)")
     ax.set_ylim(0.90, 1.0)
@@ -120,16 +98,12 @@ def fig_scale_horizon_forecast():
 
     f = M["forecast_6000"]
     ax = axes[2]
-    names = ["persist.", "Mamba-\ninspired", "GRU", "causal L1\n(ours)"]
-    vals = [
-        f["persistence"]["cos"],
-        f["mamba"]["cos"],
-        f["gru"]["cos"],
-        f["causal_l1"]["cos"],
-    ]
-    cols = [C_PERS, C_MAMBA, C_GRU, C_OURS]
+    names = ["persist.", "query L1", "Mamba", "GRU", "causal L1\n(ours)"]
+    vals = [f["persistence"]["cos"], f["query_l1"]["cos"], f["mamba"]["cos"],
+            f["gru"]["cos"], f["causal_l1"]["cos"]]
+    cols = [C_PERS, C_QUERY, C_MAMBA, C_GRU, C_OURS]
     ax.bar(names, vals, color=cols)
-    ax.set_ylabel("Mean forecast cosine (steps 1--4)")
+    ax.set_ylabel("Forecast cosine ($h{=}4$)")
     ax.set_title("(c) Dynamics baselines (6k clips)")
     ax.set_ylim(0.90, 1.0)
     ax.grid(axis="y", alpha=0.25)
@@ -145,7 +119,7 @@ def fig_planning_domain():
 
     The legacy 2k ``planning_2000`` record is explicitly invalid in the metric
     ledger because its L2/L3 encoder was not executed.  It must never be
-    visualised as a forecast-by-domain result.
+    visualised as a forecast-by-orifice result.
     """
     fig, axes = plt.subplots(1, 2, figsize=(11.2, 3.8))
 
@@ -159,24 +133,12 @@ def fig_planning_domain():
     random = [row["nmi_random"] for row in keyframes]
     ax.bar(x - width / 2, latent, width, label="latent pose NMI", color=C_OURS)
     ax.bar(x + width / 2, random, width, label="matched random", color=C_PERS)
-    ax.axhline(
-        grounding["semantic"]["nmi"],
-        color=C_GRU,
-        ls="--",
-        lw=1.1,
-        label=f"semantic NMI {grounding['semantic']['nmi']:.3f}",
-    )
-    ax.axhline(
-        grounding["semantic"]["nmi_random"],
-        color=C_PERS,
-        ls=":",
-        lw=1.1,
-        label=f"semantic random {grounding['semantic']['nmi_random']:.3f}",
-    )
+    ax.axhline(grounding["semantic"]["nmi"], color=C_GRU, ls="--", lw=1.1,
+               label=f"semantic NMI {grounding['semantic']['nmi']:.3f}")
+    ax.axhline(grounding["semantic"]["nmi_random"], color=C_PERS, ls=":", lw=1.1,
+               label=f"semantic random {grounding['semantic']['nmi_random']:.3f}")
     ax.set_xticks(x)
-    ax.set_xticklabels(
-        [f"Keyframe {index + 1}" for index in range(len(keyframes))], fontsize=6.5
-    )
+    ax.set_xticklabels([row["label"] for row in keyframes], fontsize=6.5)
     ax.set_ylabel("Normalised mutual information")
     ax.set_title("(a) Six-keyframe latent-action audit")
     ax.set_ylim(0, 0.65)
@@ -186,18 +148,8 @@ def fig_planning_domain():
     ax = axes[1]
     fs = M["fewshot"]
     names = ["GI\nzero-shot", "GI\n32-shot", "Bronch\nzero-shot", "Bronch\n32-shot"]
-    vals = [
-        fs["gi"]["zero"],
-        fs["gi"]["few"],
-        fs["bronch"]["zero"],
-        fs["bronch"]["few"],
-    ]
-    pers = [
-        fs["gi"]["persist"],
-        fs["gi"]["persist"],
-        fs["bronch"]["persist"],
-        fs["bronch"]["persist"],
-    ]
+    vals = [fs["gi"]["zero"], fs["gi"]["few"], fs["bronch"]["zero"], fs["bronch"]["few"]]
+    pers = [fs["gi"]["persist"], fs["gi"]["persist"], fs["bronch"]["persist"], fs["bronch"]["persist"]]
     x = np.arange(4)
     ax.bar(x, vals, color=[C_QUERY, C_GI, C_QUERY, C_BR], label="model")
     ax.plot(x, pers, "s--", color=C_PERS, ms=5, label="persistence")
@@ -223,24 +175,12 @@ def fig_downstream():
     w_cv = 0.36
     frozen = cv["vjepa2_frozen"]
     adapted = cv["vjepa2_adapted"]
-    ax.bar(
-        x_cv - w_cv / 2,
-        [frozen["phase"], frozen["instr"]],
-        w_cv,
-        yerr=[frozen["phase_std_across_folds"], frozen["instr_std_across_folds"]],
-        capsize=3,
-        label="Frozen",
-        color=C_OURS,
-    )
-    ax.bar(
-        x_cv + w_cv / 2,
-        [adapted["phase"], adapted["instr"]],
-        w_cv,
-        yerr=[adapted["phase_std_across_folds"], adapted["instr_std_across_folds"]],
-        capsize=3,
-        label="Adapted",
-        color=C_GRU,
-    )
+    ax.bar(x_cv - w_cv / 2, [frozen["phase"], frozen["instr"]], w_cv,
+           yerr=[frozen["phase_std_across_folds"], frozen["instr_std_across_folds"]],
+           capsize=3, label="Frozen", color=C_OURS)
+    ax.bar(x_cv + w_cv / 2, [adapted["phase"], adapted["instr"]], w_cv,
+           yerr=[adapted["phase_std_across_folds"], adapted["instr_std_across_folds"]],
+           capsize=3, label="Adapted", color=C_GRU)
     ax.set_xticks(x_cv)
     ax.set_xticklabels(["Phase acc.", "Instrument mAP"])
     ax.set_ylabel("5-fold mean $\\pm$ std")
@@ -250,24 +190,8 @@ def fig_downstream():
     ax.grid(axis="y", alpha=0.25)
 
     d = M["downstream_official"]
-    keys = [
-        "imagenet",
-        "videomae",
-        "dinov2",
-        "timesformer",
-        "vivit",
-        "vjepa2_frozen",
-        "vjepa2_adapted",
-    ]
-    labels = [
-        "ImageNet",
-        "VideoMAE",
-        "DINOv2",
-        "TimeSformer",
-        "ViViT",
-        "V-JEPA2\nfrozen",
-        "V-JEPA2\nadapted",
-    ]
+    keys = ["imagenet", "videomae", "dinov2", "timesformer", "vivit", "vjepa2_frozen", "vjepa2_adapted"]
+    labels = ["ImageNet", "VideoMAE", "DINOv2", "TimeSformer", "ViViT", "V-JEPA2\nfrozen", "V-JEPA2\nadapted"]
     phase = [d[k]["phase"] for k in keys]
     instr = [d[k]["instr"] for k in keys]
     pstd = [d[k]["phase_std"] for k in keys]
@@ -276,9 +200,7 @@ def fig_downstream():
     w = 0.38
     ax = axes[1]
     ax.bar(x - w / 2, phase, w, yerr=pstd, capsize=2, label="phase acc", color=C_ACC)
-    ax.bar(
-        x + w / 2, instr, w, yerr=istd, capsize=2, label="instrument mAP", color=C_MAP
-    )
+    ax.bar(x + w / 2, instr, w, yerr=istd, capsize=2, label="instrument mAP", color=C_MAP)
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=7)
     ax.set_ylabel("Score (mean $\\pm$ std, 3 seeds)")
@@ -289,24 +211,10 @@ def fig_downstream():
 
     ax = axes[2]
     pc = M["per_class_frozen"]
-    names = [
-        "Prep.",
-        "Calot",
-        "Clip/cut",
-        "GB dissect",
-        "GB pack",
-        "Clean/coag",
-        "GB retract",
-    ]
-    vals = [
-        pc["preparation"],
-        pc["calot_triangle_dissection"],
-        pc["clipping_cutting"],
-        pc["gallbladder_dissection"],
-        pc["gallbladder_packaging"],
-        pc["cleaning_coagulation"],
-        pc["gallbladder_retraction"],
-    ]
+    names = ["Prep.", "Calot", "Clip/cut", "GB dissect", "GB pack", "Clean/coag", "GB retract"]
+    vals = [pc["preparation"], pc["calot_triangle_dissection"], pc["clipping_cutting"],
+            pc["gallbladder_dissection"], pc["gallbladder_packaging"],
+            pc["cleaning_coagulation"], pc["gallbladder_retraction"]]
     ax.barh(names, vals, color=C_OURS)
     ax.set_xlabel("Per-class accuracy (V-JEPA 2 frozen)")
     ax.set_xlim(0, 1.0)
@@ -321,42 +229,32 @@ def fig_downstream():
 
 
 def fig_aux():
-    """Figure 5: pixel contrast, corrected risk, and grouped STIR."""
+    """Figure 5: pixel contrast, energy grounding, STIR."""
     fig, axes = plt.subplots(1, 3, figsize=(12.6, 3.6))
 
     ax = axes[0]
     pix = M["pixel"]
-    names = [
-        "Copy last\n(CNN)",
-        "CNN\nnext-frame",
-        "Copy last\n(DDPM)",
-        "DDPM\nnext-frame",
-    ]
-    vals = [
-        pix["cnn"]["copy"],
-        pix["cnn"]["psnr"],
-        pix["diffusion"]["copy"],
-        pix["diffusion"]["psnr"],
-    ]
+    names = ["Copy last\n(CNN proto.)", "CNN\nnext-frame", "Copy last\n(diff. proto.)", "DDPM\nnext-frame"]
+    vals = [pix["cnn"]["copy"], pix["cnn"]["psnr"], pix["diffusion"]["copy"], pix["diffusion"]["psnr"]]
     cols = [C_PERS, C_GRU, C_PERS, C_MAMBA]
     ax.bar(names, vals, color=cols)
     ax.set_ylabel("PSNR (dB)")
     ax.set_title("(a) Pixel generation vs copy-last")
     ax.set_ylim(0, 36)
-    ax.tick_params(axis="x", labelsize=7)
     for i, v in enumerate(vals):
         ax.text(i, v + 0.6, f"{v:.1f}", ha="center", fontsize=8)
     ax.grid(axis="y", alpha=0.25)
 
     ax = axes[1]
+    c = M["collision"]
     risk = M["grounded_upgrade"]["risk_real_v2"]["test"]
-    names = ["Corrected risk", "Chance", "Prespecified\ngate"]
-    vals = [risk["auc"], 0.50, 0.75]
-    cols = [C_GRU, C_PERS, C_QUERY]
+    names = ["Legacy energy", "Corrected risk", "Chance", "Gate"]
+    vals = [c["auc"], risk["auc"], 0.50, 0.75]
+    cols = [C_OURS, C_GRU, C_PERS, C_QUERY]
     ax.bar(names, vals, color=cols)
     ax.axhline(0.75, color=C_QUERY, ls="--", lw=1.0)
     ax.set_ylim(0, 1.0)
-    ax.set_title("(b) Corrected near-wall risk\nAUC 0.523 FAIL")
+    ax.set_title("(b) Energy vs corrected risk\nAUC 0.523 FAIL")
     ax.set_ylabel("AUC")
     ax.grid(axis="y", alpha=0.25)
     for i, v in enumerate(vals):
@@ -364,11 +262,9 @@ def fig_aux():
 
     ax = axes[2]
     s = M["stir"]
-    ax.bar(
-        ["Before STIR", "After STIR"], [s["before"], s["after"]], color=[C_PERS, C_OURS]
-    )
-    ax.set_ylabel("Latent feature-set distance")
-    ax.set_title("(c) STIR endpoint regulariser")
+    ax.bar(["Before STIR", "After STIR"], [s["before"], s["after"]], color=[C_PERS, C_OURS])
+    ax.set_ylabel("Token chamfer")
+    ax.set_title("(c) STIR deformation regulariser")
     ax.grid(axis="y", alpha=0.25)
     for i, v in enumerate([s["before"], s["after"]]):
         ax.text(i, v + 1.5, f"{v:.1f}", ha="center", fontsize=8)
@@ -377,20 +273,65 @@ def fig_aux():
     _save(fig, "figure5_aux")
 
 
+def fig_latent():
+    """Figure 6: PCA of the declared 6k validation cache."""
+    cache = Path("outputs/scale_6000_causal/latents_cache.pt")
+    if not cache.is_file():
+        raise FileNotFoundError(
+            "Figure 6 requires outputs/scale_6000_causal/latents_cache.pt; "
+            "refusing to substitute a legacy cache.")
+    import torch
+    from endoworld.data.domains import ID_TO_DOMAIN
+    pack = torch.load(cache, map_location="cpu", weights_only=False)
+    Z = pack.get("Z_val") if pack.get("Z_val") is not None else pack["Z"]
+    D = pack.get("D_val") if pack.get("D_val") is not None else pack["D"]
+    if Z.dim() == 4:
+        Z = Z.mean(dim=2)
+    feat = Z.mean(dim=1).numpy()
+    feat = feat - feat.mean(0, keepdims=True)
+    _, s, vt = np.linalg.svd(feat, full_matrices=False)
+    P = feat @ vt[:2].T
+    var = s ** 2 / (s ** 2).sum()
+    fig, axes = plt.subplots(1, 2, figsize=(11.4, 4.2))
+    ax = axes[0]
+    colours = {0: C_LAP, 1: C_GI, 2: C_BR, 3: C_PERS}
+    for did in np.unique(D.numpy()):
+        m = D.numpy() == did
+        ax.scatter(P[m, 0], P[m, 1], s=9, alpha=0.55, color=colours.get(int(did), "#000"),
+                   label=ID_TO_DOMAIN.get(int(did), str(did)))
+    ax.set_xlabel(f"PC1 ({100 * var[0]:.0f}%)")
+    ax.set_ylabel(f"PC2 ({100 * var[1]:.0f}%)")
+    ax.set_title("(a) Clip latents by orifice")
+    ax.legend(fontsize=8, frameon=False)
+    ax.grid(alpha=0.25)
+
+    ax = axes[1]
+    z0 = Z[0].numpy()
+    z0 = z0 - z0.mean(0, keepdims=True)
+    _, _, vt2 = np.linalg.svd(z0, full_matrices=False)
+    tr = z0 @ vt2[:2].T
+    ax.plot(tr[:, 0], tr[:, 1], "o-", color=C_OURS, lw=1.6, ms=5, label="actual trajectory")
+    ax.plot([tr[-1, 0]], [tr[-1, 1]], "s", color=C_PERS, ms=8, label="persistence (last token)")
+    ax.set_xlabel("PC1")
+    ax.set_ylabel("PC2")
+    ax.set_title("(b) One clip: smooth latent path")
+    ax.legend(fontsize=8, frameon=False)
+    ax.grid(alpha=0.25)
+    fig.tight_layout()
+    _save(fig, "figure6_latent")
+
+
 def fig_per_dataset(path: Path | None = None):
     """Figure 7: per-dataset forecast from the declared 6k evaluation."""
     cands = [
         path,
-        ROOT / "outputs/scale_6000_causal/per_dataset.json",
-        ROOT / "results/scale_6000_causal__per_dataset.json",
-        ROOT / "results/forecast_per_dataset.json",
+        Path("outputs/scale_6000_causal/per_dataset.json"),
     ]
     src = next((p for p in cands if p is not None and p.is_file()), None)
     if src is None:
         raise FileNotFoundError(
-            "Figure 7 requires the declared 6k per-dataset report; refusing "
-            "to substitute a legacy result."
-        )
+            "Figure 7 requires outputs/scale_6000_causal/per_dataset.json; "
+            "refusing to substitute a legacy result.")
     rep = json.loads(src.read_text(encoding="utf-8"))
     rows = sorted(rep["by_dataset"].values(), key=lambda r: -r["n"])
     if not rows:
@@ -411,17 +352,11 @@ def fig_per_dataset(path: Path | None = None):
         if n == 1:
             bar.set_hatch("///")
     if any(n == 1 for n in n_vals):
-        ax.bar(
-            [],
-            [],
-            color="white",
-            edgecolor=C_OURS,
-            hatch="///",
-            label="$n{=}1$ descriptive only",
-        )
+        ax.bar([], [], color="white", edgecolor=C_OURS, hatch="///",
+               label="$n{=}1$ descriptive only")
     ax.set_xticks(x)
     ax.set_xticklabels(names, rotation=35, ha="right", fontsize=8)
-    ax.set_ylabel("Mean forecast cosine (steps 1--4)")
+    ax.set_ylabel("Forecast cosine ($h{=}4$)")
     ax.set_title("Per-dataset latent forecast (video-level val)")
     ax.set_ylim(0.70, 1.0)
     ax.legend(fontsize=8, frameon=False)
@@ -435,6 +370,7 @@ def main():
     fig_planning_domain()
     fig_downstream()
     fig_aux()
+    fig_latent()
     fig_per_dataset()
     print(f"[figures] wrote {OUT}")
 

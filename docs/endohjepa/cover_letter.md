@@ -2,50 +2,48 @@
 
 Dear Editors and Reviewers,
 
-We submit our manuscript, **“Endo-HJEPA: Multi-Domain Latent Forecasting with
-Audited SE(3)-Conditioned Dynamics for Endoscopic Video,”**
+We submit our manuscript, **“Endo-HJEPA: Hierarchical Latent Prediction for
+Cross-Orifice Endoscopic Video with Audited SE(3)-Conditioned Evaluation,”**
 for consideration in *Medical Image Analysis*.
 
-We study two questions that are often conflated in endoscopic world models:
-offline prediction of future scene representations and sensitivity of those
-predictions to measured camera motion. Endo-HJEPA combines a frozen V-JEPA 2
-ViT-L encoder across laparoscopic, gastrointestinal and bronchoscopic video
-with residual latent forecasting and a separately audited
-SE(3)-conditioned branch.
+Endoscopic AI is predominantly reactive. We study offline prediction of scene
+representations and the association between measured camera motion and future
+representations, without claiming clinical warning, calibrated collision safety
+or robot control. Endo-HJEPA combines a frozen V-JEPA 2 ViT-L encoder across
+laparoscopy, gastrointestinal endoscopy and bronchoscopy with residual latent
+forecasting and a separately audited SE(3)-conditioned branch.
 
-In a strictly past-only run, mean forecast cosine over steps 1--4 is 0.9578
-versus 0.9102 for matched persistence. On a separate 750-clip validation cache
-encoded bidirectionally within each clip after 6,000 training clips, the
-corresponding values are 0.978 for the forecaster, 0.916 for persistence,
-0.974 for GRU and 0.971 for a custom Mamba-inspired gated recurrence. On 958 overlapping
-windows from four SCARED audit sequences, forecasts conditioned on recorded
-actions have lower error than forecasts conditioned on a no-fixed-point batch
-permutation in 88.5% of windows; a distinct
-same-sequence bank yields 92.2% pair wins and 66.4% all-negative wins. These
-results are audit-selected rather than an independent case-level test.
-Near-wall risk does not generalise after correcting label timing (AUC 0.523).
+On a video-level non-overlap offline representation protocol over 19 datasets
+and 1,707 sequences, forecast cosine is 0.978 versus 0.916 for persistence,
+0.974 for GRU and 0.971 for Mamba. A strictly past-only audit remains above
+persistence (0.9578 versus 0.9102). The audited SCARED-subset
+action-preference result is 85.2% (n=958); it is explicitly reported as
+audit-selected rather than an independent confirmation test. In a one-shot,
+oracle-goal latent-retrieval proxy over 200 overlapping windows from four
+held-out SCARED sequences, CEM-derived retrieval wins 60.0% of windows and
+reduces retrieved-pose translation error by 33.8% versus persistence; this is
+not an executed navigation result.
+External C3VD action preference is 58.3% across ten usable trajectories
+(n=798), below the prespecified gate, and near-wall risk does not generalise
+across cases.
 
-The paper contributes a multi-domain latent forecaster and an executable,
-reproducible audit for SE(3)-conditioned association. It documents
-temporal-context, pose-convention and negative-action checks, and retains
-negative results rather than extending them into unsupported control or
+The paper's contribution is therefore an executable audit and reproducible
+protocol for latent prediction and SE(3)-conditioned offline evaluation. It
+documents temporal-context, pose-convention and matched-negative checks, and
+reports negative results rather than extending them into unsupported control or
 clinical claims. Code, metric records and figure generators are released at
 https://github.com/liranyang123456-commits/endohjepa.
 
 This manuscript is original, has not been published previously and is not under
 consideration elsewhere. All authors have approved the submission and declare
-no competing interests. The private clinical component is a retrospective
-secondary analysis of de-identified in-house laparoscopic and ION bronchoscopy
-videos, provided by Dr. Nan Wei after the responsible hospital department's
-institutional review process. Associated CT volumes were available but were
-not used in the reported analyses. Data access and use were reviewed and
-authorised through the institutional data-governance process of Henan
-Provincial People's Hospital. The authors conducted no new animal experiments,
-prospective enrolment or research-directed intervention, and no identifiable
-participant information was used. The study complies with the Declaration of
-Helsinki. The formal ethics approval or exemption identifier, decision date
-and consent-waiver determination must be supplied by the responsible
-institution before submission.
+no competing interests. The ION component is a retrospective secondary analysis
+of de-identified CT volumes and intra-operative bronchoscopy videos, provided
+by Dr. Nan Wei after the responsible hospital department's strict institutional
+review process. Data access and use were authorised through Henan Provincial
+People's Hospital. Before this letter is used for submission, the formal
+**[IRB approval / ethics-exemption identifier]**, **[approval date]**,
+approved consent-waiver wording and authorised-data-access procedure must be
+inserted consistently with the hospital record.
 
 Sincerely,
 

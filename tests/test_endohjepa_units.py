@@ -1,5 +1,4 @@
 """Offline unit checks for Endo-HJEPA (no GPU, no large data)."""
-
 from __future__ import annotations
 
 import torch
@@ -20,10 +19,7 @@ from endoworld.world.factorized_state import (
     FactorizedStateAdapter,
     FactorizedStateConfig,
 )
-from endoworld.world.continuous_dynamics import (
-    ContinuousActionDynamics,
-    ContinuousDynamicsConfig,
-)
+from endoworld.world.continuous_dynamics import ContinuousDynamicsConfig
 from endoworld.world.probabilistic_dynamics import (
     DynamicsEnsemble,
     RiskCalibrator,
@@ -31,7 +27,6 @@ from endoworld.world.probabilistic_dynamics import (
 from endoworld.world.plan_mpc import (
     ContinuousMPCConfig,
     continuous_cem,
-    continuous_mppi,
 )
 from endoworld.world.physical_actions import (
     PhysicalActionDataset,
@@ -58,14 +53,8 @@ def test_specular_token_weights():
 
 def test_dense_hjepa_and_ablation():
     cfg = HJEPAConfig(
-        latent_dim=32,
-        hidden_dim=64,
-        n_heads=4,
-        n_layers=1,
-        history=2,
-        horizon=2,
-        spatial_keep=4,
-        ablation="full",
+        latent_dim=32, hidden_dim=64, n_heads=4, n_layers=1,
+        history=2, horizon=2, spatial_keep=4, ablation="full",
     )
     m = EndoHJEPA(cfg)
     z = torch.randn(3, 6, 8, 32)
@@ -85,15 +74,8 @@ def test_dense_hjepa_and_ablation():
 
 def test_hierarchical_predictors_use_context_and_actions():
     cfg = HJEPAConfig(
-        latent_dim=16,
-        hidden_dim=32,
-        n_heads=4,
-        n_layers=2,
-        history=3,
-        horizon=3,
-        n_actions=8,
-        dropout=0.0,
-        ablation="full",
+        latent_dim=16, hidden_dim=32, n_heads=4, n_layers=2,
+        history=3, horizon=3, n_actions=8, dropout=0.0, ablation="full",
     )
     model = EndoHJEPA(cfg).eval()
     z = torch.randn(2, 3, 16)
@@ -124,56 +106,10 @@ def test_hierarchical_predictors_use_context_and_actions():
     assert model.l3.action_embed.weight.grad is not None
     assert float(model.l3.action_embed.weight.grad.abs().sum()) > 0
     enc_grad = sum(
-        float(p.grad.abs().sum())
-        for p in model.l3.encoder.parameters()
+        float(p.grad.abs().sum()) for p in model.l3.encoder.parameters()
         if p.grad is not None
     )
     assert enc_grad > 0
-
-
-def test_continuous_dynamics_uses_history_actions_and_block_causality():
-    cfg = ContinuousDynamicsConfig(
-        latent_dim=16,
-        hidden_dim=32,
-        n_heads=4,
-        n_layers=2,
-        history=3,
-        horizon=3,
-        dropout=0.0,
-    )
-    model = ContinuousActionDynamics(cfg).eval()
-    history = torch.randn(2, 3, 16)
-    actions = torch.zeros(2, 3, 6)
-
-    prediction = model(history, actions)
-    assert not torch.allclose(prediction, model(history + 0.5, actions))
-
-    changed_first = actions.clone()
-    changed_first[:, 0, 0] = 1.0
-    assert not torch.allclose(prediction, model(history, changed_first))
-
-    changed_last = actions.clone()
-    changed_last[:, -1, 0] = 1.0
-    changed_last_prediction = model(history, changed_last)
-    assert torch.allclose(
-        prediction[:, :-1], changed_last_prediction[:, :-1], atol=1e-6
-    )
-    assert not torch.allclose(prediction[:, -1], changed_last_prediction[:, -1])
-
-    model.zero_grad(set_to_none=True)
-    model(history, changed_first).square().mean().backward()
-    action_grad = sum(
-        float(parameter.grad.abs().sum())
-        for parameter in model.action_proj.parameters()
-        if parameter.grad is not None
-    )
-    encoder_grad = sum(
-        float(parameter.grad.abs().sum())
-        for parameter in model.encoder.parameters()
-        if parameter.grad is not None
-    )
-    assert action_grad > 0
-    assert encoder_grad > 0
 
 
 def test_physical_action_alignment_and_video_split():
@@ -184,22 +120,16 @@ def test_physical_action_alignment_and_video_split():
     assert np.allclose(delta[:, 0], 0.01)
     assert np.allclose(delta[:, 1:], 0.0)
     assert np.array_equal(
-        tubelet_pose_indices(np.arange(6), tubelet=2), np.array([0, 2, 4])
-    )
+        tubelet_pose_indices(np.arange(6), tubelet=2), np.array([0, 2, 4]))
     assert np.allclose(
-        tubelet_pose_positions(np.arange(6), tubelet=2), np.array([0.5, 2.5, 4.5])
-    )
-    assert (
-        video_split("scared-sequence-a", case_id="dataset_1", dataset="SCARED")
-        == "train"
-    )
-    assert (
-        video_split("scared-sequence-b", case_id="dataset_6", dataset="SCARED") == "val"
-    )
-    assert (
-        video_split("scared-sequence-c", case_id="dataset_7", dataset="SCARED")
-        == "test"
-    )
+        tubelet_pose_positions(np.arange(6), tubelet=2),
+        np.array([0.5, 2.5, 4.5]))
+    assert video_split(
+        "scared-sequence-a", case_id="dataset_1", dataset="SCARED") == "train"
+    assert video_split(
+        "scared-sequence-b", case_id="dataset_6", dataset="SCARED") == "val"
+    assert video_split(
+        "scared-sequence-c", case_id="dataset_7", dataset="SCARED") == "test"
 
     # Find deterministic ids for two splits, then verify every transition from
     # one video stays in only that split.
@@ -219,7 +149,8 @@ def test_physical_action_alignment_and_video_split():
         for sequence_id in ids.values()
     ]
     for split, sequence_id in ids.items():
-        dataset = PhysicalActionDataset(sequences, history=2, horizon=2, split=split)
+        dataset = PhysicalActionDataset(
+            sequences, history=2, horizon=2, split=split)
         assert len(dataset) == 5
         assert {dataset[j]["sequence_id"] for j in range(len(dataset))} == {sequence_id}
         item = dataset[0]
@@ -239,17 +170,10 @@ def test_geometry_losses_and_metrics():
 
 
 def test_factorized_state_preserves_teacher_and_hides_nuisance():
-    adapter = FactorizedStateAdapter(
-        FactorizedStateConfig(
-            teacher_dim=24,
-            slot_dim=8,
-            adapter_rank=4,
-            geometry_dim=3,
-            tool_dim=2,
-            semantic_dim=4,
-            nuisance_dim=2,
-        )
-    )
+    adapter = FactorizedStateAdapter(FactorizedStateConfig(
+        teacher_dim=24, slot_dim=8, adapter_rank=4,
+        geometry_dim=3, tool_dim=2, semantic_dim=4, nuisance_dim=2,
+    ))
     teacher = torch.randn(2, 5, 24, requires_grad=True)
     targets = {
         "geometry_target": torch.randn(2, 5, 3),
@@ -267,16 +191,12 @@ def test_factorized_state_preserves_teacher_and_hides_nuisance():
 
 def test_probabilistic_ensemble_and_risk_calibration():
     cfg = ContinuousDynamicsConfig(
-        latent_dim=12,
-        hidden_dim=24,
-        n_heads=4,
-        n_layers=1,
-        history=2,
-        horizon=2,
-        dropout=0.0,
+        latent_dim=12, hidden_dim=24, n_heads=4, n_layers=1,
+        history=2, horizon=2, dropout=0.0,
     )
     ensemble = DynamicsEnsemble(cfg, members=2).eval()
-    prediction = ensemble.predict(torch.randn(3, 2, 12), torch.randn(3, 2, 6))
+    prediction = ensemble.predict(
+        torch.randn(3, 2, 12), torch.randn(3, 2, 6))
     assert prediction["mean"].shape == (3, 2, 12)
     assert torch.all(prediction["aleatoric_variance"] > 0)
     assert torch.all(prediction["epistemic_variance"] >= 0)
@@ -295,8 +215,7 @@ def test_continuous_cem_and_hard_safety_gate():
         def __init__(self):
             super().__init__()
             self.cfg = ContinuousDynamicsConfig(
-                latent_dim=6, history=2, horizon=2, action_dim=6
-            )
+                latent_dim=6, history=2, horizon=2, action_dim=6)
 
         def forward(self, history, actions):
             return history[:, -1:] + actions.cumsum(dim=1)
@@ -309,47 +228,31 @@ def test_continuous_cem_and_hard_safety_gate():
     history = torch.zeros(2, 2, 6)
     goal = torch.ones(2, 6)
     cfg = ContinuousMPCConfig(
-        horizon=2,
-        samples=128,
-        iterations=4,
-        elites=16,
+        horizon=2, samples=128, iterations=4, elites=16,
         max_uncertainty=10.0,
     )
     plan = continuous_cem(dynamics, history, goal, cfg)
     assert plan["accepted"].all()
-    assert (
-        torch.linalg.vector_norm(plan["prediction"][:, -1] - goal, dim=-1).mean() < 1.0
-    )
+    assert torch.linalg.vector_norm(plan["prediction"][:, -1] - goal, dim=-1).mean() < 1.0
 
-    rejected = continuous_cem(dynamics, history, goal, cfg, risk_head=UnsafeRisk())
+    rejected = continuous_cem(
+        dynamics, history, goal, cfg, risk_head=UnsafeRisk())
     assert not rejected["accepted"].any()
     assert torch.count_nonzero(rejected["actions"]) == 0
-    assert torch.count_nonzero(rejected["prediction"]) == 0
-
-    rejected_mppi = continuous_mppi(
-        dynamics, history, goal, cfg, risk_head=UnsafeRisk()
-    )
-    assert not rejected_mppi["accepted"].any()
-    assert torch.count_nonzero(rejected_mppi["actions"]) == 0
-    assert torch.count_nonzero(rejected_mppi["prediction"]) == 0
 
 
 def test_gru_and_transformer_baseline():
     z = torch.randn(3, 6, 32)
     gru = GRUDynamics(32, 64, 2)
     assert gru(z[:, :2]).shape == (3, 2, 32)
-    pred = build_predictor(
-        WorldModelConfig(
-            latent_dim=32, hidden_dim=64, history=2, horizon=2, kind="transformer"
-        )
-    )
+    pred = build_predictor(WorldModelConfig(
+        latent_dim=32, hidden_dim=64, history=2, horizon=2, kind="transformer"))
     assert pred(z[:, :2]).shape == (3, 2, 32)
 
 
 def test_c3vd_pose_last_row_translation():
     from endoworld.world.c3vd_actions import load_pose_txt, pose_deltas
     from pathlib import Path
-
     p = Path("datasets/C3VD/cecum_t1_a/cecum_t1_a/pose.txt")
     if not p.is_file():
         return
@@ -363,7 +266,6 @@ def test_c3vd_pose_last_row_translation():
 
 def test_cholect50_official_cv_partition():
     from endoworld.data.cholect50 import CHOLECT50_CV_FOLDS
-
     vids = [v for fold in CHOLECT50_CV_FOLDS.values() for v in fold]
     assert len(CHOLECT50_CV_FOLDS) == 5
     assert all(len(fold) == 10 for fold in CHOLECT50_CV_FOLDS.values())

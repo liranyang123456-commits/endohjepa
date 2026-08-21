@@ -1,18 +1,18 @@
 # Endo-HJEPA paper materials
 
-Title: *Endo-HJEPA: Multi-Domain Latent Forecasting with Audited
-SE(3)-Conditioned Dynamics for Endoscopic Video*
+**This folder is only for the endoscopic world-model manuscript.**
 
-- Manuscript source: `endohjepa.tex`; compile with
-  `pdflatex`, `bibtex`, then two further `pdflatex` passes.
+It is isolated from `docs/paper/` (IBM / CBM / BMEO CT thermal ablation planning).
+Do not reuse figures, tables, contribution lists, or ethics wording from that track.
+
+Working title: *Endo-HJEPA: Hierarchical Latent Prediction for Cross-Orifice
+Endoscopic Video with Audited SE(3)-Conditioned Evaluation*
+
+- Manuscript source: `endohjepa.tex`; build with the command on line 2.
 - Submission highlights: `highlights.txt`; each line is within the 85-character limit.
-- Authoritative methods: Sections 3--4 of `endohjepa.tex`.
+- Methods: `methods.md` (English) / `methods_zh.md` (outline).
 - Verified aggregate metrics: `verified_metrics.json`. Qualitative figures are
   regenerated from their stated checkpoint, cache and selection rule.
-- Access caveat: ION bronchoscopy and in-house MIS video are private and are
-  available only through the institutional data-governance process.
-- Submission blocker: the responsible institution must provide the formal
-  ethics approval/exemption identifier, decision date and consent-waiver
-  determination before the private-cohort manuscript can be submitted.
-- Public code and reproducibility records:
-  `https://github.com/liranyang123456-commits/endohjepa`.
+- Access caveat: ION bronchoscopy is private. Do not submit ION-derived results
+  until the required institutional approval/exemption identifier is inserted in
+  the manuscript, or remove and recompute those analyses.
