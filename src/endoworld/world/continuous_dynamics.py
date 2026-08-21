@@ -1,5 +1,4 @@
 """Continuous SE(3)-conditioned latent dynamics baseline."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -52,9 +51,7 @@ class ContinuousActionDynamics(nn.Module):
             batch_first=True,
             norm_first=True,
         )
-        self.encoder = nn.TransformerEncoder(
-            layer, cfg.n_layers, enable_nested_tensor=False
-        )
+        self.encoder = nn.TransformerEncoder(layer, cfg.n_layers)
         self.head = nn.Sequential(
             nn.LayerNorm(cfg.hidden_dim),
             nn.Linear(cfg.hidden_dim, cfg.latent_dim),
@@ -77,44 +74,41 @@ class ContinuousActionDynamics(nn.Module):
     def action_residual(self, actions: torch.Tensor) -> torch.Tensor:
         """Metric-action shortcut accumulated over the rollout horizon."""
         step_delta = self.action_delta_head(
-            self.normalise_actions(actions[:, : self.cfg.horizon])
-        )
+            self.normalise_actions(actions[:, :self.cfg.horizon]))
         return step_delta.cumsum(dim=1)
 
     def _future_features(
-        self,
-        history: torch.Tensor,
-        actions: torch.Tensor,
+        self, history: torch.Tensor, actions: torch.Tensor,
     ) -> torch.Tensor:
         if actions.size(1) < self.cfg.horizon:
-            raise ValueError(f"need {self.cfg.horizon} actions, got {actions.size(1)}")
+            raise ValueError(
+                f"need {self.cfg.horizon} actions, got {actions.size(1)}")
         history_token = self.history_proj(history)
         query = self.query.expand(history.size(0), -1, -1)
         query = query + self.action_proj(
-            self.normalise_actions(actions[:, : self.cfg.horizon])
-        )
+            self.normalise_actions(actions[:, :self.cfg.horizon]))
         tokens = torch.cat([history_token, query], dim=1)
         tokens = tokens + TransformerPredictor._positions(
-            tokens.size(1), tokens.size(2), tokens.device, tokens.dtype
-        )
+            tokens.size(1), tokens.size(2), tokens.device, tokens.dtype)
         tokens = self.encoder(
             tokens,
             mask=TransformerPredictor._block_causal_mask(
-                history.size(1), self.cfg.horizon, tokens.device
-            ),
+                history.size(1), self.cfg.horizon, tokens.device),
         )
-        return tokens[:, -self.cfg.horizon :]
+        return tokens[:, -self.cfg.horizon:]
 
     def forward(self, history: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
-        prediction = self.head(
-            self._future_features(history, actions)
-        ) + self.action_residual(actions)
+        prediction = (
+            self.head(self._future_features(history, actions))
+            + self.action_residual(actions)
+        )
         if self.cfg.residual:
             prediction = prediction + history[:, -1:].detach()
         return prediction
 
     def inverse(self, current: torch.Tensor, future: torch.Tensor) -> torch.Tensor:
-        return self.inverse_head(torch.cat([current, future, future - current], dim=-1))
+        return self.inverse_head(
+            torch.cat([current, future, future - current], dim=-1))
 
     def losses(
         self,
@@ -131,20 +125,22 @@ class ContinuousActionDynamics(nn.Module):
         forward = F.smooth_l1_loss(prediction, future)
         current = torch.cat([history[:, -1:], future[:, :-1]], dim=1)
         inverse_prediction = self.inverse(current, future)
-        inverse = F.smooth_l1_loss(inverse_prediction, self.normalise_actions(actions))
+        inverse = F.smooth_l1_loss(
+            inverse_prediction, self.normalise_actions(actions))
         predicted_current = torch.cat([history[:, -1:], prediction[:, :-1]], dim=1)
         cycle_action = self.inverse(predicted_current, prediction)
-        cycle = F.smooth_l1_loss(cycle_action, self.normalise_actions(actions))
+        cycle = F.smooth_l1_loss(
+            cycle_action, self.normalise_actions(actions))
         if history.size(0) > 1 and counterfactual_weight > 0:
             if negative_actions is None:
                 permutation = torch.randperm(history.size(0), device=history.device)
                 negative_actions = actions[permutation]
             shuffled_prediction = self(history, negative_actions)
             real_error = (prediction - future).square().mean(dim=(1, 2))
-            shuffled_error = (shuffled_prediction - future).square().mean(dim=(1, 2))
+            shuffled_error = (
+                shuffled_prediction - future).square().mean(dim=(1, 2))
             counterfactual = F.relu(
-                real_error - shuffled_error + counterfactual_margin
-            ).mean()
+                real_error - shuffled_error + counterfactual_margin).mean()
         else:
             counterfactual = forward.new_zeros(())
         return {

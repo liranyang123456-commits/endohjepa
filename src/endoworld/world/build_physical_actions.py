@@ -3,7 +3,6 @@
 Example:
     python -m endoworld.world.build_physical_actions --encoder vjepa2
 """
-
 from __future__ import annotations
 
 import argparse
@@ -33,13 +32,11 @@ def _frame_indices(paths: list[Path], n_poses: int) -> np.ndarray:
 
 def _read_paths(paths: list[Path], image_size: int) -> torch.Tensor:
     from PIL import Image
-
     frames = [
         np.asarray(
             Image.open(path).convert("RGB").resize((image_size, image_size)),
             dtype=np.float32,
-        )
-        / 255.0
+        ) / 255.0
         for path in paths
     ]
     return torch.from_numpy(np.stack(frames).transpose(0, 3, 1, 2))
@@ -51,23 +48,18 @@ def _encode_chunks(enc, frames: torch.Tensor, device: str, chunk: int) -> torch.
     outputs = []
     with torch.no_grad():
         for start in range(0, frames.size(0), chunk):
-            part = frames[start : start + chunk]
+            part = frames[start:start + chunk]
             part = part[: (part.size(0) // tubelet) * tubelet]
             if part.size(0) < tubelet:
                 continue
-            outputs.append(
-                enc.encode_temporal(part.unsqueeze(0).to(device).float())[0].cpu()
-            )
+            outputs.append(enc.encode_temporal(part.unsqueeze(0).to(device).float())[0].cpu())
     if not outputs:
         return torch.zeros(0, int(getattr(enc, "embed_dim", 1)))
     return torch.cat(outputs)
 
 
 def _encode_past_only(
-    enc,
-    frames: torch.Tensor,
-    device: str,
-    lookback_frames: int,
+    enc, frames: torch.Tensor, device: str, lookback_frames: int,
     batch: int = 8,
 ) -> torch.Tensor:
     """Leakage-free encoding: latent t sees only frames up to its own time.
@@ -88,19 +80,11 @@ def _encode_past_only(
     with torch.no_grad():
         for start in range(0, n_windows, batch):
             steps = range(start, min(start + batch, n_windows))
-            part = (
-                torch.stack(
-                    [
-                        frames[
-                            (warm + s + 1) * tubelet - lookback_frames : (warm + s + 1)
-                            * tubelet
-                        ]
-                        for s in steps
-                    ]
-                )
-                .to(device)
-                .float()
-            )
+            part = torch.stack([
+                frames[(warm + s + 1) * tubelet - lookback_frames:
+                       (warm + s + 1) * tubelet]
+                for s in steps
+            ]).to(device).float()
             outputs.append(enc.encode_temporal(part)[:, -1].cpu())
     return torch.cat(outputs)
 
@@ -119,7 +103,6 @@ def _sequence_from_frames(
     lookback_tubelets: int = 8,
 ) -> PhysicalSequence | None:
     from endoworld.world.physical_actions import interpolate_pose_rows, pose_deltas
-
     tubelet = int(getattr(enc, "tubelet", 2))
     usable = min(frame_tensor.size(0), len(frame_indices))
     usable -= usable % tubelet
@@ -127,7 +110,8 @@ def _sequence_from_frames(
         return None
     if past_only:
         lookback_frames = lookback_tubelets * tubelet
-        z = _encode_past_only(enc, frame_tensor[:usable], device, lookback_frames)
+        z = _encode_past_only(
+            enc, frame_tensor[:usable], device, lookback_frames)
         warm = lookback_frames // tubelet - 1
         # Latent step k (0-based after warm-up) ends at sampled frame
         # (warm + k + 1) * tubelet - 1, whose pose row is integer: window-end
@@ -142,8 +126,7 @@ def _sequence_from_frames(
     else:
         z = _encode_chunks(enc, frame_tensor[:usable], device, chunk)
         z, _, actions = align_latents_and_poses(
-            z, poses, frame_indices[:usable], tubelet
-        )
+            z, poses, frame_indices[:usable], tubelet)
     if len(z) < 2:
         return None
     return PhysicalSequence(
@@ -164,40 +147,27 @@ def _part_path(parts_dir: Path | None, sequence_id: str) -> Path | None:
 
 def _save_part(path: Path, seq: PhysicalSequence) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(
-        {
-            "sequence_id": seq.sequence_id,
-            "dataset": seq.dataset,
-            "latents": seq.latents.cpu(),
-            "actions": seq.actions.cpu(),
-            "case_id": seq.case_id,
-        },
-        path,
-    )
+    torch.save({
+        "sequence_id": seq.sequence_id,
+        "dataset": seq.dataset,
+        "latents": seq.latents.cpu(),
+        "actions": seq.actions.cpu(),
+        "case_id": seq.case_id,
+    }, path)
 
 
 def _load_part(path: Path) -> PhysicalSequence:
     row = torch.load(path, map_location="cpu", weights_only=False)
     return PhysicalSequence(
-        sequence_id=row["sequence_id"],
-        dataset=row["dataset"],
-        latents=row["latents"].float(),
-        actions=row["actions"].float(),
-        case_id=row.get("case_id"),
-    )
+        sequence_id=row["sequence_id"], dataset=row["dataset"],
+        latents=row["latents"].float(), actions=row["actions"].float(),
+        case_id=row.get("case_id"))
 
 
 def collect_scared(
-    enc,
-    root: str,
-    device: str,
-    max_frames: int,
-    stride: int,
-    chunk: int,
-    stereo_eye: str | None = None,
-    past_only: bool = False,
-    lookback_tubelets: int = 8,
-    parts_dir: Path | None = None,
+    enc, root: str, device: str, max_frames: int, stride: int, chunk: int,
+    stereo_eye: str | None = None, past_only: bool = False,
+    lookback_tubelets: int = 8, parts_dir: Path | None = None,
 ):
     from endoworld.world.scared_actions import (
         crop_stereo_half,
@@ -206,7 +176,6 @@ def collect_scared(
         load_scared_poses,
         read_video_frames,
     )
-
     rows = []
     for keyframe in find_scared_keyframes(root):
         sequence_id = f"scared:{keyframe.as_posix()}"
@@ -219,28 +188,25 @@ def collect_scared(
         video, paths = find_scared_rgb(keyframe)
         if video is not None:
             import cv2
-
             cap = cv2.VideoCapture(str(video))
             total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
             cap.release()
-            indices = np.arange(0, min(total, len(poses)), stride, dtype=np.int64)[
-                :max_frames
-            ]
-            frames = read_video_frames(
-                video, indices, enc.image_size, stereo_eye=stereo_eye
-            )
+            indices = np.arange(0, min(total, len(poses)), stride, dtype=np.int64)[:max_frames]
+            frames = read_video_frames(video, indices, enc.image_size,
+                                       stereo_eye=stereo_eye)
         elif paths:
             paths = paths[::stride][:max_frames]
             indices = _frame_indices(paths, len(poses))
             frames = _read_paths(paths, enc.image_size)
             if stereo_eye in ("top", "bottom"):
                 import torch as _torch
-
                 cropped = [
-                    crop_stereo_half(frame.permute(1, 2, 0).numpy(), stereo_eye)
+                    crop_stereo_half(
+                        frame.permute(1, 2, 0).numpy(), stereo_eye)
                     for frame in frames
                 ]
-                frames = _torch.from_numpy(np.stack(cropped).transpose(0, 3, 1, 2))
+                frames = _torch.from_numpy(
+                    np.stack(cropped).transpose(0, 3, 1, 2))
         else:
             continue
         case_id = next(
@@ -248,18 +214,9 @@ def collect_scared(
             None,
         )
         seq = _sequence_from_frames(
-            enc,
-            frames,
-            indices,
-            poses,
-            sequence_id,
-            "SCARED",
-            device,
-            chunk,
-            case_id=case_id,
-            past_only=past_only,
-            lookback_tubelets=lookback_tubelets,
-        )
+            enc, frames, indices, poses, sequence_id, "SCARED", device, chunk,
+            case_id=case_id, past_only=past_only,
+            lookback_tubelets=lookback_tubelets)
         if seq is not None:
             rows.append(seq)
             if part is not None:
@@ -268,22 +225,13 @@ def collect_scared(
     return rows
 
 
-def collect_c3vd(
-    enc,
-    root: str,
-    device: str,
-    max_frames: int,
-    stride: int,
-    chunk: int,
-    past_only: bool = False,
-    lookback_tubelets: int = 8,
-):
+def collect_c3vd(enc, root: str, device: str, max_frames: int, stride: int, chunk: int,
+                 past_only: bool = False, lookback_tubelets: int = 8):
     from endoworld.world.c3vd_actions import (
         find_c3vd_color_frames,
         find_c3vd_pose_files,
         load_pose_txt,
     )
-
     rows = []
     for pose_path in find_c3vd_pose_files(root):
         poses = load_pose_txt(pose_path)
@@ -294,17 +242,8 @@ def collect_c3vd(
         frames = _read_paths(paths, enc.image_size)
         sequence_id = f"c3vd:{pose_path.parent.as_posix()}"
         seq = _sequence_from_frames(
-            enc,
-            frames,
-            indices,
-            poses,
-            sequence_id,
-            "C3VD",
-            device,
-            chunk,
-            past_only=past_only,
-            lookback_tubelets=lookback_tubelets,
-        )
+            enc, frames, indices, poses, sequence_id, "C3VD", device, chunk,
+            past_only=past_only, lookback_tubelets=lookback_tubelets)
         if seq is not None:
             rows.append(seq)
     return rows
@@ -322,60 +261,34 @@ def main():
     parser.add_argument("--chunk", type=int, default=64)
     parser.add_argument("--out", default="outputs/physical_actions/sequences.pt")
     parser.add_argument(
-        "--stereo-eye",
-        choices=["top", "bottom", "none"],
-        default="none",
+        "--stereo-eye", choices=["top", "bottom", "none"], default="none",
         help="SCARED rgb.mp4 stacks both cameras vertically; crop one eye so "
-        "image motion corresponds to the single-camera SE(3) pose.",
-    )
+             "image motion corresponds to the single-camera SE(3) pose.")
     parser.add_argument(
-        "--past-only",
-        action="store_true",
+        "--past-only", action="store_true",
         help="Encode every tubelet from a look-back window only (no future "
-        "attention, no 64-frame chunk resets).",
-    )
+             "attention, no 64-frame chunk resets).")
     parser.add_argument(
-        "--lookback-tubelets",
-        type=int,
-        default=8,
-        help="Past-only window length in tubelets (8 tubelets = 16 frames).",
-    )
+        "--lookback-tubelets", type=int, default=8,
+        help="Past-only window length in tubelets (8 tubelets = 16 frames).")
     args = parser.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     from endoworld.understanding.encoders import load_any_encoder
-
     enc, _, _, _ = load_any_encoder(
-        args.encoder, device, args.vjepa2_id, args.scratch_ckpt
-    )
+        args.encoder, device, args.vjepa2_id, args.scratch_ckpt)
     stereo_eye = None if args.stereo_eye == "none" else args.stereo_eye
     parts_dir = Path(args.out).parent / "parts"
     sequences = collect_scared(
-        enc,
-        args.scared,
-        device,
-        args.max_frames,
-        args.stride,
-        args.chunk,
-        stereo_eye=stereo_eye,
-        past_only=args.past_only,
-        lookback_tubelets=args.lookback_tubelets,
-        parts_dir=parts_dir,
-    )
+        enc, args.scared, device, args.max_frames, args.stride, args.chunk,
+        stereo_eye=stereo_eye, past_only=args.past_only,
+        lookback_tubelets=args.lookback_tubelets, parts_dir=parts_dir)
     sequences += collect_c3vd(
-        enc,
-        args.c3vd,
-        device,
-        args.max_frames,
-        args.stride,
-        args.chunk,
-        past_only=args.past_only,
-        lookback_tubelets=args.lookback_tubelets,
-    )
+        enc, args.c3vd, device, args.max_frames, args.stride, args.chunk,
+        past_only=args.past_only, lookback_tubelets=args.lookback_tubelets)
     if not sequences:
         raise RuntimeError("no aligned SCARED/C3VD RGB-pose sequences found")
     save_sequences(sequences, args.out)
     import json
-
     meta = {
         "encoder": args.encoder,
         "vjepa2_id": args.vjepa2_id,
@@ -385,9 +298,7 @@ def main():
         "lookback_tubelets": args.lookback_tubelets,
         "alignment": (
             "window-end pose (integer, no interpolation)"
-            if args.past_only
-            else "fractional tubelet-centre SE(3) interpolation"
-        ),
+            if args.past_only else "fractional tubelet-centre SE(3) interpolation"),
         "n_sequences": len(sequences),
         "n_latents": int(sum(s.latents.size(0) for s in sequences)),
     }

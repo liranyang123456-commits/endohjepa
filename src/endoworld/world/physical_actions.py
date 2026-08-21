@@ -4,7 +4,6 @@ All poses use a single convention: camera-to-world 4x4 matrices and local camera
 motion ``log(inv(T_t) @ T_{t+1})`` represented as ``[v_x,v_y,v_z,w_x,w_y,w_z]``.
 Splits are assigned by complete video/sequence id, never by transition.
 """
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -20,36 +19,23 @@ from torch.utils.data import Dataset
 def _so3_log(rotation: np.ndarray) -> np.ndarray:
     cos_theta = np.clip((np.trace(rotation) - 1.0) * 0.5, -1.0, 1.0)
     theta = float(np.arccos(cos_theta))
-    vee = np.array(
-        [
-            rotation[2, 1] - rotation[1, 2],
-            rotation[0, 2] - rotation[2, 0],
-            rotation[1, 0] - rotation[0, 1],
-        ],
-        dtype=np.float64,
-    )
+    vee = np.array([
+        rotation[2, 1] - rotation[1, 2],
+        rotation[0, 2] - rotation[2, 0],
+        rotation[1, 0] - rotation[0, 1],
+    ], dtype=np.float64)
     if theta < 1e-7:
         return 0.5 * vee
-    if np.pi - theta < 1e-5:
-        symmetric = 0.5 * (rotation + rotation.T)
-        _, eigenvectors = np.linalg.eigh(symmetric)
-        axis = eigenvectors[:, -1]
-        axis /= np.linalg.norm(axis)
-        if float(axis @ vee) < 0.0:
-            axis = -axis
-        return theta * axis
     return theta * vee / (2.0 * np.sin(theta))
 
 
 def _so3_exp(omega: np.ndarray) -> np.ndarray:
     theta = float(np.linalg.norm(omega))
-    omega_hat = np.array(
-        [
-            [0.0, -omega[2], omega[1]],
-            [omega[2], 0.0, -omega[0]],
-            [-omega[1], omega[0], 0.0],
-        ]
-    )
+    omega_hat = np.array([
+        [0.0, -omega[2], omega[1]],
+        [omega[2], 0.0, -omega[0]],
+        [-omega[1], omega[0], 0.0],
+    ])
     if theta < 1e-7:
         return np.eye(3) + omega_hat + 0.5 * omega_hat @ omega_hat
     return (
@@ -67,17 +53,17 @@ def se3_log(transform: np.ndarray) -> np.ndarray:
     rotation, translation = transform[:3, :3], transform[:3, 3]
     omega = _so3_log(rotation)
     theta = float(np.linalg.norm(omega))
-    omega_hat = np.array(
-        [
-            [0.0, -omega[2], omega[1]],
-            [omega[2], 0.0, -omega[0]],
-            [-omega[1], omega[0], 0.0],
-        ]
-    )
+    omega_hat = np.array([
+        [0.0, -omega[2], omega[1]],
+        [omega[2], 0.0, -omega[0]],
+        [-omega[1], omega[0], 0.0],
+    ])
     if theta < 1e-7:
         v_inv = np.eye(3) - 0.5 * omega_hat + (omega_hat @ omega_hat) / 12.0
     else:
-        a = (1.0 - 0.5 * theta / np.tan(0.5 * theta)) / theta**2
+        a = (1.0 / theta**2) - (
+            (1.0 + np.cos(theta)) / (2.0 * theta * np.sin(theta))
+        )
         v_inv = np.eye(3) - 0.5 * omega_hat + a * (omega_hat @ omega_hat)
     return np.concatenate([v_inv @ translation, omega])
 
@@ -89,13 +75,11 @@ def se3_exp(twist: np.ndarray) -> np.ndarray:
         raise ValueError(f"expected (6,), got {twist.shape}")
     velocity, omega = twist[:3], twist[3:]
     theta = float(np.linalg.norm(omega))
-    omega_hat = np.array(
-        [
-            [0.0, -omega[2], omega[1]],
-            [omega[2], 0.0, -omega[0]],
-            [-omega[1], omega[0], 0.0],
-        ]
-    )
+    omega_hat = np.array([
+        [0.0, -omega[2], omega[1]],
+        [omega[2], 0.0, -omega[0]],
+        [-omega[1], omega[0], 0.0],
+    ])
     if theta < 1e-7:
         rotation = np.eye(3) + omega_hat + 0.5 * omega_hat @ omega_hat
         v_matrix = np.eye(3) + 0.5 * omega_hat + (omega_hat @ omega_hat) / 6.0
@@ -136,9 +120,7 @@ def pose_deltas(poses: np.ndarray) -> np.ndarray:
 
 
 def tubelet_pose_positions(
-    frame_indices: np.ndarray,
-    tubelet: int,
-    n_latents: int | None = None,
+    frame_indices: np.ndarray, tubelet: int, n_latents: int | None = None,
 ) -> np.ndarray:
     """Map temporal encoder outputs to fractional source-pose positions."""
     frame_indices = np.asarray(frame_indices, dtype=np.int64)
@@ -153,14 +135,12 @@ def tubelet_pose_positions(
 
 
 def tubelet_pose_indices(
-    frame_indices: np.ndarray,
-    tubelet: int,
-    n_latents: int | None = None,
+    frame_indices: np.ndarray, tubelet: int, n_latents: int | None = None,
 ) -> np.ndarray:
     """Nearest native rows for diagnostics; alignment uses fractional centres."""
-    return np.rint(tubelet_pose_positions(frame_indices, tubelet, n_latents)).astype(
-        np.int64
-    )
+    return np.rint(
+        tubelet_pose_positions(frame_indices, tubelet, n_latents)
+    ).astype(np.int64)
 
 
 def interpolate_pose_rows(poses: np.ndarray, positions: np.ndarray) -> np.ndarray:
@@ -172,10 +152,14 @@ def interpolate_pose_rows(poses: np.ndarray, positions: np.ndarray) -> np.ndarra
         hi = min(lo + 1, len(poses) - 1)
         alpha = float(position - lo)
         transform = np.eye(4)
-        transform[:3, 3] = (1.0 - alpha) * poses[lo, :3, 3] + alpha * poses[hi, :3, 3]
+        transform[:3, 3] = (
+            (1.0 - alpha) * poses[lo, :3, 3]
+            + alpha * poses[hi, :3, 3]
+        )
         relative_rotation = poses[lo, :3, :3].T @ poses[hi, :3, :3]
-        transform[:3, :3] = poses[lo, :3, :3] @ _so3_exp(
-            alpha * _so3_log(relative_rotation)
+        transform[:3, :3] = (
+            poses[lo, :3, :3]
+            @ _so3_exp(alpha * _so3_log(relative_rotation))
         )
         output.append(transform)
     return np.stack(output) if output else np.zeros((0, 4, 4))
@@ -188,21 +172,13 @@ def align_latents_and_poses(
     tubelet: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Return equal-length latents/poses and actions between adjacent latents."""
-    z = (
-        latents.detach().cpu().numpy()
-        if torch.is_tensor(latents)
-        else np.asarray(latents)
-    )
+    z = latents.detach().cpu().numpy() if torch.is_tensor(latents) else np.asarray(latents)
     positions = tubelet_pose_positions(frame_indices, tubelet, len(z))
     valid = (positions >= 0) & (positions <= len(poses) - 1)
     positions = positions[valid]
-    z = z[: len(valid)][valid]
+    z = z[:len(valid)][valid]
     aligned_poses = interpolate_pose_rows(poses, positions)
-    return (
-        z.astype(np.float32),
-        aligned_poses.astype(np.float64),
-        pose_deltas(aligned_poses),
-    )
+    return z.astype(np.float32), aligned_poses.astype(np.float64), pose_deltas(aligned_poses)
 
 
 def video_split(
@@ -247,11 +223,8 @@ class PhysicalSequence:
         if self.actions.shape != (self.latents.size(0) - 1, 6):
             raise ValueError(
                 f"actions must be (T-1,6), got {tuple(self.actions.shape)} "
-                f"for T={self.latents.size(0)}"
-            )
-        if self.depth_or_risk is not None and self.depth_or_risk.size(
-            0
-        ) != self.latents.size(0):
+                f"for T={self.latents.size(0)}")
+        if self.depth_or_risk is not None and self.depth_or_risk.size(0) != self.latents.size(0):
             raise ValueError("depth_or_risk must have one row per latent")
 
 
@@ -271,14 +244,11 @@ class PhysicalActionDataset(Dataset):
         self.history, self.horizon = int(history), int(horizon)
         for sequence in sequences:
             sequence.validate()
-            if (
-                video_split(
-                    sequence.sequence_id,
-                    case_id=sequence.case_id,
-                    dataset=sequence.dataset,
-                )
-                != split
-            ):
+            if video_split(
+                sequence.sequence_id,
+                case_id=sequence.case_id,
+                dataset=sequence.dataset,
+            ) != split:
                 continue
             seq_index = len(self.sequences)
             self.sequences.append(sequence)
@@ -295,7 +265,7 @@ class PhysicalActionDataset(Dataset):
         end = split + self.horizon
         item: dict[str, torch.Tensor | str] = {
             "history": seq.latents[start:split],
-            "actions": seq.actions[split - 1 : end - 1],
+            "actions": seq.actions[split - 1:end - 1],
             "future": seq.latents[split:end],
             "sequence_id": seq.sequence_id,
             "dataset": seq.dataset,
@@ -316,10 +286,7 @@ class PhysicalActionDataset(Dataset):
         return self._sequence_windows
 
     def hard_negative_index(
-        self,
-        index: int,
-        radius: int = 64,
-        rng=None,
+        self, index: int, radius: int = 64, rng=None,
     ) -> int:
         """A same-sequence, temporally adjacent counterfactual (hard negative).
 
@@ -347,26 +314,19 @@ def save_sequences(sequences: Iterable[PhysicalSequence], path: str | Path) -> N
     rows = []
     for seq in sequences:
         seq.validate()
-        rows.append(
-            {
-                "sequence_id": seq.sequence_id,
-                "dataset": seq.dataset,
-                "latents": seq.latents.cpu(),
-                "actions": seq.actions.cpu(),
-                "depth_or_risk": None
-                if seq.depth_or_risk is None
-                else seq.depth_or_risk.cpu(),
-                "case_id": seq.case_id,
-                "split": video_split(
-                    seq.sequence_id, case_id=seq.case_id, dataset=seq.dataset
-                ),
-            }
-        )
+        rows.append({
+            "sequence_id": seq.sequence_id,
+            "dataset": seq.dataset,
+            "latents": seq.latents.cpu(),
+            "actions": seq.actions.cpu(),
+            "depth_or_risk": None if seq.depth_or_risk is None else seq.depth_or_risk.cpu(),
+            "case_id": seq.case_id,
+            "split": video_split(
+                seq.sequence_id, case_id=seq.case_id, dataset=seq.dataset),
+        })
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(
-        {"pose_convention": "c2w_local_log_se3_v_then_w", "sequences": rows}, path
-    )
+    torch.save({"pose_convention": "c2w_local_log_se3_v_then_w", "sequences": rows}, path)
 
 
 def load_sequences(path: str | Path) -> list[PhysicalSequence]:
@@ -379,9 +339,7 @@ def load_sequences(path: str | Path) -> list[PhysicalSequence]:
             dataset=row["dataset"],
             latents=row["latents"].float(),
             actions=row["actions"].float(),
-            depth_or_risk=None
-            if row.get("depth_or_risk") is None
-            else row["depth_or_risk"].float(),
+            depth_or_risk=None if row.get("depth_or_risk") is None else row["depth_or_risk"].float(),
             case_id=row.get("case_id"),
         )
         for row in pack["sequences"]

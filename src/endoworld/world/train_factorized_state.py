@@ -9,7 +9,6 @@ planner states for slot-space dynamics and MPC.
         --data outputs/physical_actions_v2/sequences.pt \
         --out outputs/factorized_state_v2
 """
-
 from __future__ import annotations
 
 import argparse
@@ -24,6 +23,7 @@ from endoworld.world.factorized_state import (
     FactorizedStateAdapter,
     FactorizedStateConfig,
 )
+from endoworld.world.train_util import clone_state_dict
 from endoworld.world.physical_actions import (
     PhysicalActionDataset,
     load_sequences,
@@ -31,22 +31,11 @@ from endoworld.world.physical_actions import (
 )
 
 
-def _clone_state_dict(module: torch.nn.Module) -> dict[str, torch.Tensor]:
-    """Snapshot parameters without sharing storage with the live module."""
-    return {
-        key: value.detach().cpu().clone() for key, value in module.state_dict().items()
-    }
-
-
 def _action_stats(sequences):
-    actions = torch.cat(
-        [
-            s.actions
-            for s in sequences
-            if video_split(s.sequence_id, case_id=s.case_id, dataset=s.dataset)
-            == "train"
-        ]
-    )
+    actions = torch.cat([
+        s.actions for s in sequences
+        if video_split(s.sequence_id, case_id=s.case_id, dataset=s.dataset) == "train"
+    ])
     return actions.mean(0), actions.std(0).clamp_min(1e-6)
 
 
@@ -70,16 +59,12 @@ def main():
 
     cfg = FactorizedStateConfig(
         teacher_dim=sequences[0].latents.size(-1),
-        slot_dim=args.slot_dim,
-        adapter_rank=args.adapter_rank,
-    )
+        slot_dim=args.slot_dim, adapter_rank=args.adapter_rank)
     model = FactorizedStateAdapter(cfg).to(device)
     geometry_twist = torch.nn.Linear(cfg.slot_dim, 6).to(device)
     optimizer = torch.optim.AdamW(
         list(model.parameters()) + list(geometry_twist.parameters()),
-        lr=args.lr,
-        weight_decay=0.01,
-    )
+        lr=args.lr, weight_decay=0.01)
 
     loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
     best = float("inf")
@@ -90,12 +75,12 @@ def main():
         for batch in loader:
             history = batch["history"].to(device)
             actions = batch["actions"].to(device)
-            batch["future"].to(device)
+            future = batch["future"].to(device)
             losses = model.losses(history.reshape(-1, history.size(-1)))
             # Geometry slot must predict the executed twist (normalised).
             geometry_slot = model.slot_projectors["geometry"](
-                model.slot_norm(model.adapter(history[:, -1].detach()))
-            )
+                model.slot_norm(model.adapter(
+                    history[:, -1].detach())))
             twist_pred = geometry_twist(geometry_slot)
             twist_target = (actions[:, 0] - mean.to(device)) / std.to(device)
             twist_loss = F.smooth_l1_loss(twist_pred, twist_target)
@@ -103,8 +88,7 @@ def main():
             optimizer.zero_grad(set_to_none=True)
             total.backward()
             torch.nn.utils.clip_grad_norm_(
-                list(model.parameters()) + list(geometry_twist.parameters()), 1.0
-            )
+                list(model.parameters()) + list(geometry_twist.parameters()), 1.0)
             optimizer.step()
             running += total.item() * history.size(0)
             seen += history.size(0)
@@ -116,51 +100,37 @@ def main():
             for batch in val_loader:
                 history = batch["history"].to(device)
                 out = model(history[:, -1])
-                fid.append(
-                    F.smooth_l1_loss(
-                        out["reconstructed_teacher"], history[:, -1]
-                    ).item()
-                )
-                preds.append(
-                    geometry_twist(
-                        model.slot_projectors["geometry"](
-                            model.slot_norm(model.adapter(history[:, -1].detach()))
-                        )
-                    ).cpu()
-                )
+                fid.append(F.smooth_l1_loss(
+                    out["reconstructed_teacher"], history[:, -1]).item())
+                preds.append(geometry_twist(
+                    model.slot_projectors["geometry"](
+                        model.slot_norm(model.adapter(history[:, -1].detach())))).cpu())
                 targets.append(((batch["actions"][:, 0] - mean) / std).cpu())
             pred = torch.cat(preds)
             target = torch.cat(targets)
             r2 = 1 - (pred - target).square().sum() / max(
-                (target - target.mean(0)).square().sum().item(), 1e-8
-            )
+                (target - target.mean(0)).square().sum().item(), 1e-8)
             score = float(np_mean(fid)) - 0.1 * float(r2)
         if score < best:
             best = score
             best_state = {
-                "adapter": _clone_state_dict(model),
-                "geometry_twist": _clone_state_dict(geometry_twist),
+                "adapter": clone_state_dict(model),
+                "geometry_twist": clone_state_dict(geometry_twist),
             }
-        print(
-            f"[epoch {epoch + 1}] train={running / max(seen, 1):.4f} "
-            f"val_fidelity={np_mean(fid):.4f} twist_R2={r2:.3f}",
-            flush=True,
-        )
+        print(f"[epoch {epoch + 1}] train={running/max(seen,1):.4f} "
+              f"val_fidelity={np_mean(fid):.4f} twist_R2={r2:.3f}", flush=True)
     if best_state is not None:
         model.load_state_dict(best_state["adapter"])
         geometry_twist.load_state_dict(best_state["geometry_twist"])
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    torch.save(
-        {
-            "adapter": model.state_dict(),
-            "geometry_twist": geometry_twist.state_dict(),
-            "config": cfg.__dict__,
-            "action_mean": mean,
-            "action_std": std,
-        },
-        out / "factorized_state.pt",
-    )
+    torch.save({
+        "adapter": model.state_dict(),
+        "geometry_twist": geometry_twist.state_dict(),
+        "config": cfg.__dict__,
+        "action_mean": mean,
+        "action_std": std,
+    }, out / "factorized_state.pt")
     report = {"val_fidelity": float(np_mean(fid)), "val_twist_r2": float(r2)}
     (out / "metrics.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(report, indent=2))
@@ -168,7 +138,6 @@ def main():
 
 def np_mean(values):
     import numpy as np
-
     return float(np.mean(values)) if values else float("nan")
 
 

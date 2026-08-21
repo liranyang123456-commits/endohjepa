@@ -1,5 +1,4 @@
 """Train probabilistic SE(3) dynamics and calibrate near-wall risk."""
-
 from __future__ import annotations
 
 import argparse
@@ -49,16 +48,13 @@ def _risk_logits(ensemble, head, loader, device, threshold):
         history = batch["history"].to(device)
         actions = batch["actions"].to(device)
         result = ensemble.predict(history, actions)
-        logits.append(
-            head(
-                result["mean"],
-                result["aleatoric_variance"],
-                result["epistemic_variance"],
-            )
-            .flatten()
-            .cpu()
-        )
-        targets.append(_risk_target(batch["depth_or_risk"], threshold).flatten().cpu())
+        logits.append(head(
+            result["mean"],
+            result["aleatoric_variance"],
+            result["epistemic_variance"],
+        ).flatten().cpu())
+        targets.append(_risk_target(
+            batch["depth_or_risk"], threshold).flatten().cpu())
     if not logits:
         return torch.zeros(0), torch.zeros(0)
     return torch.cat(logits), torch.cat(targets)
@@ -72,23 +68,21 @@ def train(args):
         labelled = [s for s in sequences if s.depth_or_risk is not None]
         dropped = len(sequences) - len(labelled)
         if dropped:
-            print(
-                f"[risk] dropping {dropped} unlabelled sequences (risk training is SCARED-only)"
-            )
+            print(f"[risk] dropping {dropped} unlabelled sequences (risk training is SCARED-only)")
         sequences = labelled
     threshold = _make_smoke_risk(sequences) if args.smoke else args.near_wall_threshold
     datasets = {
-        split: PhysicalActionDataset(sequences, args.history, args.horizon, split)
+        split: PhysicalActionDataset(
+            sequences, args.history, args.horizon, split)
         for split in ("train", "val", "test")
     }
     if any(len(dataset) == 0 for dataset in datasets.values()):
         raise RuntimeError("need non-empty video-level train/val/test splits")
     if not all(sequence.depth_or_risk is not None for sequence in sequences):
-        raise RuntimeError(
-            "all sequences need depth_or_risk for calibrated risk training"
-        )
+        raise RuntimeError("all sequences need depth_or_risk for calibrated risk training")
     loaders = {
-        split: DataLoader(dataset, batch_size=args.batch_size, shuffle=split == "train")
+        split: DataLoader(
+            dataset, batch_size=args.batch_size, shuffle=split == "train")
         for split, dataset in datasets.items()
     }
     cfg = ContinuousDynamicsConfig(
@@ -104,8 +98,7 @@ def train(args):
     mean, std = _action_stats(sequences)
     ensemble.set_action_stats(mean.to(device), std.to(device))
     dynamics_optimizer = torch.optim.AdamW(
-        ensemble.parameters(), lr=args.lr, weight_decay=0.01
-    )
+        ensemble.parameters(), lr=args.lr, weight_decay=0.01)
     for epoch in range(args.epochs):
         ensemble.train()
         for batch in loaders["train"]:
@@ -130,7 +123,8 @@ def train(args):
         for batch in loaders["train"]:
             history = batch["history"].to(device)
             actions = batch["actions"].to(device)
-            target = _risk_target(batch["depth_or_risk"].to(device), threshold)
+            target = _risk_target(
+                batch["depth_or_risk"].to(device), threshold)
             with torch.no_grad():
                 prediction = ensemble.predict(history, actions)
             logits = risk_head(
@@ -146,11 +140,9 @@ def train(args):
     ensemble.eval()
     risk_head.eval()
     val_logits, val_target = _risk_logits(
-        ensemble, risk_head, loaders["val"], device, threshold
-    )
+        ensemble, risk_head, loaders["val"], device, threshold)
     test_logits, test_target = _risk_logits(
-        ensemble, risk_head, loaders["test"], device, threshold
-    )
+        ensemble, risk_head, loaders["test"], device, threshold)
     calibrator = RiskCalibrator(alpha=args.alpha).fit(val_logits, val_target)
     report = {
         "n_calibration": len(val_target),
@@ -159,24 +151,23 @@ def train(args):
         "test": calibrator.metrics(test_logits, test_target),
         "thresholds": {"auc": 0.75, "min_transitions": 500},
     }
-    report["passed"] = bool(report["test"]["auc"] >= 0.75 and len(test_target) >= 500)
+    report["passed"] = bool(
+        report["test"]["auc"] >= 0.75 and len(test_target) >= 500)
     output = Path(args.out)
     output.mkdir(parents=True, exist_ok=True)
-    torch.save(
-        {
-            "ensemble": ensemble.state_dict(),
-            "risk_head": risk_head.state_dict(),
-            "config": cfg.__dict__,
-            "calibration": {
-                "temperature": calibrator.temperature,
-                "radius": calibrator.radius,
-                "alpha": calibrator.alpha,
-            },
-            "report": report,
+    torch.save({
+        "ensemble": ensemble.state_dict(),
+        "risk_head": risk_head.state_dict(),
+        "config": cfg.__dict__,
+        "calibration": {
+            "temperature": calibrator.temperature,
+            "radius": calibrator.radius,
+            "alpha": calibrator.alpha,
         },
-        output / "probabilistic_risk.pt",
-    )
-    (output / "metrics.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+        "report": report,
+    }, output / "probabilistic_risk.pt")
+    (output / "metrics.json").write_text(
+        json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(report, indent=2))
     return report
 
@@ -196,12 +187,7 @@ def build_parser():
     parser.add_argument("--risk-epochs", type=int, default=20)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=3e-4)
-    parser.add_argument(
-        "--near-wall-threshold",
-        type=float,
-        default=34.4,
-        help="threshold on the per-frame fifth-percentile SCARED depth in millimetres",
-    )
+    parser.add_argument("--near-wall-threshold", type=float, default=5.0)
     parser.add_argument("--alpha", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--cpu", action="store_true")

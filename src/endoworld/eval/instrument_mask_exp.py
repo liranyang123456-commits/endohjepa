@@ -3,7 +3,6 @@
     python -m endoworld.eval.instrument_mask_exp --encoder vjepa2
 Do not cite CholecSeg8k clip-leaky 0.992 mAP.
 """
-
 from __future__ import annotations
 
 import argparse
@@ -18,7 +17,7 @@ import torch.nn.functional as F
 def _pool_mask(inst: torch.Tensor, hw: int) -> torch.Tensor:
     """inst (T,H,W) → (T', hw) matching tubelet-pooled spatial tokens."""
     t, h, w = inst.shape
-    side = int(hw**0.5)
+    side = int(hw ** 0.5)
     if side * side != hw:
         return inst.mean(dim=0).reshape(-1)[:hw].unsqueeze(0).expand(max(t // 2, 1), -1)
     x = F.interpolate(inst.unsqueeze(1), size=(side, side), mode="area").squeeze(1)
@@ -32,11 +31,9 @@ def _pool_mask(inst: torch.Tensor, hw: int) -> torch.Tensor:
 
 
 @torch.no_grad()
-def token_motion(
-    enc, root: str, split: str, clip_len: int, image_size: int, device: str, limit: int
-) -> dict:
+def token_motion(enc, root: str, split: str, clip_len: int, image_size: int,
+                 device: str, limit: int) -> dict:
     from endoworld.data.endovis_masks import iter_endovis_clips
-
     inst_m, bg_m, fracs = [], [], []
     n = 0
     for seq, clip, inst in iter_endovis_clips(root, split, clip_len, image_size, limit):
@@ -45,7 +42,7 @@ def token_motion(
             continue
         dz = (z[1:] - z[:-1]).pow(2).mean(-1)  # (T-1, N)
         w = _pool_mask(inst, z.size(1)).to(device)
-        w = w[: dz.size(0)]
+        w = w[:dz.size(0)]
         inst_w = w.clamp(0, 1)
         bg_w = 1.0 - inst_w
         if float(inst_w.sum()) > 0:
@@ -61,9 +58,7 @@ def token_motion(
         "token_mse_instrument": float(np.mean(inst_m)) if inst_m else None,
         "token_mse_background": float(np.mean(bg_m)) if bg_m else None,
         "ratio_inst_over_bg": (
-            float(np.mean(inst_m) / max(np.mean(bg_m), 1e-8))
-            if inst_m and bg_m
-            else None
+            float(np.mean(inst_m) / max(np.mean(bg_m), 1e-8)) if inst_m and bg_m else None
         ),
     }
 
@@ -76,19 +71,13 @@ def main():
     ap.add_argument("--root", default="datasets/endovis2017_full/endovis2017")
     ap.add_argument("--split", default="train")
     ap.add_argument("--limit", type=int, default=32)
-    ap.add_argument(
-        "--out", default="outputs/endohjepa_vjepa2/instrument_mask_exp.json"
-    )
+    ap.add_argument("--out", default="outputs/endohjepa_vjepa2/instrument_mask_exp.json")
     args = ap.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     from endoworld.understanding.encoders import load_any_encoder
-
     enc, clip_len, image_size, _ = load_any_encoder(
-        args.encoder, device, args.vjepa2_id, args.scratch_ckpt
-    )
-    motion = token_motion(
-        enc, args.root, args.split, clip_len, image_size, device, args.limit
-    )
+        args.encoder, device, args.vjepa2_id, args.scratch_ckpt)
+    motion = token_motion(enc, args.root, args.split, clip_len, image_size, device, args.limit)
     report = {
         "paper": "Endo-HJEPA",
         "not_ct_ablation_planning": True,

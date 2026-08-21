@@ -20,10 +20,11 @@ than inside the drawing, so the figure carries no free-floating legend text.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
-ROOT = Path(r"E:\PlotNeuralNet-master")
+ROOT = Path(os.environ.get("PLOTNEURALNET_ROOT", "PlotNeuralNet-master"))
 sys.path.insert(0, str(ROOT))
 from pycore.tikzeng import (  # noqa: E402
     to_begin, to_connection, to_Conv, to_ConvConvRelu, to_end, to_generate,

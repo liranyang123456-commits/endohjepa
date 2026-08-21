@@ -1,817 +1,845 @@
 {
-  "paper": "Endo-HJEPA",
-  "note": "Submission metric ledger. Each entry names a source report and protocol; invalid or superseded records are explicitly archived rather than used as evidence.",
-  "forecast_6000": {
-    "source": "outputs/scale_6000_*/val_metrics.json",
-    "n_train": 6000,
-    "protocol": "video-level val, pooled latents, h=4",
-    "persistence": {
-      "cos": 0.916,
-      "mse": 0.532
-    },
-    "query_l1": {
-      "cos": 0.936,
-      "mse": 0.408
-    },
-    "mamba": {
-      "cos": 0.971,
-      "mse": 0.18
-    },
-    "gru": {
-      "cos": 0.974,
-      "mse": 0.161
-    },
-    "causal_l1": {
-      "cos": 0.978,
-      "mse": 0.139
-    }
+ "paper": "Endo-HJEPA",
+ "note": "Submission metric ledger. Each entry names a source report and protocol; invalid or superseded records are explicitly archived rather than used as evidence.",
+ "forecast_6000": {
+  "source": "outputs/scale_6000_*/val_metrics.json",
+  "n_train": 6000,
+  "protocol": "video-level val, pooled latents, h=4",
+  "persistence": {
+   "cos": 0.916,
+   "mse": 0.532
   },
-  "wilcoxon_vs_gru": {
-    "source": "outputs/scale_6000_causal/stats_vs_gru.json",
-    "n_clips": 750,
-    "h1": {
-      "ours": 0.9811,
-      "gru": 0.9777,
-      "persist": 0.9426,
-      "delta": 0.00335,
-      "ci95": [
-        0.003,
-        0.00371
-      ],
-      "holm_p": 1.24e-84
-    },
-    "h4": {
-      "ours": 0.9776,
-      "gru": 0.974,
-      "persist": 0.9157,
-      "delta": 0.0036,
-      "ci95": [
-        0.00321,
-        0.00398
-      ],
-      "holm_p": 4.06e-102
-    }
+  "query_l1": {
+   "cos": 0.936,
+   "mse": 0.408
   },
-  "wilcoxon_vs_mamba": {
-    "source": "outputs/scale_6000_causal/stats_vs_mamba.json",
-    "h1": {
-      "ours": 0.9811,
-      "mamba": 0.9772,
-      "holm_p": 3.4e-88
-    },
-    "h4": {
-      "ours": 0.9776,
-      "mamba": 0.9715,
-      "holm_p": 1.23e-111
-    }
+  "mamba": {
+   "cos": 0.971,
+   "mse": 0.18
   },
-  "scale_curve": {
-    "source": "outputs/scale_{500,1000,2000,4000,6000,15000_causal}/val_metrics.json",
-    "note": "500–6000 share a 750-clip val; 13552 uses the 15000-cache val (1631 clips). Cosine is flat; MSE still drops.",
-    "clips": [
-      500,
-      1000,
-      2000,
-      4000,
-      6000,
-      13552
-    ],
-    "cos": [
-      0.962,
-      0.968,
-      0.972,
-      0.976,
-      0.978,
-      0.978
-    ],
-    "mse": [
-      0.236,
-      0.201,
-      0.174,
-      0.15,
-      0.139,
-      0.135
-    ]
+  "gru": {
+   "cos": 0.974,
+   "mse": 0.161
   },
-  "scale_13552": {
-    "source": "outputs/scale_15000_causal/val_metrics.json",
-    "n_train": 13552,
-    "n_val": 1631,
-    "cos": 0.978,
-    "mse": 0.135,
-    "persist_cos": 0.917,
-    "persist_mse": 0.529
-  },
-  "planning_2000": {
-    "source": "outputs/p2000_full_causal/eval_ckpt_cumulative_energy.json",
-    "valid": false,
-    "invalid_reason": "Post-hoc correctness audit found TransformerPredictor.forward did not execute its encoder, so L2/L3 outputs were not conditioned on history/actions. These values are retained only for provenance and must not appear as scientific evidence.",
-    "n_val": 250,
-    "plan_better_than_persist": 0.98,
-    "cos_plan": 0.92,
-    "cos_l1": 0.97,
-    "cos_persist": 0.874,
-    "energy_plan_lower_frac": 0.928,
-    "by_domain": {
-      "laparo": {
-        "forecast": 0.96,
-        "persist": 0.895,
-        "plan_reach": 0.952,
-        "n": 84
-      },
-      "gi": {
-        "forecast": 0.97,
-        "persist": 0.935,
-        "plan_reach": 0.988,
-        "n": 83
-      },
-      "bronch": {
-        "forecast": 0.984,
-        "persist": 0.918,
-        "plan_reach": 1.0,
-        "n": 83
-      }
-    }
-  },
-  "cross_domain_zero_shot": {
-    "source": "outputs/t16_transfer_laparo/eval_ckpt.json",
-    "laparo": {
-      "model": 0.922,
-      "persist": 0.85,
-      "n": 42
-    },
-    "gi": {
-      "model": 0.791,
-      "persist": 0.913,
-      "n": 42
-    },
-    "bronch": {
-      "model": 0.776,
-      "persist": 0.893,
-      "n": 41
-    }
-  },
-  "fewshot": {
-    "source": "outputs/t16_transfer_laparo/fewshot_{gi,bronch}.json",
-    "gi": {
-      "zero": 0.793,
-      "few": 0.839,
-      "persist": 0.911,
-      "recovery": 0.045
-    },
-    "bronch": {
-      "zero": 0.781,
-      "few": 0.83,
-      "persist": 0.894,
-      "recovery": 0.049
-    }
-  },
-  "downstream_official": {
-    "source": "outputs/vjepa2_adapted/cholect50_probe_multiseed.json",
-    "split": "CholecT50 official challenge test (VID68,70,73,74,75), 3 seeds",
-    "imagenet": {
-      "phase": 0.592,
-      "phase_std": 0.016,
-      "instr": 0.43,
-      "instr_std": 0.003
-    },
-    "dinov2": {
-      "phase": 0.658,
-      "phase_std": 0.016,
-      "instr": 0.575,
-      "instr_std": 0.003
-    },
-    "videomae": {
-      "phase": 0.558,
-      "phase_std": 0.012,
-      "instr": 0.497,
-      "instr_std": 0.004
-    },
-    "timesformer": {
-      "phase": 0.683,
-      "phase_std": 0.012,
-      "instr": 0.49,
-      "instr_std": 0.01
-    },
-    "vivit": {
-      "phase": 0.692,
-      "phase_std": 0.024,
-      "instr": 0.443,
-      "instr_std": 0.004
-    },
-    "vjepa2_frozen": {
-      "phase": 0.704,
-      "phase_std": 0.006,
-      "instr": 0.406,
-      "instr_std": 0.002
-    },
-    "vjepa2_adapted": {
-      "phase": 0.688,
-      "phase_std": 0.057,
-      "instr": 0.485,
-      "instr_std": 0.005
-    }
-  },
-  "downstream_crossval": {
-    "source": "outputs/vjepa2_adapted/cholect50_probe_crossval.json",
-    "split": "CholecT50 official recommended five-fold cross-validation, 10 test videos per fold, 3 probe seeds per fold",
-    "n_clips_pooled_linear": 800,
-    "n_clips_dense_mil": 1200,
-    "n_clips": 800,
-    "n_videos": 50,
-    "vjepa2_frozen": {
-      "phase": 0.6829,
-      "phase_std_across_folds": 0.04,
-      "instr": 0.5315,
-      "instr_std_across_folds": 0.046
-    },
-    "vjepa2_adapted": {
-      "phase": 0.6792,
-      "phase_std_across_folds": 0.038,
-      "instr": 0.4887,
-      "instr_std_across_folds": 0.0481
-    },
-    "vjepa2_frozen_dense_mil": {
-      "source": "outputs/vjepa2_adapted/cholect50_dense_probe_crossval.json",
-      "probe": "dense tokens; MIL max-pool instrument head + attention-pool phase head",
-      "phase": 0.7192,
-      "phase_std_across_folds": 0.0133,
-      "instr": 0.5864,
-      "instr_std_across_folds": 0.041
-    },
-    "vjepa2_finetune_mil": {
-      "source": "outputs/vjepa2_adapted/cholect50_finetune_mil_crossval.json",
-      "probe": "last-2-block end-to-end fine-tune + dense MIL/attention heads, 3 epochs per fold",
-      "phase": 0.7108,
-      "phase_std_across_folds": 0.0312,
-      "instr": 0.4629,
-      "instr_std_across_folds": 0.0411,
-      "note": "Supervised fine-tuning at this label scale degrades the frozen features; frozen + dense probe remains best."
-    }
-  },
-  "per_class_frozen": {
-    "source": "outputs/vjepa2_adapted/cholect50_probe_multiseed.json",
-    "n_test_clips_per_seed": 80,
-    "n_videos": 5,
-    "n_seeds": 3,
-    "preparation": 0.8,
-    "preparation_std": 0.0,
-    "calot_triangle_dissection": 0.69,
-    "calot_triangle_dissection_std": 0.017,
-    "clipping_cutting": 0.67,
-    "clipping_cutting_std": 0.0,
-    "gallbladder_dissection": 0.74,
-    "gallbladder_dissection_std": 0.017,
-    "gallbladder_packaging": 0.67,
-    "gallbladder_packaging_std": 0.0,
-    "cleaning_coagulation": 0.5,
-    "cleaning_coagulation_std": 0.0,
-    "gallbladder_retraction": 0.8,
-    "gallbladder_retraction_std": 0.0
-  },
-  "collision": {
-    "source": "outputs/p2000_full_causal/scared_collision.json",
-    "auc": 0.682,
-    "spearman": -0.471,
-    "n_transitions": 132
-  },
-  "navigation": {
-    "source": "outputs/p2000_full_causal/scared_navigation.json",
-    "reach": 0.1,
-    "n_trials": 10,
-    "pose_err_reduction": 0.0
-  },
-  "grounded_upgrade": {
-    "evidence_class": "software verification only; not a paper result",
-    "action_path_unit_tests": {
-      "source": "tests/test_endohjepa_units.py",
-      "passed": true,
-      "checks": [
-        "history sensitivity",
-        "action sensitivity",
-        "domain sensitivity",
-        "future-action block causality",
-        "action/encoder gradients"
-      ]
-    },
-    "continuous_action_smoke": {
-      "source": "outputs/continuous_actions_smoke/metrics.json",
-      "synthetic": true,
-      "real_action_win_fraction": 0.9841,
-      "inverse_action_r2": 0.7,
-      "passed": true
-    },
-    "continuous_action_real": {
-      "source": "outputs/continuous_actions_real_cf/metrics.json",
-      "dataset": "SCARED case-level split plus C3VD external test",
-      "n_validation": 2299,
-      "n_test": 2130,
-      "mse_real_actions": 0.3262,
-      "mse_shuffled_actions": 0.4172,
-      "real_action_win_fraction": 0.7385,
-      "inverse_action_r2": 0.3937,
-      "thresholds": {
-        "real_action_win_fraction": 0.8,
-        "inverse_action_r2": 0.3
-      },
-      "passed": false,
-      "per_dataset_test": {
-        "SCARED": {
-          "n": 1999,
-          "win_fraction": 0.7554,
-          "mse_real": 0.2852,
-          "mse_shuffled": 0.3824,
-          "inverse_action_r2": 0.4741
-        },
-        "C3VD": {
-          "n": 131,
-          "win_fraction": 0.5191,
-          "mse_real": 0.9508,
-          "mse_shuffled": 0.944,
-          "inverse_action_r2": -8.7108
-        },
-        "note": "Canonical evaluate() protocol (batch 32, permutation seed 0). Aggregate 73.8% is dominated by SCARED; the single held-out C3VD trajectory is near chance."
-      },
-      "audit_caveat": "Three variants (real, real_cf, real_skip) were compared on this test set during the audit; the reported variant has the highest test win, so treat as audit evidence, not a frozen-protocol confirmation.",
-      "interpretation": "Continuous SE(3) contains measurable physical signal and reduces mean error versus shuffled actions, but action sensitivity is not reliable enough for the planning branch."
-    },
-    "continuous_action_v2": {
-      "source": "outputs/continuous_actions_v2/action_audit_scared.json + grouped_cv_report.json",
-      "cache": "outputs/physical_actions_v2/sequences.pt (mono-cropped, past-only 8-tubelet lookback, window-end pose alignment)",
-      "protocol": "SCARED audit-selected action-sensitivity evidence: batch-shuffled and fixed same-sequence negative protocols are reported separately; overlapping windows are descriptive.",
-      "grouped_cv": {
-        "macro_pair_win_fraction": 0.8887,
-        "min_fold_pair_win_fraction": 0.8414,
-        "macro_inverse_action_r2": 0.4319,
-        "n_folds": 4,
-        "passed": true
-      },
-      "validation": {
-        "n": 1108,
-        "real_action_win_fraction": 0.7933,
-        "fixed_bank_pair_win_fraction": 0.8588,
-        "inverse_action_r2": 0.4373
-      },
-      "frozen_test": {
-        "status": "archived mixed record; do not use as current evidence",
-        "reason": "The 83.1% combined SCARED+C3VD value contains a pre-diagnostic C3VD variant and does not share one current external-coordinate protocol."
-      },
-      "scared_action_audit": {
-        "source": "outputs/continuous_actions_v2/action_audit_scared.json",
-        "n_windows": 958,
-        "n_test_sequences": 4,
-        "batch_shuffled": {
-          "n": 958,
-          "mse_real_actions": 0.14272546663973676,
-          "mse_shuffled_actions": 0.23011611267099924,
-          "real_action_win_fraction": 0.8517745302713987,
-          "inverse_action_r2": 0.5101000666618347,
-          "negative_protocol": "one deterministic random permutation within each evaluation batch; negatives can come from another sequence"
-        },
-        "fixed_same_sequence_bank": {
-          "n": 958,
-          "n_negatives": 10,
-          "mse_real_actions": 0.1427254667213976,
-          "mse_negative_actions": 0.26490075979498456,
-          "pair_win_fraction": 0.9079331941544885,
-          "all_negative_win_fraction": 0.6586638830897703,
-          "negative_protocol": "10 deterministic same-sequence actions sampled within the evaluator's local hard-negative radius"
-        },
-        "dependence_note": "Windows overlap within each sequence. Window-level fractions are descriptive; they are not independent case-level inference.",
-        "test_contact_note": "This audit set was previously contacted during the action-path audit. Results are audit-selected evidence, not an independent confirmation test."
-      },
-      "c3vd_external": {
-        "source": "outputs/continuous_actions_v2/c3vd_external_15traj.json",
-        "protocol": "v2 model (SCARED-only) on the fixed ten-trajectory C3VD/C3VDv2 external manifest, expressed in the implementation's OpenGL-to-OpenCV pose convention; convention-specific, descriptive",
-        "pooled_n": 798,
-        "canonical": {
-          "mse_real_actions": 0.1657,
-          "mse_shuffled_actions": 0.1797,
-          "real_action_win_fraction": 0.5827,
-          "inverse_action_r2": 0.3382
-        },
-        "fixed_bank": {
-          "n_negatives": 10,
-          "mse_negative_actions": 0.1911,
-          "pair_win_fraction": 0.6662,
-          "all_negative_win_fraction": 0.1554
-        },
-        "per_trajectory_win": {
-          "c1_ascending_t4_v4": 0.6087,
-          "c1_cecum_t1_v4": 0.5368,
-          "c1_descending_t4_v4": 0.5132,
-          "c1_sigmoid1_t4_v4": 0.6167,
-          "c1_sigmoid2_t4_v4": 0.6379,
-          "c1_transverse1_t1_v4": 0.7092,
-          "c1_transverse1_t4_v4": 0.4545,
-          "c2_cecum_t1_v4": 0.5385,
-          "c2_transverse1_t1_v4": 0.5904,
-          "cecum_t1_a": 0.6364
-        },
-        "n_trajectories_above_chance": 9,
-        "n_trajectories": 10
-      },
-      "passed": false,
-      "note": "Audit-selected SCARED evidence is reported by negative protocol; it is not an independent confirmation test."
-    },
-    "navigation_v2": {
-      "source": "outputs/physical_navigation_v2/report_scared_proxy.json",
-      "protocol": "single-shot oracle-goal latent-retrieval proxy; not receding-horizon or executed navigation",
-      "n_trials": 200,
-      "n_sequences": 4,
-      "proxy_win_fraction": 0.6,
-      "proxy_win_fraction_window_bootstrap95": [
-        0.53,
-        0.665
-      ],
-      "retrieval_translation_error_reduction_fraction": 0.3376851131260731,
-      "retrieval_translation_reduction_window_bootstrap95": [
-        0.26827428156213934,
-        0.3991046618006801
-      ],
-      "retrieval_translation_error_mean": 2.4935321473743857,
-      "persistence_translation_error_mean": 3.7648740754471897,
-      "command_translation_error_mean": 2.740342347560603,
-      "navigation_validated": false,
-      "dependence_note": "Windows from the same sequence/keyframe overlap; bootstrap intervals are descriptive window-resampling summaries, not case-level inference."
-    },
-    "risk_real_v2": {
-      "source": "outputs/probabilistic_risk_v2_corrected/metrics.json",
-      "protocol": "three-member probabilistic dynamics and calibrated near-wall head retrained after correcting the v2 SCARED label mapping from 31+4k to 30+4k native frames",
-      "n_test_transitions": 3832,
-      "near_wall_threshold": 34.4,
-      "test": {
-        "auc": 0.522693787902348,
-        "brier": 0.2464299350976944,
-        "ece": 0.098402999049842,
-        "coverage": 0.7332985401153564,
-        "temperature": 9.96277904510498,
-        "conformal_radius": 0.5796711444854736
-      },
-      "gate": {
-        "auc": 0.75,
-        "min_transitions": 500
-      },
-      "passed": false,
-      "interpretation": "Corrected-label risk remains below the prespecified AUC gate and is not used for the reported CEM retrieval proxy."
-    },
-    "risk_dense_v2": {
-      "source": "outputs/dense_risk_v2/metrics.json + metrics_relative.json",
-      "protocol": "per-token risk head with attention pooling on dense past-only tokens (256x1024 per step), frame-level 5th-pct depth labels",
-      "val_auc": 0.629,
-      "test_auc": 0.47,
-      "n_test_frames": 986,
-      "relative_labels": {
-        "val_auc": 0.592,
-        "test_auc": 0.515,
-        "note": "per-case causal-quartile labels remove the base-rate shift (35% vs 28%) but do not improve AUC"
-      },
-      "passed": false,
-      "interpretation": "Dense-risk values predate the unified label-timing audit and are not manuscript evidence.",
-      "status": "archived exploratory result; not used after the v2 SCARED risk-label timing correction"
-    },
-    "multiseed_v2": {
-      "source": "outputs/continuous_actions_v2{,_seed1,_seed2}/metrics.json",
-      "protocol": "3 training seeds, development evaluation on validation split (frozen test untouched)",
-      "fixed_bank_pair_win": [
-        0.8588,
-        0.8654,
-        0.8619
-      ],
-      "inverse_action_r2": [
-        0.437,
-        0.447,
-        0.447
-      ],
-      "all_gates_passed": true,
-      "interpretation": "v2 physical branch is seed-robust: fixed-bank win 85.9-86.5% across seeds."
-    },
-    "past_only_forecast_audit": {
-      "source": "outputs/past_only_forecast/audit.json + audit_6000.json",
-      "protocol": "matched train/val subsets, same causal L1, 20 epochs; 2000-clip and 6000-clip versions agree",
-      "bidirectional_cos_6000": 0.9761,
-      "past_only_cos_6000": 0.9578,
-      "delta_cos_6000": -0.0183,
-      "persistence_cos_6000": 0.9102,
-      "bidirectional_cos_2000": 0.9709,
-      "past_only_cos_2000": 0.9564,
-      "delta_cos_2000": -0.0145,
-      "interpretation": "Within-window future attention inflates the headline cosine by ~1.5-1.8 points; the forecast advantage over persistence survives strictly causal encoding at both scales."
-    },
-    "slot_space_ablation": {
-      "source": "outputs/continuous_actions_v2_slots/metrics.json + physical_navigation_v2_slots/report.json",
-      "adapter": "outputs/factorized_state_v2 (val fidelity 0.037, twist R2 0.183)",
-      "action_sensitivity_fixed_bank": 0.8649,
-      "navigation_reach": 0.055,
-      "navigation_error_reduction": 0.022,
-      "interpretation": "Planner-state slot result is an archived preliminary action-sensitivity ablation; it was not assessed under the oracle-goal retrieval proxy and is not manuscript evidence for planning."
-    },
-    "c3vd_pose_gate": {
-      "source": "docs/endohjepa/c3vd_pose_gate.json",
-      "method": "depth-warp diagnostic under Scaramuzza intrinsics; no convention selection or translation validation",
-      "implementation_candidate": "loader transpose + GL->CV flip",
-      "candidates": {
-        "transpose-only": {
-          "median_depth_err": 8.656542522942619,
-          "median_relative_depth_err": 0.25189768980271887,
-          "median_flow_px": 8.70429229589209,
-          "in_frame": 0.8906666666666667
-        },
-        "loader transpose + GL->CV flip": {
-          "median_depth_err": 8.949137752170326,
-          "median_relative_depth_err": 0.25462974291661333,
-          "median_flow_px": 6.944962364673158,
-          "in_frame": 0.9463888888888888
-        },
-        "loader rotation-only diagnostic": {
-          "median_depth_err": 8.766297203401264,
-          "median_relative_depth_err": 0.25323303523920626,
-          "median_flow_px": 0.18912811814522915,
-          "in_frame": 0.9201666666666668
-        }
-      },
-      "interpretation": "Depth-warp diagnostic only. It does not select a convention or independently validate translation without cross-frame correspondences."
-    },
-    "risk_smoke": {
-      "source": "outputs/probabilistic_risk_smoke/metrics.json",
-      "synthetic": true,
-      "n_test": 504,
-      "auc": 0.8789,
-      "brier": 0.187,
-      "ece": 0.2007,
-      "coverage": 0.752,
-      "passed": true
-    },
-    "navigation_smoke": {
-      "source": "outputs/physical_navigation_smoke/report.json",
-      "synthetic": true,
-      "n_trials": 100,
-      "reach": 0.89,
-      "translation_error_reduction_fraction": 0.6703,
-      "paper_eligible": false
-    },
-    "real_data_gate": {
-      "source": "docs/endohjepa/geometry_asset_gate.json",
-      "passed": false,
-      "reason": "External SCARED RGB/pose/depth and the cached VGGT-1B checkpoint are available, but no candidate has completed a common case-level split, depth convention and C3VD depth-warp diagnostic; pseudo3D has historical JSON but no E2E checkpoint."
-    }
-  },
-  "action_grounding": {
-    "semantic": {
-      "source": "outputs/p2000_full_causal/action_triplet_align.json",
-      "nmi": 0.044,
-      "nmi_random": 0.056,
-      "probe": 0.306,
-      "chance": 0.39
-    },
-    "physical": {
-      "source": "outputs/p2000_full_causal/pose_latent_align.json",
-      "nmi_range": [
-        0.41,
-        0.52
-      ],
-      "random_range": [
-        0.49,
-        0.53
-      ],
-      "keyframes_above_random": 2,
-      "n_keyframes": 6,
-      "per_keyframe": [
-        {"label": "d1-k1", "nmi_latent": 0.428, "nmi_random": 0.497},
-        {"label": "d1-k2", "nmi_latent": 0.451, "nmi_random": 0.513},
-        {"label": "d1-k3", "nmi_latent": 0.511, "nmi_random": 0.493},
-        {"label": "d2-k1", "nmi_latent": 0.405, "nmi_random": 0.525},
-        {"label": "d2-k2", "nmi_latent": 0.495, "nmi_random": 0.522},
-        {"label": "d2-k3", "nmi_latent": 0.524, "nmi_random": 0.517}
-      ]
-    }
-  },
-  "pixel": {
-    "cnn": {
-      "source": "outputs/vjepa2_adapted/pixel_baseline.json",
-      "psnr": 17.91,
-      "copy": 29.6
-    },
-    "diffusion": {
-      "source": "outputs/vjepa2_adapted/pixel_diffusion.json",
-      "psnr": 4.88,
-      "copy": 30.37
-    }
-  },
-  "stir": {
-    "source": "outputs/vjepa2_adapted/stir_finetune.json",
-    "before": 179.9,
-    "after": 168.2
-  },
-  "ablation_residual": {
-    "note": "Different val cache than the 6000-clip table; persist=0.886. Train/val n and seed are not recorded in the released metrics file. Do not mix into Table 2.",
-    "source": "outputs/v2res_full_{nores,}_h4/val_metrics.json",
-    "no_residual": 0.768,
-    "with_residual": 0.9,
-    "persist": 0.886,
-    "n_train": null,
-    "n_val": null,
-    "seed": null
-  },
-  "hp_sensitivity": {
-    "source": "outputs/hp_*/val_metrics.json",
-    "range": [
-      0.977,
-      0.978
-    ]
-  },
-  "per_dataset_6000": {
-    "source": "outputs/scale_6000_causal/per_dataset.json",
-    "aligned": true,
-    "n_val": 750,
-    "overall": {
-      "cos": 0.978,
-      "persist": 0.916
-    },
-    "by_domain": {
-      "bronch": {
-        "n": 250,
-        "cos": 0.988,
-        "persist": 0.918
-      },
-      "gi": {
-        "n": 250,
-        "cos": 0.976,
-        "persist": 0.938
-      },
-      "laparo": {
-        "n": 250,
-        "cos": 0.968,
-        "persist": 0.892
-      }
-    },
-    "rows": [
-      {
-        "dataset": "ION_bronch",
-        "domain": "bronch",
-        "n": 250,
-        "cos": 0.988,
-        "persist": 0.918
-      },
-      {
-        "dataset": "Kvasir-Capsule",
-        "domain": "gi",
-        "n": 206,
-        "cos": 0.978,
-        "persist": 0.941
-      },
-      {
-        "dataset": "CholecT50",
-        "domain": "laparo",
-        "n": 89,
-        "cos": 0.963,
-        "persist": 0.894
-      },
-      {
-        "dataset": "Stereo_Lap",
-        "domain": "laparo",
-        "n": 75,
-        "cos": 0.982,
-        "persist": 0.889
-      },
-      {
-        "dataset": "endoscapes",
-        "domain": "laparo",
-        "n": 72,
-        "cos": 0.961,
-        "persist": 0.893
-      },
-      {
-        "dataset": "HyperKvasir",
-        "domain": "gi",
-        "n": 44,
-        "cos": 0.97,
-        "persist": 0.924
-      },
-      {
-        "dataset": "endovis2018_full",
-        "domain": "laparo",
-        "n": 7,
-        "cos": 0.961,
-        "persist": 0.882
-      },
-      {
-        "dataset": "endovis2017_full",
-        "domain": "laparo",
-        "n": 5,
-        "cos": 0.965,
-        "persist": 0.909
-      }
-    ],
-    "n1_omitted": [
-      "SCARED",
-      "STIR"
-    ]
-  },
-  "per_dataset_15000_qualitative": {
-    "source": "docs/endohjepa/qualitative_forecast_15000.json",
-    "checkpoint": "outputs/scale_15000_causal/endohjepa.pt",
-    "split": "video-level val",
-    "n_val": 1631,
-    "purpose": "aggregate labels and honest latent-retrieval visualisation; not pixel generation",
-    "rows": [
-      {
-        "dataset": "CholecT50",
-        "n": 231,
-        "cos": 0.9758,
-        "persist": 0.8612,
-        "win_fraction": 0.987
-      },
-      {
-        "dataset": "EndoNeRF",
-        "n": 1,
-        "cos": 0.9768,
-        "persist": 0.8867,
-        "win_fraction": 1.0
-      },
-      {
-        "dataset": "HyperKvasir",
-        "n": 147,
-        "cos": 0.9776,
-        "persist": 0.882,
-        "win_fraction": 1.0
-      },
-      {
-        "dataset": "ION_bronch",
-        "n": 252,
-        "cos": 0.9879,
-        "persist": 0.8834,
-        "win_fraction": 1.0
-      },
-      {
-        "dataset": "Kvasir-Capsule",
-        "n": 560,
-        "cos": 0.9838,
-        "persist": 0.9106,
-        "win_fraction": 1.0
-      },
-      {
-        "dataset": "SCARED",
-        "n": 4,
-        "cos": 0.9487,
-        "persist": 0.8134,
-        "win_fraction": 1.0
-      },
-      {
-        "dataset": "STIR",
-        "n": 1,
-        "cos": 0.9722,
-        "persist": 0.8736,
-        "win_fraction": 1.0
-      },
-      {
-        "dataset": "Stereo_Lap",
-        "n": 202,
-        "cos": 0.9868,
-        "persist": 0.8232,
-        "win_fraction": 1.0
-      },
-      {
-        "dataset": "endoscapes",
-        "n": 202,
-        "cos": 0.9747,
-        "persist": 0.8529,
-        "win_fraction": 0.9455
-      },
-      {
-        "dataset": "endovis2017_full",
-        "n": 12,
-        "cos": 0.9738,
-        "persist": 0.8636,
-        "win_fraction": 1.0
-      },
-      {
-        "dataset": "endovis2018_full",
-        "n": 19,
-        "cos": 0.9745,
-        "persist": 0.8586,
-        "win_fraction": 1.0
-      }
-    ],
-    "atlas_only_no_val_forecast": [
-      "C3VD",
-      "Cholec80-Boxes",
-      "CholecSeg8k",
-      "EndoVis_InstrumentTracking",
-      "Kvasir-Instrument",
-      "MIS_own",
-      "SurgT",
-      "TrackVes"
-    ],
-    "protocol": {
-      "checkpoint": "outputs\\scale_15000_causal\\endohjepa.pt",
-      "cache": "outputs\\cache_15000_pool\\latents_cache.pt",
-      "split": "video-level val",
-      "n_val": 1631,
-      "history": 4,
-      "horizon": 4,
-      "aggregate_horizon": "h=4 terminal target",
-      "visualisation": "nearest real future tubelet; not pixel generation"
-    }
+  "causal_l1": {
+   "cos": 0.978,
+   "mse": 0.139
   }
+ },
+ "wilcoxon_vs_gru": {
+  "source": "outputs/scale_6000_causal/stats_vs_gru.json",
+  "n_clips": 750,
+  "h1": {
+   "ours": 0.9811,
+   "gru": 0.9777,
+   "persist": 0.9426,
+   "delta": 0.00335,
+   "ci95": [
+    0.003,
+    0.00371
+   ],
+   "holm_p": 1.24e-84
+  },
+  "h4": {
+   "ours": 0.9776,
+   "gru": 0.974,
+   "persist": 0.9157,
+   "delta": 0.0036,
+   "ci95": [
+    0.00321,
+    0.00398
+   ],
+   "holm_p": 4.06e-102
+  }
+ },
+ "wilcoxon_vs_mamba": {
+  "source": "outputs/scale_6000_causal/stats_vs_mamba.json",
+  "h1": {
+   "ours": 0.9811,
+   "mamba": 0.9772,
+   "holm_p": 3.4e-88
+  },
+  "h4": {
+   "ours": 0.9776,
+   "mamba": 0.9715,
+   "holm_p": 1.23e-111
+  }
+ },
+ "scale_curve": {
+  "source": "outputs/scale_{500,1000,2000,4000,6000,15000_causal}/val_metrics.json",
+  "note": "500–6000 share a 750-clip val; 13552 uses the 15000-cache val (1631 clips). Cosine is flat; MSE still drops.",
+  "clips": [
+   500,
+   1000,
+   2000,
+   4000,
+   6000,
+   13552
+  ],
+  "cos": [
+   0.962,
+   0.968,
+   0.972,
+   0.976,
+   0.978,
+   0.978
+  ],
+  "mse": [
+   0.236,
+   0.201,
+   0.174,
+   0.15,
+   0.139,
+   0.135
+  ]
+ },
+ "scale_13552": {
+  "source": "outputs/scale_15000_causal/val_metrics.json",
+  "n_train": 13552,
+  "n_val": 1631,
+  "cos": 0.978,
+  "mse": 0.135,
+  "persist_cos": 0.917,
+  "persist_mse": 0.529
+ },
+ "planning_2000": {
+  "source": "outputs/p2000_full_causal/eval_ckpt_cumulative_energy.json",
+  "valid": false,
+  "invalid_reason": "Post-hoc correctness audit found TransformerPredictor.forward did not execute its encoder, so L2/L3 outputs were not conditioned on history/actions. These values are retained only for provenance and must not appear as scientific evidence.",
+  "n_val": 250,
+  "plan_better_than_persist": 0.98,
+  "cos_plan": 0.92,
+  "cos_l1": 0.97,
+  "cos_persist": 0.874,
+  "energy_plan_lower_frac": 0.928,
+  "by_domain": {
+   "laparo": {
+    "forecast": 0.96,
+    "persist": 0.895,
+    "plan_reach": 0.952,
+    "n": 84
+   },
+   "gi": {
+    "forecast": 0.97,
+    "persist": 0.935,
+    "plan_reach": 0.988,
+    "n": 83
+   },
+   "bronch": {
+    "forecast": 0.984,
+    "persist": 0.918,
+    "plan_reach": 1.0,
+    "n": 83
+   }
+  }
+ },
+ "cross_domain_zero_shot": {
+  "source": "outputs/t16_transfer_laparo/eval_ckpt.json",
+  "laparo": {
+   "model": 0.922,
+   "persist": 0.85,
+   "n": 42
+  },
+  "gi": {
+   "model": 0.791,
+   "persist": 0.913,
+   "n": 42
+  },
+  "bronch": {
+   "model": 0.776,
+   "persist": 0.893,
+   "n": 41
+  }
+ },
+ "fewshot": {
+  "source": "outputs/t16_transfer_laparo/fewshot_{gi,bronch}.json",
+  "gi": {
+   "zero": 0.793,
+   "few": 0.839,
+   "persist": 0.911,
+   "recovery": 0.045
+  },
+  "bronch": {
+   "zero": 0.781,
+   "few": 0.83,
+   "persist": 0.894,
+   "recovery": 0.049
+  }
+ },
+ "downstream_official": {
+  "source": "outputs/vjepa2_adapted/cholect50_probe_multiseed.json",
+  "split": "CholecT50 official challenge test (VID68,70,73,74,75), 3 seeds",
+  "imagenet": {
+   "phase": 0.592,
+   "phase_std": 0.016,
+   "instr": 0.43,
+   "instr_std": 0.003
+  },
+  "dinov2": {
+   "phase": 0.658,
+   "phase_std": 0.016,
+   "instr": 0.575,
+   "instr_std": 0.003
+  },
+  "videomae": {
+   "phase": 0.558,
+   "phase_std": 0.012,
+   "instr": 0.497,
+   "instr_std": 0.004
+  },
+  "timesformer": {
+   "phase": 0.683,
+   "phase_std": 0.012,
+   "instr": 0.49,
+   "instr_std": 0.01
+  },
+  "vivit": {
+   "phase": 0.692,
+   "phase_std": 0.024,
+   "instr": 0.443,
+   "instr_std": 0.004
+  },
+  "vjepa2_frozen": {
+   "phase": 0.704,
+   "phase_std": 0.006,
+   "instr": 0.406,
+   "instr_std": 0.002
+  },
+  "vjepa2_adapted": {
+   "phase": 0.688,
+   "phase_std": 0.057,
+   "instr": 0.485,
+   "instr_std": 0.005
+  }
+ },
+ "downstream_crossval": {
+  "source": "outputs/vjepa2_adapted/cholect50_probe_crossval.json",
+  "split": "CholecT50 official recommended five-fold cross-validation, 10 test videos per fold, 3 probe seeds per fold",
+  "n_clips_pooled_linear": 800,
+  "n_clips_dense_mil": 1200,
+  "n_clips": 800,
+  "n_videos": 50,
+  "vjepa2_frozen": {
+   "phase": 0.6829,
+   "phase_std_across_folds": 0.04,
+   "instr": 0.5315,
+   "instr_std_across_folds": 0.046
+  },
+  "vjepa2_adapted": {
+   "phase": 0.6792,
+   "phase_std_across_folds": 0.038,
+   "instr": 0.4887,
+   "instr_std_across_folds": 0.0481
+  },
+  "vjepa2_frozen_dense_mil": {
+   "source": "outputs/vjepa2_adapted/cholect50_dense_probe_crossval.json",
+   "probe": "dense tokens; MIL max-pool instrument head + attention-pool phase head",
+   "phase": 0.7192,
+   "phase_std_across_folds": 0.0133,
+   "instr": 0.5864,
+   "instr_std_across_folds": 0.041
+  },
+  "vjepa2_finetune_mil": {
+   "source": "outputs/vjepa2_adapted/cholect50_finetune_mil_crossval.json",
+   "probe": "last-2-block end-to-end fine-tune + dense MIL/attention heads, 3 epochs per fold",
+   "phase": 0.7108,
+   "phase_std_across_folds": 0.0312,
+   "instr": 0.4629,
+   "instr_std_across_folds": 0.0411,
+   "note": "Supervised fine-tuning at this label scale degrades the frozen features; frozen + dense probe remains best."
+  }
+ },
+ "per_class_frozen": {
+  "source": "outputs/vjepa2_adapted/cholect50_probe_multiseed.json",
+  "n_test_clips_per_seed": 80,
+  "n_videos": 5,
+  "n_seeds": 3,
+  "preparation": 0.8,
+  "preparation_std": 0.0,
+  "calot_triangle_dissection": 0.69,
+  "calot_triangle_dissection_std": 0.017,
+  "clipping_cutting": 0.67,
+  "clipping_cutting_std": 0.0,
+  "gallbladder_dissection": 0.74,
+  "gallbladder_dissection_std": 0.017,
+  "gallbladder_packaging": 0.67,
+  "gallbladder_packaging_std": 0.0,
+  "cleaning_coagulation": 0.5,
+  "cleaning_coagulation_std": 0.0,
+  "gallbladder_retraction": 0.8,
+  "gallbladder_retraction_std": 0.0
+ },
+ "collision": {
+  "source": "outputs/p2000_full_causal/scared_collision.json",
+  "auc": 0.682,
+  "spearman": -0.471,
+  "n_transitions": 132
+ },
+ "navigation": {
+  "source": "outputs/p2000_full_causal/scared_navigation.json",
+  "reach": 0.1,
+  "n_trials": 10,
+  "pose_err_reduction": 0.0
+ },
+ "grounded_upgrade": {
+  "evidence_class": "software verification only; not a paper result",
+  "action_path_unit_tests": {
+   "source": "tests/test_endohjepa_units.py",
+   "passed": true,
+   "checks": [
+    "history sensitivity",
+    "action sensitivity",
+    "domain sensitivity",
+    "future-action block causality",
+    "action/encoder gradients"
+   ]
+  },
+  "continuous_action_smoke": {
+   "source": "outputs/continuous_actions_smoke/metrics.json",
+   "synthetic": true,
+   "real_action_win_fraction": 0.9841,
+   "inverse_action_r2": 0.7,
+   "passed": true
+  },
+  "continuous_action_real": {
+   "source": "outputs/continuous_actions_real_cf/metrics.json",
+   "dataset": "SCARED case-level split plus C3VD external test",
+   "n_validation": 2299,
+   "n_test": 2130,
+   "mse_real_actions": 0.3262,
+   "mse_shuffled_actions": 0.4172,
+   "real_action_win_fraction": 0.7385,
+   "inverse_action_r2": 0.3937,
+   "thresholds": {
+    "real_action_win_fraction": 0.8,
+    "inverse_action_r2": 0.3
+   },
+   "passed": false,
+   "per_dataset_test": {
+    "SCARED": {
+     "n": 1999,
+     "win_fraction": 0.7554,
+     "mse_real": 0.2852,
+     "mse_shuffled": 0.3824,
+     "inverse_action_r2": 0.4741
+    },
+    "C3VD": {
+     "n": 131,
+     "win_fraction": 0.5191,
+     "mse_real": 0.9508,
+     "mse_shuffled": 0.944,
+     "inverse_action_r2": -8.7108
+    },
+    "note": "Canonical evaluate() protocol (batch 32, permutation seed 0). Aggregate 73.8% is dominated by SCARED; the single held-out C3VD trajectory is near chance."
+   },
+   "audit_caveat": "Three variants (real, real_cf, real_skip) were compared on this test set during the audit; the reported variant has the highest test win, so treat as audit evidence, not a frozen-protocol confirmation.",
+   "interpretation": "Continuous SE(3) contains measurable physical signal and reduces mean error versus shuffled actions, but action sensitivity is not reliable enough for the planning branch."
+  },
+  "continuous_action_v2": {
+   "source": "outputs/continuous_actions_v2/action_audit_scared.json + grouped_cv_report.json",
+   "cache": "outputs/physical_actions_v2/sequences.pt (mono-cropped, past-only 8-tubelet lookback, window-end pose alignment)",
+   "protocol": "SCARED audit-selected action-sensitivity evidence: batch-shuffled and fixed same-sequence negative protocols are reported separately; overlapping windows are descriptive.",
+   "grouped_cv": {
+    "macro_pair_win_fraction": 0.8887,
+    "min_fold_pair_win_fraction": 0.8414,
+    "macro_inverse_action_r2": 0.4319,
+    "n_folds": 4,
+    "passed": true
+   },
+   "validation": {
+    "n": 1108,
+    "real_action_win_fraction": 0.7933,
+    "fixed_bank_pair_win_fraction": 0.8588,
+    "inverse_action_r2": 0.4373
+   },
+   "frozen_test": {
+    "status": "archived mixed record; do not use as current evidence",
+    "reason": "The 83.1% combined SCARED+C3VD value contains a pre-diagnostic C3VD variant and does not share one current external-coordinate protocol."
+   },
+   "scared_action_audit": {
+    "source": "outputs/continuous_actions_v2/action_audit_scared.json",
+    "n_windows": 958,
+    "n_test_sequences": 4,
+    "batch_shuffled": {
+     "n": 958,
+     "mse_real_actions": 0.14272546663973676,
+     "mse_shuffled_actions": 0.23011611267099924,
+     "real_action_win_fraction": 0.8517745302713987,
+     "inverse_action_r2": 0.5101000666618347,
+     "negative_protocol": "one deterministic random permutation within each evaluation batch; negatives can come from another sequence"
+    },
+    "fixed_same_sequence_bank": {
+     "n": 958,
+     "n_negatives": 10,
+     "mse_real_actions": 0.1427254667213976,
+     "mse_negative_actions": 0.26490075979498456,
+     "pair_win_fraction": 0.9079331941544885,
+     "all_negative_win_fraction": 0.6586638830897703,
+     "negative_protocol": "10 deterministic same-sequence actions sampled within the evaluator's local hard-negative radius"
+    },
+    "dependence_note": "Windows overlap within each sequence. Window-level fractions are descriptive; they are not independent case-level inference.",
+    "test_contact_note": "This audit set was previously contacted during the action-path audit. Results are audit-selected evidence, not an independent confirmation test."
+   },
+   "c3vd_external": {
+    "source": "outputs/continuous_actions_v2/c3vd_external_15traj.json",
+    "protocol": "v2 model (SCARED-only) on the fixed ten-trajectory C3VD/C3VDv2 external manifest, expressed in the implementation's OpenGL-to-OpenCV pose convention; convention-specific, descriptive",
+    "pooled_n": 798,
+    "canonical": {
+     "mse_real_actions": 0.1657,
+     "mse_shuffled_actions": 0.1797,
+     "real_action_win_fraction": 0.5827,
+     "inverse_action_r2": 0.3382
+    },
+    "fixed_bank": {
+     "n_negatives": 10,
+     "mse_negative_actions": 0.1911,
+     "pair_win_fraction": 0.6662,
+     "all_negative_win_fraction": 0.1554
+    },
+    "per_trajectory_win": {
+     "c1_ascending_t4_v4": 0.6087,
+     "c1_cecum_t1_v4": 0.5368,
+     "c1_descending_t4_v4": 0.5132,
+     "c1_sigmoid1_t4_v4": 0.6167,
+     "c1_sigmoid2_t4_v4": 0.6379,
+     "c1_transverse1_t1_v4": 0.7092,
+     "c1_transverse1_t4_v4": 0.4545,
+     "c2_cecum_t1_v4": 0.5385,
+     "c2_transverse1_t1_v4": 0.5904,
+     "cecum_t1_a": 0.6364
+    },
+    "n_trajectories_above_chance": 9,
+    "n_trajectories": 10
+   },
+   "passed": false,
+   "note": "Audit-selected SCARED evidence is reported by negative protocol; it is not an independent confirmation test."
+  },
+  "navigation_v2": {
+   "source": "outputs/physical_navigation_v2/report_scared_proxy.json",
+   "protocol": "single-shot oracle-goal latent-retrieval proxy; not receding-horizon or executed navigation",
+   "n_trials": 200,
+   "n_sequences": 4,
+   "proxy_win_fraction": 0.6,
+   "proxy_win_fraction_window_bootstrap95": [
+    0.53,
+    0.665
+   ],
+   "retrieval_translation_error_reduction_fraction": 0.3376851131260731,
+   "retrieval_translation_reduction_window_bootstrap95": [
+    0.26827428156213934,
+    0.3991046618006801
+   ],
+   "retrieval_translation_error_mean": 2.4935321473743857,
+   "persistence_translation_error_mean": 3.7648740754471897,
+   "command_translation_error_mean": 2.740342347560603,
+   "navigation_validated": false,
+   "dependence_note": "Windows from the same sequence/keyframe overlap; bootstrap intervals are descriptive window-resampling summaries, not case-level inference."
+  },
+  "risk_real_v2": {
+   "source": "outputs/probabilistic_risk_v2_corrected/metrics.json",
+   "protocol": "three-member probabilistic dynamics and calibrated near-wall head retrained after correcting the v2 SCARED label mapping from 31+4k to 30+4k native frames",
+   "n_test_transitions": 3832,
+   "near_wall_threshold": 34.4,
+   "test": {
+    "auc": 0.522693787902348,
+    "brier": 0.2464299350976944,
+    "ece": 0.098402999049842,
+    "coverage": 0.7332985401153564,
+    "temperature": 9.96277904510498,
+    "conformal_radius": 0.5796711444854736
+   },
+   "gate": {
+    "auc": 0.75,
+    "min_transitions": 500
+   },
+   "passed": false,
+   "interpretation": "Corrected-label risk remains below the prespecified AUC gate and is not used for the reported CEM retrieval proxy."
+  },
+  "risk_dense_v2": {
+   "source": "outputs/dense_risk_v2/metrics.json + metrics_relative.json",
+   "protocol": "per-token risk head with attention pooling on dense past-only tokens (256x1024 per step), frame-level 5th-pct depth labels",
+   "val_auc": 0.629,
+   "test_auc": 0.47,
+   "n_test_frames": 986,
+   "relative_labels": {
+    "val_auc": 0.592,
+    "test_auc": 0.515,
+    "note": "per-case causal-quartile labels remove the base-rate shift (35% vs 28%) but do not improve AUC"
+   },
+   "passed": false,
+   "interpretation": "Dense-risk values predate the unified label-timing audit and are not manuscript evidence.",
+   "status": "archived exploratory result; not used after the v2 SCARED risk-label timing correction"
+  },
+  "multiseed_v2": {
+   "source": "outputs/continuous_actions_v2{,_seed1,_seed2}/metrics.json",
+   "protocol": "3 training seeds, development evaluation on validation split (frozen test untouched)",
+   "fixed_bank_pair_win": [
+    0.8588,
+    0.8654,
+    0.8619
+   ],
+   "inverse_action_r2": [
+    0.437,
+    0.447,
+    0.447
+   ],
+   "all_gates_passed": true,
+   "interpretation": "v2 physical branch is seed-robust: fixed-bank win 85.9-86.5% across seeds."
+  },
+  "past_only_forecast_audit": {
+   "source": "outputs/past_only_forecast/audit.json + audit_6000.json",
+   "protocol": "matched train/val subsets, same causal L1, 20 epochs; 2000-clip and 6000-clip versions agree",
+   "bidirectional_cos_6000": 0.9761,
+   "past_only_cos_6000": 0.9578,
+   "delta_cos_6000": -0.0183,
+   "persistence_cos_6000": 0.9102,
+   "bidirectional_cos_2000": 0.9709,
+   "past_only_cos_2000": 0.9564,
+   "delta_cos_2000": -0.0145,
+   "interpretation": "Within-window future attention inflates the headline cosine by ~1.5-1.8 points; the forecast advantage over persistence survives strictly causal encoding at both scales."
+  },
+  "slot_space_ablation": {
+   "source": "outputs/continuous_actions_v2_slots/metrics.json + physical_navigation_v2_slots/report.json",
+   "adapter": "outputs/factorized_state_v2 (val fidelity 0.037, twist R2 0.183)",
+   "action_sensitivity_fixed_bank": 0.8649,
+   "navigation_reach": 0.055,
+   "navigation_error_reduction": 0.022,
+   "interpretation": "Planner-state slot result is an archived preliminary action-sensitivity ablation; it was not assessed under the oracle-goal retrieval proxy and is not manuscript evidence for planning."
+  },
+  "c3vd_pose_gate": {
+   "source": "docs/endohjepa/c3vd_pose_gate.json",
+   "method": "depth-warp diagnostic under Scaramuzza intrinsics; no convention selection or translation validation",
+   "implementation_candidate": "loader transpose + GL->CV flip",
+   "candidates": {
+    "transpose-only": {
+     "median_depth_err": 8.656542522942619,
+     "median_relative_depth_err": 0.25189768980271887,
+     "median_flow_px": 8.70429229589209,
+     "in_frame": 0.8906666666666667
+    },
+    "loader transpose + GL->CV flip": {
+     "median_depth_err": 8.949137752170326,
+     "median_relative_depth_err": 0.25462974291661333,
+     "median_flow_px": 6.944962364673158,
+     "in_frame": 0.9463888888888888
+    },
+    "loader rotation-only diagnostic": {
+     "median_depth_err": 8.766297203401264,
+     "median_relative_depth_err": 0.25323303523920626,
+     "median_flow_px": 0.18912811814522915,
+     "in_frame": 0.9201666666666668
+    }
+   },
+   "interpretation": "Depth-warp diagnostic only. It does not select a convention or independently validate translation without cross-frame correspondences."
+  },
+  "risk_smoke": {
+   "source": "outputs/probabilistic_risk_smoke/metrics.json",
+   "synthetic": true,
+   "n_test": 504,
+   "auc": 0.8789,
+   "brier": 0.187,
+   "ece": 0.2007,
+   "coverage": 0.752,
+   "passed": true
+  },
+  "navigation_smoke": {
+   "source": "outputs/physical_navigation_smoke/report.json",
+   "synthetic": true,
+   "n_trials": 100,
+   "reach": 0.89,
+   "translation_error_reduction_fraction": 0.6703,
+   "paper_eligible": false
+  },
+  "real_data_gate": {
+   "source": "docs/endohjepa/geometry_asset_gate.json",
+   "passed": false,
+   "reason": "External SCARED RGB/pose/depth and the cached VGGT-1B checkpoint are available, but no candidate has completed a common case-level split, depth convention and C3VD depth-warp diagnostic; pseudo3D has historical JSON but no E2E checkpoint."
+  }
+ },
+ "action_grounding": {
+  "semantic": {
+   "source": "outputs/p2000_full_causal/action_triplet_align.json",
+   "nmi": 0.044,
+   "nmi_random": 0.056,
+   "probe": 0.306,
+   "chance": 0.39
+  },
+  "physical": {
+   "source": "outputs/p2000_full_causal/pose_latent_align.json",
+   "nmi_range": [
+    0.41,
+    0.52
+   ],
+   "random_range": [
+    0.49,
+    0.53
+   ],
+   "keyframes_above_random": 2,
+   "n_keyframes": 6,
+   "per_keyframe": [
+    {
+     "label": "d1-k1",
+     "nmi_latent": 0.428,
+     "nmi_random": 0.497
+    },
+    {
+     "label": "d1-k2",
+     "nmi_latent": 0.451,
+     "nmi_random": 0.513
+    },
+    {
+     "label": "d1-k3",
+     "nmi_latent": 0.511,
+     "nmi_random": 0.493
+    },
+    {
+     "label": "d2-k1",
+     "nmi_latent": 0.405,
+     "nmi_random": 0.525
+    },
+    {
+     "label": "d2-k2",
+     "nmi_latent": 0.495,
+     "nmi_random": 0.522
+    },
+    {
+     "label": "d2-k3",
+     "nmi_latent": 0.524,
+     "nmi_random": 0.517
+    }
+   ]
+  }
+ },
+ "pixel": {
+  "cnn": {
+   "source": "outputs/vjepa2_adapted/pixel_baseline.json",
+   "psnr": 17.91,
+   "copy": 29.6
+  },
+  "diffusion": {
+   "source": "outputs/vjepa2_adapted/pixel_diffusion.json",
+   "psnr": 4.88,
+   "copy": 30.37
+  }
+ },
+ "stir": {
+  "source": "outputs/vjepa2_adapted/stir_finetune_grouped.json",
+  "before": 177.7,
+  "after": 172.2,
+  "split": "patient-level grouped (7 train / 2 held-out patients)",
+  "n_test_sequences": 8,
+  "n_test_patients": 2,
+  "note": "held-out patient-grouped split; supersedes the same-sequence diagnostic (stir_finetune.json, 179.9 -> 168.2 on tuned sequences)"
+ },
+ "ablation_residual": {
+  "note": "Different val cache than the 6000-clip table; persist=0.886. Train/val n and seed are not recorded in the released metrics file. Do not mix into Table 2.",
+  "source": "outputs/v2res_full_{nores,}_h4/val_metrics.json",
+  "no_residual": 0.768,
+  "with_residual": 0.9,
+  "persist": 0.886,
+  "n_train": null,
+  "n_val": null,
+  "seed": null
+ },
+ "hp_sensitivity": {
+  "source": "outputs/hp_*/val_metrics.json",
+  "range": [
+   0.977,
+   0.978
+  ]
+ },
+ "per_dataset_6000": {
+  "source": "outputs/scale_6000_causal/per_dataset.json",
+  "aligned": true,
+  "n_val": 750,
+  "overall": {
+   "cos": 0.978,
+   "persist": 0.916
+  },
+  "by_domain": {
+   "bronch": {
+    "n": 250,
+    "cos": 0.988,
+    "persist": 0.918
+   },
+   "gi": {
+    "n": 250,
+    "cos": 0.976,
+    "persist": 0.938
+   },
+   "laparo": {
+    "n": 250,
+    "cos": 0.968,
+    "persist": 0.892
+   }
+  },
+  "rows": [
+   {
+    "dataset": "ION_bronch",
+    "domain": "bronch",
+    "n": 250,
+    "cos": 0.988,
+    "persist": 0.918
+   },
+   {
+    "dataset": "Kvasir-Capsule",
+    "domain": "gi",
+    "n": 206,
+    "cos": 0.978,
+    "persist": 0.941
+   },
+   {
+    "dataset": "CholecT50",
+    "domain": "laparo",
+    "n": 89,
+    "cos": 0.963,
+    "persist": 0.894
+   },
+   {
+    "dataset": "Stereo_Lap",
+    "domain": "laparo",
+    "n": 75,
+    "cos": 0.982,
+    "persist": 0.889
+   },
+   {
+    "dataset": "endoscapes",
+    "domain": "laparo",
+    "n": 72,
+    "cos": 0.961,
+    "persist": 0.893
+   },
+   {
+    "dataset": "HyperKvasir",
+    "domain": "gi",
+    "n": 44,
+    "cos": 0.97,
+    "persist": 0.924
+   },
+   {
+    "dataset": "endovis2018_full",
+    "domain": "laparo",
+    "n": 7,
+    "cos": 0.961,
+    "persist": 0.882
+   },
+   {
+    "dataset": "endovis2017_full",
+    "domain": "laparo",
+    "n": 5,
+    "cos": 0.965,
+    "persist": 0.909
+   }
+  ],
+  "n1_omitted": [
+   "SCARED",
+   "STIR"
+  ]
+ },
+ "per_dataset_15000_qualitative": {
+  "source": "docs/endohjepa/qualitative_forecast_15000.json",
+  "checkpoint": "outputs/scale_15000_causal/endohjepa.pt",
+  "split": "video-level val",
+  "n_val": 1631,
+  "purpose": "aggregate labels and honest latent-retrieval visualisation; not pixel generation",
+  "rows": [
+   {
+    "dataset": "CholecT50",
+    "n": 231,
+    "cos": 0.9758,
+    "persist": 0.8612,
+    "win_fraction": 0.987
+   },
+   {
+    "dataset": "EndoNeRF",
+    "n": 1,
+    "cos": 0.9768,
+    "persist": 0.8867,
+    "win_fraction": 1.0
+   },
+   {
+    "dataset": "HyperKvasir",
+    "n": 147,
+    "cos": 0.9776,
+    "persist": 0.882,
+    "win_fraction": 1.0
+   },
+   {
+    "dataset": "ION_bronch",
+    "n": 252,
+    "cos": 0.9879,
+    "persist": 0.8834,
+    "win_fraction": 1.0
+   },
+   {
+    "dataset": "Kvasir-Capsule",
+    "n": 560,
+    "cos": 0.9838,
+    "persist": 0.9106,
+    "win_fraction": 1.0
+   },
+   {
+    "dataset": "SCARED",
+    "n": 4,
+    "cos": 0.9487,
+    "persist": 0.8134,
+    "win_fraction": 1.0
+   },
+   {
+    "dataset": "STIR",
+    "n": 1,
+    "cos": 0.9722,
+    "persist": 0.8736,
+    "win_fraction": 1.0
+   },
+   {
+    "dataset": "Stereo_Lap",
+    "n": 202,
+    "cos": 0.9868,
+    "persist": 0.8232,
+    "win_fraction": 1.0
+   },
+   {
+    "dataset": "endoscapes",
+    "n": 202,
+    "cos": 0.9747,
+    "persist": 0.8529,
+    "win_fraction": 0.9455
+   },
+   {
+    "dataset": "endovis2017_full",
+    "n": 12,
+    "cos": 0.9738,
+    "persist": 0.8636,
+    "win_fraction": 1.0
+   },
+   {
+    "dataset": "endovis2018_full",
+    "n": 19,
+    "cos": 0.9745,
+    "persist": 0.8586,
+    "win_fraction": 1.0
+   }
+  ],
+  "atlas_only_no_val_forecast": [
+   "C3VD",
+   "Cholec80-Boxes",
+   "CholecSeg8k",
+   "EndoVis_InstrumentTracking",
+   "Kvasir-Instrument",
+   "MIS_own",
+   "SurgT",
+   "TrackVes"
+  ],
+  "protocol": {
+   "checkpoint": "outputs\\scale_15000_causal\\endohjepa.pt",
+   "cache": "outputs\\cache_15000_pool\\latents_cache.pt",
+   "split": "video-level val",
+   "n_val": 1631,
+   "history": 4,
+   "horizon": 4,
+   "aggregate_horizon": "h=4 terminal target",
+   "visualisation": "nearest real future tubelet; not pixel generation"
+  }
+ }
 }

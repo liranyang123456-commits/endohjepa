@@ -1,5 +1,4 @@
 """STIR Challenge start/end IR segmentation → point sets for L1 track regulariser."""
-
 from __future__ import annotations
 
 import json
@@ -22,7 +21,6 @@ class StirClip:
 
 def _points_from_seg(path: Path, max_points: int = 64) -> np.ndarray:
     from PIL import Image
-
     arr = np.asarray(Image.open(path))
     if arr.ndim == 3:
         arr = arr[..., 0]
@@ -50,9 +48,7 @@ def load_stir_clip(seq_dir: str | Path, max_points: int = 64) -> StirClip | None
     frame_dirs = sorted(p for p in seq.rglob("*_frames") if p.is_dir())
     frames: list[Path] = []
     if frame_dirs:
-        frames = sorted(frame_dirs[0].glob("frame_*.jpg")) + sorted(
-            frame_dirs[0].glob("frame_*.png")
-        )
+        frames = sorted(frame_dirs[0].glob("frame_*.jpg")) + sorted(frame_dirs[0].glob("frame_*.png"))
     starts = list(seq.glob("*_icgstart.png"))
     ends = list(seq.glob("*_icgend.png"))
     calib = {}
@@ -88,7 +84,6 @@ def stir_clip_tensors(clip: StirClip, image_size: int, n_frames: int = 8):
     """Load visible frames + start/end points resized to the encoder grid."""
     from PIL import Image
     import torch
-
     if len(clip.frames) < 2:
         return None
     idxs = np.linspace(0, len(clip.frames) - 1, min(n_frames, len(clip.frames)))
@@ -98,9 +93,7 @@ def stir_clip_tensors(clip: StirClip, image_size: int, n_frames: int = 8):
         im = Image.open(clip.frames[i]).convert("RGB")
         if src_wh is None:
             src_wh = im.size
-        frames.append(
-            np.asarray(im.resize((image_size, image_size)), np.float32) / 255.0
-        )
+        frames.append(np.asarray(im.resize((image_size, image_size)), np.float32) / 255.0)
     if src_wh is None:
         return None
     arr = np.stack(frames).transpose(0, 3, 1, 2)

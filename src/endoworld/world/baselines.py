@@ -1,5 +1,4 @@
 """Dynamics baselines for paper ablations (not the main world model): GRU + Mamba/SSM."""
-
 from __future__ import annotations
 
 import torch
@@ -7,9 +6,7 @@ import torch.nn as nn
 
 
 class GRUDynamics(nn.Module):
-    def __init__(
-        self, latent_dim: int, hidden_dim: int, horizon: int, residual: bool = True
-    ):
+    def __init__(self, latent_dim: int, hidden_dim: int, horizon: int, residual: bool = True):
         super().__init__()
         self.horizon = horizon
         self.residual = residual
@@ -40,21 +37,19 @@ class MambaDynamics(nn.Module):
     with a(x) = sigmoid gate, b(x) = input map. Autoregressive over the horizon.
     """
 
-    def __init__(
-        self, latent_dim: int, hidden_dim: int, horizon: int, residual: bool = True
-    ):
+    def __init__(self, latent_dim: int, hidden_dim: int, horizon: int, residual: bool = True):
         super().__init__()
         self.horizon = horizon
         self.residual = residual
         self.in_proj = nn.Linear(latent_dim, hidden_dim)
-        self.gate = nn.Linear(hidden_dim, hidden_dim)  # a(x): input-dependent decay
-        self.in_map = nn.Linear(hidden_dim, hidden_dim)  # b(x)
+        self.gate = nn.Linear(hidden_dim, hidden_dim)      # a(x): input-dependent decay
+        self.in_map = nn.Linear(hidden_dim, hidden_dim)    # b(x)
         self.out_proj = nn.Linear(hidden_dim, latent_dim)
         self.act = nn.SiLU()
 
     def forward(self, z_hist, domain_id=None):
         h = self.act(self.in_proj(z_hist))  # (B, T, H)
-        state = h[:, -1]  # (B, H)
+        state = h[:, -1]                    # (B, H)
         last = h[:, -1]
         preds = []
         for _ in range(self.horizon):

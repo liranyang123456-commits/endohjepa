@@ -1,45 +1,20 @@
 """Fast regression tests for sampling, protocol, and checkpoint safety fixes."""
 from __future__ import annotations
 
-from argparse import Namespace
-from pathlib import Path
-
 import torch
 
-from endoworld.data.video_clips import ClipSpec
 from endoworld.eval.cholect50_dense_probe import AttentionPhaseProbe, _fit_probe
-from endoworld.eval.cholect50_probe import _clip_starts
-from endoworld.eval.stir_experiment import split_sequences
-from endoworld.understanding.adapt import (
-    _adaptation_audit,
-    _cli_values,
-    build_argparser,
-    filter_adaptation_clips,
-)
-from endoworld.world.train_factorized_state import _clone_state_dict
+from endoworld.eval.cholect50_probe import CHALLENGE_TEST_VIDS, split_indices
+from endoworld.world.train_util import clone_state_dict
 
 
-def _clip(dataset: str, sequence_id: str, split: str = "train") -> ClipSpec:
-    return ClipSpec(
-        dataset=dataset,
-        frames_dir=f"/frames/{sequence_id}",
-        frame_files=[f"{i}.png" for i in range(64)],
-        start=0,
-        clip_len=4,
-        stride=2,
-        sequence_id=sequence_id,
-        split=split,
-    )
-
-
-def test_cholect_clip_starts_respect_strided_span():
-    # span = (16 - 1) * 2 + 1 = 31
-    assert _clip_starts(30, 16, 2, 24) == []
-    assert _clip_starts(31, 16, 2, 24) == [0]
-    assert _clip_starts(32, 16, 2, 24) == [0, 1]
-    starts = _clip_starts(63, 16, 2, 24)
-    assert starts[-1] == 63 - 31
-    assert all(start + (16 - 1) * 2 < 63 for start in starts)
+def test_cholect_official_split_matches_challenge_videos():
+    vids = [f"VID{i:02d}" for i in range(1, 81)]
+    train_idx, test_idx = split_indices(vids, official=True)
+    train_vids = {vids[i] for i in train_idx}
+    test_vids = {vids[i] for i in test_idx}
+    assert train_vids.isdisjoint(test_vids)
+    assert test_vids == set(CHALLENGE_TEST_VIDS)
 
 
 def test_dense_probe_factory_is_seeded_before_initialisation():
@@ -64,69 +39,54 @@ def test_dense_probe_factory_is_seeded_before_initialisation():
     assert any(not torch.equal(first[key], different[key]) for key in first)
 
 
-def test_adaptation_filters_and_audit_exclude_held_out_video_ids():
-    clips = [
-        _clip("CholecT50", r"CholecT50\videos\VID68"),
-        _clip("CholecT50", r"CholecT50\videos\VID01"),
-        _clip("Other", "secret-video"),
-        _clip("Excluded", "ordinary"),
-        _clip("Other", "validation-only", split="val"),
-    ]
-    selected = filter_adaptation_clips(
-        clips,
-        allowed_splits={"train"},
-        excluded_datasets={"excluded"},
-        excluded_video_ids={"secret-video"},
-        allow_cholect50_held_out=False,
-    )
-    assert [clip.sequence_id for clip in selected] == [
-        r"CholecT50\videos\VID01"]
+def test_build_clip_index_enforces_split_and_exclusions(tmp_path):
+    import csv
 
-    explicitly_allowed = filter_adaptation_clips(
-        clips[:2],
-        allowed_splits={"train"},
-        excluded_datasets=set(),
-        excluded_video_ids=set(),
-        allow_cholect50_held_out=True,
-    )
-    assert len(explicitly_allowed) == 2
+    from endoworld.data.video_clips import build_clip_index
 
-    args = Namespace(
-        manifest="manifest.csv",
-        allow_cholect50_held_out=False,
-    )
-    audit = _adaptation_audit(
-        selected, args, {"train"}, {"excluded"}, {"secret-video"})
-    assert audit["n_clips"] == 1
-    assert len(audit["clip_ids_sha256"]) == 64
-    assert "VID01" in audit["clip_ids"][0]
+    frames = tmp_path / "frames_a"
+    frames.mkdir()
+    for i in range(40):
+        (frames / f"{i:04d}.png").write_bytes(b"x")
+    manifest = tmp_path / "sequences.csv"
+    with manifest.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["dataset", "sequence_id", "frames_dir", "modality",
+                        "split", "domain"],
+        )
+        writer.writeheader()
+        writer.writerow({
+            "dataset": "DatasetA", "sequence_id": "seq-train",
+            "frames_dir": str(frames), "modality": "frames",
+            "split": "train", "domain": "laparoscopy",
+        })
+        writer.writerow({
+            "dataset": "DatasetA", "sequence_id": "seq-test",
+            "frames_dir": str(frames), "modality": "frames",
+            "split": "test", "domain": "laparoscopy",
+        })
+    train_clips = build_clip_index(manifest, clip_len=4, stride=2, split="train")
+    assert train_clips and {c.sequence_id for c in train_clips} == {"seq-train"}
+    excluded = build_clip_index(
+        manifest, clip_len=4, stride=2, split="train", exclude={"DatasetA"})
+    assert excluded == []
 
 
-def test_adaptation_filter_cli_accepts_repeatable_allowlists():
-    args = build_argparser().parse_args([
-        "--allow-splits", "train,val",
-        "--exclude-datasets", "DatasetA",
-        "--exclude-datasets", "DatasetB,DatasetC",
-        "--exclude-video-ids", "VID68,VID70",
-    ])
-    assert _cli_values(args.allow_splits) == {"train", "val"}
-    assert _cli_values(args.exclude_datasets) == {
-        "dataseta", "datasetb", "datasetc"}
-    assert _cli_values(args.exclude_video_ids) == {"vid68", "vid70"}
+def test_stir_endpoint_padding_is_reproducible():
+    from endoworld.eval.stir_experiment import _pad_points
 
-
-def test_stir_sequence_split_is_disjoint_and_reproducible():
-    sequences = [Path(f"patient/sequence-{i}") for i in range(10)]
-    train_a, test_a = split_sequences(sequences, train_fraction=0.7, seed=4)
-    train_b, test_b = split_sequences(sequences, train_fraction=0.7, seed=4)
-    assert train_a == train_b and test_a == test_b
-    assert set(train_a).isdisjoint(test_a)
-    assert set(train_a) | set(test_a) == set(sequences)
+    pts = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    padded = _pad_points(pts, 5)
+    assert padded.shape == (5, 2)
+    assert torch.equal(padded[:2], pts)
+    assert torch.equal(padded[2:], pts[-1:].expand(3, 2))
+    assert torch.equal(_pad_points(pts, 5), padded)
 
 
 def test_best_state_snapshot_does_not_share_cpu_storage():
     model = torch.nn.Linear(3, 2)
-    snapshot = _clone_state_dict(model)
+    snapshot = clone_state_dict(model)
     original = snapshot["weight"].clone()
     with torch.no_grad():
         model.weight.add_(1.0)

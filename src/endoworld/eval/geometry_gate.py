@@ -5,7 +5,6 @@ Each input NPZ may contain ``pred_depth``, ``gt_depth``, ``pred_pose``,
 canonical local [v,w] twist convention. A teacher is accepted only when it
 beats the supplied simple baseline on available depth and pose metrics.
 """
-
 from __future__ import annotations
 
 import argparse
@@ -33,9 +32,7 @@ def evaluate_pack(path: str | Path) -> dict:
             correct = pack["correct"]
         elif {"pred_depth", "gt_depth"} <= set(pack.files):
             p, t = pack["pred_depth"], pack["gt_depth"]
-            correct = (
-                np.maximum(p / np.maximum(t, 1e-8), t / np.maximum(p, 1e-8)) < 1.25
-            )
+            correct = (np.maximum(p / np.maximum(t, 1e-8), t / np.maximum(p, 1e-8)) < 1.25)
         else:
             correct = np.zeros_like(pack["confidence"])
         report["confidence_ece"] = confidence_ece(pack["confidence"], correct)
@@ -46,22 +43,18 @@ def gate(candidate: dict, baseline: dict) -> dict:
     checks = {}
     if "depth" in candidate and "depth" in baseline:
         checks["depth_abs_rel"] = (
-            candidate["depth"]["abs_rel"] < baseline["depth"]["abs_rel"]
-        )
+            candidate["depth"]["abs_rel"] < baseline["depth"]["abs_rel"])
         checks["depth_delta1"] = (
-            candidate["depth"]["delta1"] > baseline["depth"]["delta1"]
-        )
+            candidate["depth"]["delta1"] > baseline["depth"]["delta1"])
     if "pose" in candidate and "pose" in baseline:
         checks["pose_translation"] = (
-            candidate["pose"]["translation_rmse"] < baseline["pose"]["translation_rmse"]
-        )
+            candidate["pose"]["translation_rmse"]
+            < baseline["pose"]["translation_rmse"])
         checks["pose_rotation"] = (
-            candidate["pose"]["rotation_deg"] < baseline["pose"]["rotation_deg"]
-        )
+            candidate["pose"]["rotation_deg"] < baseline["pose"]["rotation_deg"])
     if "reprojection_error_mean" in candidate and "reprojection_error_mean" in baseline:
         checks["reprojection"] = (
-            candidate["reprojection_error_mean"] < baseline["reprojection_error_mean"]
-        )
+            candidate["reprojection_error_mean"] < baseline["reprojection_error_mean"])
     return {
         "accepted": bool(checks) and all(checks.values()),
         "checks": checks,
@@ -88,7 +81,8 @@ def main():
         "baseline": baseline,
         "candidates": candidates,
         "selected": [
-            name for name, result in candidates.items() if result["gate"]["accepted"]
+            name for name, result in candidates.items()
+            if result["gate"]["accepted"]
         ],
     }
     output = Path(args.out)

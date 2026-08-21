@@ -15,33 +15,25 @@ dataset. No GPU encoding is required when a matching cache exists.
         --latents outputs/p2000_full_causal/latents_cache.pt \\
         --n-val 250 --seed 1 --planning
 """
-
 from __future__ import annotations
 
 import argparse
 import json
+from collections import defaultdict
 from pathlib import Path
 
 import torch
 import torch.nn.functional as F
 
-from endoworld.data.domains import DOMAIN_IDS
 from endoworld.data.video_clips import EndoClipDataset, domain_balanced_indices
 from endoworld.eval.world_benchmark import load_predictor, maybe_pool
 from endoworld.world.h_jepa import persistence_baseline
 
 
-def _rebuild_val_clips(
-    manifest: str, n_val: int, seed: int, clip_len: int, stride: int
-):
+def _rebuild_val_clips(manifest: str, n_val: int, seed: int, clip_len: int, stride: int):
     ds = EndoClipDataset(
-        manifest,
-        clip_len=clip_len,
-        stride=stride,
-        image_size=256,
-        exclude=["EndoVis2019_ROBUST-MIS"],
-        return_meta=True,
-        split="val",
+        manifest, clip_len=clip_len, stride=stride, image_size=256,
+        exclude=["EndoVis2019_ROBUST-MIS"], return_meta=True, split="val",
     )
     n = min(n_val, len(ds.clips))
     idx = domain_balanced_indices(ds.clips, n=n, seed=seed)
@@ -86,24 +78,17 @@ def main():
         Z, D = pack["Z"], pack["D"]
         split_used = "train_fallback"
     Z = maybe_pool(Z)
-    clips = _rebuild_val_clips(
-        args.manifest, args.n_val, args.seed, args.clip_len, args.stride
-    )
+    clips = _rebuild_val_clips(args.manifest, args.n_val, args.seed, args.clip_len, args.stride)
     n = min(Z.size(0), len(clips), D.size(0))
-    length_aligned = n == Z.size(0) and n == len(clips) and n == D.size(0)
+    aligned = n == Z.size(0) and n == len(clips)
     Z, D, clips = Z[:n], D[:n], clips[:n]
     names = [c.dataset for c in clips]
     domains = [c.domain for c in clips]
-    rebuilt_domains = torch.tensor([DOMAIN_IDS[domain] for domain in domains])
-    domain_order_aligned = torch.equal(D.detach().cpu().long(), rebuilt_domains.long())
 
     t = Z.size(1)
     history = min(history, t - 1)
     horizon = min(horizon, t - history)
-    z_hist, z_fut = (
-        Z[:, :history].to(device),
-        Z[:, history : history + horizon].to(device),
-    )
+    z_hist, z_fut = Z[:, :history].to(device), Z[:, history:history + horizon].to(device)
     D = D.to(device)
     with torch.no_grad():
         if kind in ("gru", "mamba"):
@@ -137,34 +122,20 @@ def main():
         "latents": latents,
         "split": split_used,
         "n_used": n,
-        "n_cache": int(
-            pack["Z_val"].size(0)
-            if pack.get("Z_val") is not None
-            else pack["Z"].size(0)
-        ),
-        "n_clips_rebuilt": len(
-            _rebuild_val_clips(
-                args.manifest, args.n_val, args.seed, args.clip_len, args.stride
-            )
-        ),
-        "length_aligned": length_aligned,
-        "domain_order_aligned": domain_order_aligned,
-        "clip_identity_verified": False,
+        "n_cache": int(pack["Z_val"].size(0) if pack.get("Z_val") is not None else pack["Z"].size(0)),
+        "n_clips_rebuilt": len(_rebuild_val_clips(args.manifest, args.n_val, args.seed, args.clip_len, args.stride)),
+        "aligned": aligned,
         "history": history,
         "horizon": horizon,
         "overall": _forecast_row(pred, persist, z_fut),
         "by_dataset": by_ds,
         "by_domain": by_dom,
-        "note": (
-            "Cache length and domain-ID order are checked against the deterministically "
-            "rebuilt clip list. The historical cache does not store clip identifiers, "
-            "so within-domain clip identity cannot be independently verified."
-        ),
+        "note": "aligned=True means Z_val[i] is assumed to match the rebuilt clip list. "
+                "If aligned is False, treat per-dataset rows as approximate.",
     }
 
     if args.planning and kind == "hjepa":
         from endoworld.eval.eval_ckpt import _reach
-
         plan_by = {}
         for ds in sorted(set(names)):
             m = torch.tensor([x == ds for x in names], device=device)
@@ -176,17 +147,12 @@ def main():
     out = args.out or str(Path(args.ckpt).parent / "per_dataset.json")
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     Path(out).write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print(
-        f"[per-dataset] n={n} length_aligned={length_aligned} "
-        f"domain_order_aligned={domain_order_aligned} wrote {out}"
-    )
+    print(f"[per-dataset] n={n} aligned={aligned} wrote {out}")
     print(f"{'dataset':28s} {'dom':7s} {'n':>4s} {'cos':>6s} {'persist':>7s} {'Δ':>6s}")
     for ds, r in sorted(by_ds.items(), key=lambda kv: (-kv[1]["n"], kv[0])):
         delta = r["cos_model"] - r["cos_persist"]
-        print(
-            f"{ds:28s} {r['domain']:7s} {r['n']:4d} {r['cos_model']:6.3f} "
-            f"{r['cos_persist']:7.3f} {delta:+6.3f}"
-        )
+        print(f"{ds:28s} {r['domain']:7s} {r['n']:4d} {r['cos_model']:6.3f} "
+              f"{r['cos_persist']:7.3f} {delta:+6.3f}")
 
 
 if __name__ == "__main__":

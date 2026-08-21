@@ -15,7 +15,6 @@ independent cross-frame correspondences.
 
     python -m endoworld.eval.c3vd_pose_gate --seq datasets/C3VD/cecum_t1_a/cecum_t1_a
 """
-
 from __future__ import annotations
 
 import argparse
@@ -42,12 +41,6 @@ def cam2ray(u: np.ndarray, v: np.ndarray) -> np.ndarray:
     z = _poly(rho)
     ray = np.stack([x, y, z], axis=-1)
     return ray / np.linalg.norm(ray, axis=-1, keepdims=True)
-
-
-def backproject_z_depth(rays: np.ndarray, z_depth: np.ndarray) -> np.ndarray:
-    """Back-project optical-axis (Z) depth along unit camera rays."""
-    scale = np.asarray(z_depth)[..., None] / np.clip(rays[..., 2:3], 1e-9, None)
-    return rays * scale
 
 
 def ray2cam(points: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -107,7 +100,8 @@ def _candidates(raw: np.ndarray) -> dict[str, np.ndarray]:
     return {
         "transpose-only": source_to_target(transpose),
         "loader transpose + GL->CV flip": source_to_target(loader),
-        "loader rotation-only diagnostic": source_to_target(loader_rotation_only),
+        "loader rotation-only diagnostic": source_to_target(
+            loader_rotation_only),
     }
 
 
@@ -117,12 +111,9 @@ def _apply(points: np.ndarray, rel: np.ndarray) -> np.ndarray:
 
 
 def evaluate_pair(
-    depth_t: np.ndarray,
-    depth_t1: np.ndarray,
-    pose_t: np.ndarray,
-    pose_t1: np.ndarray,
-    n_points: int,
-    rng: np.random.Generator,
+    depth_t: np.ndarray, depth_t1: np.ndarray,
+    pose_t: np.ndarray, pose_t1: np.ndarray,
+    n_points: int, rng: np.random.Generator,
 ) -> dict[str, float]:
     valid = np.argwhere(depth_t > 0)
     if len(valid) > n_points:
@@ -130,7 +121,7 @@ def evaluate_pair(
     u = valid[:, 1].astype(np.float64)
     v = valid[:, 0].astype(np.float64)
     rays = cam2ray(u, v)
-    points = backproject_z_depth(rays, depth_t[valid[:, 0], valid[:, 1]])
+    points = rays * depth_t[valid[:, 0], valid[:, 1], None]
     out = {}
     for name, rel in _candidates(np.stack([pose_t, pose_t1])).items():
         moved = _apply(points, rel)
@@ -144,10 +135,8 @@ def evaluate_pair(
                 "in_frame": float(in_frame.mean()),
             }
             continue
-        pi, pj = (
-            np.clip(pv[in_frame].round().astype(int), 0, H - 1),
-            np.clip(pu[in_frame].round().astype(int), 0, W - 1),
-        )
+        pi, pj = np.clip(pv[in_frame].round().astype(int), 0, H - 1), \
+            np.clip(pu[in_frame].round().astype(int), 0, W - 1)
         target_depth = depth_t1[pi, pj]
         valid_target = target_depth > 0
         if valid_target.sum() < 10:
@@ -159,19 +148,16 @@ def evaluate_pair(
             }
             continue
         depth_err = np.abs(
-            target_depth[valid_target] - moved[in_frame, 2][valid_target]
-        )
+            target_depth[valid_target] - moved[in_frame, 2][valid_target])
         # This is the image displacement induced by the candidate, not a
         # correspondence reprojection error; keep it descriptive only.
         flow_px = np.hypot(
             pu[in_frame][valid_target] - u[in_frame][valid_target],
-            pv[in_frame][valid_target] - v[in_frame][valid_target],
-        )
+            pv[in_frame][valid_target] - v[in_frame][valid_target])
         out[name] = {
             "median_depth_err": float(np.median(depth_err)),
-            "median_relative_depth_err": float(
-                np.median(depth_err / np.maximum(target_depth[valid_target], 1e-6))
-            ),
+            "median_relative_depth_err": float(np.median(
+                depth_err / np.maximum(target_depth[valid_target], 1e-6))),
             "median_flow_px": float(np.median(flow_px)),
             "in_frame": float(in_frame.mean()),
         }
@@ -182,19 +168,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seq", default="datasets/C3VD/cecum_t1_a/cecum_t1_a")
     parser.add_argument("--pairs", type=int, default=12)
-    parser.add_argument(
-        "--gap",
-        type=int,
-        default=5,
-        help="frame gap per pair; larger gaps amplify motion",
-    )
+    parser.add_argument("--gap", type=int, default=5,
+                        help="frame gap per pair; larger gaps amplify motion")
     parser.add_argument("--points", type=int, default=1500)
-    parser.add_argument(
-        "--depth-scale",
-        type=float,
-        default=655.35,
-        help="raw uint16 per millimetre (0--100 mm over uint16)",
-    )
+    parser.add_argument("--depth-scale", type=float, default=655.35,
+                        help="raw uint16 per millimetre (0--100 mm over uint16)")
     parser.add_argument("--out", default="docs/endohjepa/c3vd_pose_gate.json")
     args = parser.parse_args()
     seq = Path(args.seq)
@@ -202,9 +180,7 @@ def main():
     depth_files = sorted(seq.glob("*_depth.tiff"))
     n = min(len(poses), len(depth_files))
     rng = np.random.default_rng(0)
-    pair_ids = np.linspace(0, n - 1 - args.gap, min(args.pairs, n - args.gap)).astype(
-        int
-    )
+    pair_ids = np.linspace(0, n - 1 - args.gap, min(args.pairs, n - args.gap)).astype(int)
     per_candidate: dict[str, list[dict]] = {}
     for i in pair_ids:
         d0 = _depth(depth_files[i], args.depth_scale)
@@ -215,11 +191,12 @@ def main():
     summary = {}
     for name, rows in per_candidate.items():
         summary[name] = {
-            "median_depth_err": float(np.median([r["median_depth_err"] for r in rows])),
-            "median_relative_depth_err": float(
-                np.median([r["median_relative_depth_err"] for r in rows])
-            ),
-            "median_flow_px": float(np.median([r["median_flow_px"] for r in rows])),
+            "median_depth_err": float(np.median(
+                [r["median_depth_err"] for r in rows])),
+            "median_relative_depth_err": float(np.median(
+                [r["median_relative_depth_err"] for r in rows])),
+            "median_flow_px": float(np.median(
+                [r["median_flow_px"] for r in rows])),
             "in_frame": float(np.mean([r["in_frame"] for r in rows])),
         }
     report = {

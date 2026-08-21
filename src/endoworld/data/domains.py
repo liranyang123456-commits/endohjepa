@@ -4,12 +4,10 @@ Domains:
   laparo   laparoscopic / rigid MIS
   gi       flexible GI endoscopy (gastro/colon) including capsule
   bronch   bronchoscopy / ION navigation
-  mixed    unknown or mixed acquisition setting
+  mixed    unknown or mixed-orifice
 """
-
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 # Canonical dataset folder name -> domain
@@ -48,25 +46,9 @@ def infer_domain(dataset: str, path: str = "") -> str:
     blob = f"{dataset} {path}".lower().replace("\\", "/")
     if any(k in blob for k in ("bronch", "ion_", "ion-", "/ion/")):
         return "bronch"
-    if any(
-        k in blob
-        for k in ("kvasir", "hyperkvasir", "capsule", "c3vd", "colon", "gastro")
-    ):
+    if any(k in blob for k in ("kvasir", "hyperkvasir", "capsule", "c3vd", "colon", "gastro")):
         return "gi"
-    if any(
-        k in blob
-        for k in (
-            "cholec",
-            "endovis",
-            "scared",
-            "lapar",
-            "endoscapes",
-            "endonerf",
-            "stir",
-            "surgt",
-            "trackves",
-        )
-    ):
+    if any(k in blob for k in ("cholec", "endovis", "scared", "lapar", "endoscapes", "endonerf", "stir", "surgt", "trackves")):
         return "laparo"
     return "mixed"
 
@@ -76,16 +58,15 @@ def domain_id(dataset: str, path: str = "") -> int:
 
 
 def extra_local_roots() -> list[tuple[str, Path]]:
-    """Read optional external corpus roots from ``ENDOWORLD_EXTRA_ROOTS``.
+    """Named extra corpora already ingested under ``datasets/``.
 
-    The platform path separator delimits entries and each entry has the form
-    ``DATASET_NAME=PATH``. Missing paths are skipped by the scanner.
+    Returns (dataset_name, root_path) pairs. Missing paths are skipped by the
+    scanner, so machines without a given corpus simply contribute nothing.
     """
-    roots = []
-    for item in os.environ.get("ENDOWORLD_EXTRA_ROOTS", "").split(os.pathsep):
-        if not item or "=" not in item:
-            continue
-        name, path = item.split("=", 1)
-        if name.strip() and path.strip():
-            roots.append((name.strip(), Path(path.strip())))
-    return roots
+    root = Path(__file__).resolve().parents[3] / "datasets"
+    return [
+        ("TrackVes", root / "TrackVes"),
+        ("EndoVis_InstrumentTracking", root / "EndoVis_InstrumentTracking"),
+        ("SurgT", root / "SurgT"),
+        ("MIS_own", root / "MIS_own"),
+    ]

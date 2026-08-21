@@ -8,7 +8,6 @@ This is the standard, honest result: zero-shot is hard, few-shot domain tokens a
     python -m endoworld.world.fewshot_domain --ckpt outputs/t16_transfer_laparo/endohjepa.pt \
         --latents outputs/cache_1000_t16/latents_cache.pt
 """
-
 from __future__ import annotations
 
 import argparse
@@ -30,14 +29,12 @@ def _per_domain_cos(model, Z, D, history, horizon):
             m = D == did
             if int(m.sum()) < 4:
                 continue
-            z_hist, z_fut = Z[m, :history], Z[m, history : history + horizon]
+            z_hist, z_fut = Z[m, :history], Z[m, history:history + horizon]
             pred = model.forward_l1(z_hist, D[m])
             persist = persistence_baseline(z_hist, horizon)
             out[ID_TO_DOMAIN.get(int(did), str(did))] = {
                 "cos_model": float(F.cosine_similarity(pred, z_fut, dim=-1).mean()),
-                "cos_persist": float(
-                    F.cosine_similarity(persist, z_fut, dim=-1).mean()
-                ),
+                "cos_persist": float(F.cosine_similarity(persist, z_fut, dim=-1).mean()),
                 "n": int(m.sum()),
             }
     return out
@@ -48,9 +45,7 @@ def main():
     ap.add_argument("--ckpt", required=True, help="model trained on source domain only")
     ap.add_argument("--latents", required=True, help="pooled cache with Z/D (+Z_val)")
     ap.add_argument("--target", default="gi", help="target domain to adapt to")
-    ap.add_argument(
-        "--shots", type=int, default=32, help="target-domain clips for adaptation"
-    )
+    ap.add_argument("--shots", type=int, default=32, help="target-domain clips for adaptation")
     ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--lr", type=float, default=1e-2)
     ap.add_argument("--out", default="")
@@ -79,7 +74,7 @@ def main():
     # split target into few-shot adapt / held-out eval
     g = torch.Generator().manual_seed(0)
     perm = torch.randperm(len(Z_t), generator=g)
-    adapt_idx, eval_idx = perm[: args.shots], perm[args.shots :]
+    adapt_idx, eval_idx = perm[: args.shots], perm[args.shots:]
     Z_ad, D_ad = Z_t[adapt_idx], D_t[adapt_idx]
     Z_ev, D_ev = Z_t[eval_idx], D_t[eval_idx]
 
@@ -93,28 +88,21 @@ def main():
     model.domain.embed.weight.requires_grad_(True)
     opt = torch.optim.AdamW([model.domain.embed.weight], lr=args.lr)
     model.train()
-    zh, zf = Z_ad[:, :history], Z_ad[:, history : history + horizon]
+    zh, zf = Z_ad[:, :history], Z_ad[:, history:history + horizon]
     for epoch in range(args.epochs):
         pred = model.forward_l1(zh, D_ad)
         loss = F.smooth_l1_loss(pred, zf)
-        opt.zero_grad()
-        loss.backward()
-        opt.step()
+        opt.zero_grad(); loss.backward(); opt.step()
     model.eval()
     few = _per_domain_cos(model, Z_ev, D_ev, history, horizon)
 
     report = {
-        "paper": "Endo-HJEPA",
-        "not_ablation_planning": True,
+        "paper": "Endo-HJEPA", "not_ablation_planning": True,
         "task": f"few-shot domain-token adaptation to {args.target}",
-        "shots": args.shots,
-        "source_model": args.ckpt,
-        "zero_shot": zero.get(args.target),
-        "few_shot": few.get(args.target),
-        "recovery": (
-            few.get(args.target, {}).get("cos_model", 0)
-            - zero.get(args.target, {}).get("cos_model", 0)
-        ),
+        "shots": args.shots, "source_model": args.ckpt,
+        "zero_shot": zero.get(args.target), "few_shot": few.get(args.target),
+        "recovery": (few.get(args.target, {}).get("cos_model", 0)
+                     - zero.get(args.target, {}).get("cos_model", 0)),
     }
     out = args.out or str(Path(args.ckpt).parent / f"fewshot_{args.target}.json")
     Path(out).parent.mkdir(parents=True, exist_ok=True)

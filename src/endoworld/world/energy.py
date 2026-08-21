@@ -1,5 +1,4 @@
 """Energy head E(z, a, z_next): low energy = compatible / in-distribution transition."""
-
 from __future__ import annotations
 
 import torch

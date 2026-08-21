@@ -9,7 +9,6 @@ margin (e.g. 0.973 vs 0.970) statistically defensible.
         --b outputs/p2000_gru/endohjepa.pt \
         --latents outputs/cache_1000_t16/latents_cache.pt
 """
-
 from __future__ import annotations
 
 import argparse
@@ -44,7 +43,6 @@ def _bootstrap_diff(a, b, n_boot=1000, seed=0):
 
 def _wilcoxon(a, b):
     from scipy.stats import wilcoxon
-
     d = a - b
     d = d[np.abs(d) > 1e-12]
     if len(d) < 5:
@@ -72,9 +70,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--a", required=True, help="checkpoint A (e.g. H-JEPA causal)")
     ap.add_argument("--b", required=True, help="checkpoint B (e.g. GRU)")
-    ap.add_argument(
-        "--latents", required=True, help="cache with Z_val (pooled or dense)"
-    )
+    ap.add_argument("--latents", required=True, help="cache with Z_val (pooled or dense)")
     ap.add_argument("--horizons", default="1,4,8")
     ap.add_argument("--n-boot", type=int, default=1000)
     ap.add_argument("--out", default="")
@@ -103,46 +99,28 @@ def main():
     rows = []
     pvals = []
     for h in horizons:
-        z_hist, z_fut = Z[:, :history], Z[:, history : history + h]
+        z_hist, z_fut = Z[:, :history], Z[:, history:history + h]
         ca = _per_clip_cos(ma, ka, z_hist, z_fut, D)
         cb = _per_clip_cos(mb, kb, z_hist, z_fut, D)
-        cp = (
-            _per_clip_cos(None, "persist", z_hist, z_fut, D)
-            if False
-            else F.cosine_similarity(persistence_baseline(z_hist, h), z_fut, dim=-1)
-            .mean(1)
-            .cpu()
-            .numpy()
-        )
+        cp = _per_clip_cos(None, "persist", z_hist, z_fut, D) if False else \
+            F.cosine_similarity(persistence_baseline(z_hist, h), z_fut, dim=-1).mean(1).cpu().numpy()
         mean_d, lo, hi = _bootstrap_diff(ca, cb, args.n_boot)
         p = _wilcoxon(ca, cb)
         pvals.append(p)
-        rows.append(
-            {
-                "horizon": h,
-                "n_clips": int(len(ca)),
-                "cos_A": float(ca.mean()),
-                "cos_B": float(cb.mean()),
-                "cos_persist": float(cp.mean()),
-                "diff_A_minus_B": mean_d,
-                "boot_ci95": [lo, hi],
-                "wilcoxon_p": p,
-            }
-        )
+        rows.append({
+            "horizon": h, "n_clips": int(len(ca)),
+            "cos_A": float(ca.mean()), "cos_B": float(cb.mean()), "cos_persist": float(cp.mean()),
+            "diff_A_minus_B": mean_d, "boot_ci95": [lo, hi], "wilcoxon_p": p,
+        })
     adj = _holm(pvals)
     for r, ap_ in zip(rows, adj):
         r["holm_p"] = ap_
         r["significant_005"] = bool(ap_ == ap_ and ap_ < 0.05)
 
     report = {
-        "paper": "Endo-HJEPA",
-        "not_ablation_planning": True,
-        "A": args.a,
-        "B": args.b,
-        "split": split,
-        "history": history,
-        "n_bootstrap": args.n_boot,
-        "correction": "holm",
+        "paper": "Endo-HJEPA", "not_ablation_planning": True,
+        "A": args.a, "B": args.b, "split": split, "history": history,
+        "n_bootstrap": args.n_boot, "correction": "holm",
         "rows": rows,
     }
     out = args.out or str(Path(args.a).parent / "stats_compare.json")

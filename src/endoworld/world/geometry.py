@@ -1,5 +1,4 @@
 """Small, dependency-light geometry losses and evaluation metrics."""
-
 from __future__ import annotations
 
 import math
@@ -22,14 +21,12 @@ def scale_invariant_depth_loss(
     if not bool(valid.any()):
         return prediction.new_zeros(())
     residual = torch.log(prediction[valid].clamp_min(1e-6)) - torch.log(
-        target[valid].clamp_min(1e-6)
-    )
+        target[valid].clamp_min(1e-6))
     return residual.square().mean() - variance_weight * residual.mean().square()
 
 
 def depth_edge_aware_smoothness(
-    inverse_depth: torch.Tensor,
-    image: torch.Tensor,
+    inverse_depth: torch.Tensor, image: torch.Tensor,
 ) -> torch.Tensor:
     """Free-form/Laplacian-style smoothness relaxed across image edges."""
     if inverse_depth.ndim == 3:
@@ -38,7 +35,9 @@ def depth_edge_aware_smoothness(
     dy_d = inverse_depth[..., 1:, :] - inverse_depth[..., :-1, :]
     dx_i = image[..., :, 1:] - image[..., :, :-1]
     dy_i = image[..., 1:, :] - image[..., :-1, :]
-    return (dx_d.abs() * torch.exp(-dx_i.abs().mean(1, keepdim=True))).mean() + (
+    return (
+        dx_d.abs() * torch.exp(-dx_i.abs().mean(1, keepdim=True))
+    ).mean() + (
         dy_d.abs() * torch.exp(-dy_i.abs().mean(1, keepdim=True))
     ).mean()
 
@@ -56,8 +55,7 @@ def pose_twist_loss(
 
 
 def temporal_geometry_consistency(
-    geometry: torch.Tensor,
-    confidence: torch.Tensor | None = None,
+    geometry: torch.Tensor, confidence: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Second-order temporal regularizer for depth/shape slot trajectories."""
     if geometry.size(1) < 3:
@@ -70,9 +68,7 @@ def temporal_geometry_consistency(
     return error.mean()
 
 
-def observability_penalty(
-    jacobian: torch.Tensor, threshold: float = 1e-3
-) -> torch.Tensor:
+def observability_penalty(jacobian: torch.Tensor, threshold: float = 1e-3) -> torch.Tensor:
     """Penalise poorly observable directions using the smallest singular value."""
     singular = torch.linalg.svdvals(jacobian.float())
     return F.relu(threshold - singular[..., -1]).mean()
@@ -81,16 +77,9 @@ def observability_penalty(
 def depth_metrics(prediction: np.ndarray, target: np.ndarray) -> dict[str, float]:
     prediction = np.asarray(prediction, dtype=np.float64)
     target = np.asarray(target, dtype=np.float64)
-    valid = (
-        np.isfinite(prediction) & np.isfinite(target) & (prediction > 0) & (target > 0)
-    )
+    valid = np.isfinite(prediction) & np.isfinite(target) & (prediction > 0) & (target > 0)
     if not valid.any():
-        return {
-            "n": 0,
-            "abs_rel": float("nan"),
-            "rmse": float("nan"),
-            "delta1": float("nan"),
-        }
+        return {"n": 0, "abs_rel": float("nan"), "rmse": float("nan"), "delta1": float("nan")}
     p, t = prediction[valid], target[valid]
     ratio = np.maximum(p / t, t / p)
     return {
@@ -117,9 +106,7 @@ def pose_metrics(prediction: np.ndarray, target: np.ndarray) -> dict[str, float]
 
 
 def confidence_ece(
-    confidence: np.ndarray,
-    correct: np.ndarray,
-    bins: int = 10,
+    confidence: np.ndarray, correct: np.ndarray, bins: int = 10,
 ) -> float:
     confidence = np.asarray(confidence, dtype=np.float64).reshape(-1)
     correct = np.asarray(correct, dtype=np.float64).reshape(-1)
@@ -131,10 +118,7 @@ def confidence_ece(
     ece = 0.0
     for lo, hi in zip(edges[:-1], edges[1:]):
         selected = (confidence >= lo) & (
-            confidence <= hi if hi == 1.0 else confidence < hi
-        )
+            confidence <= hi if hi == 1.0 else confidence < hi)
         if selected.any():
-            ece += selected.mean() * abs(
-                confidence[selected].mean() - correct[selected].mean()
-            )
+            ece += selected.mean() * abs(confidence[selected].mean() - correct[selected].mean())
     return float(ece)

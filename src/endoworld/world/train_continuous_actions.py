@@ -1,5 +1,4 @@
 """Train/evaluate the continuous SE(3) action-conditioned baseline."""
-
 from __future__ import annotations
 
 import argparse
@@ -14,22 +13,13 @@ from endoworld.world.continuous_dynamics import (
     ContinuousActionDynamics,
     ContinuousDynamicsConfig,
 )
+from endoworld.world.train_util import clone_state_dict
 from endoworld.world.physical_actions import (
     PhysicalActionDataset,
     PhysicalSequence,
     load_sequences,
     video_split,
 )
-
-
-def _derangement(n: int, generator: torch.Generator) -> torch.Tensor:
-    """Return a deterministic random permutation with no fixed points."""
-    if n < 2:
-        raise ValueError("a derangement requires at least two elements")
-    order = torch.randperm(n, generator=generator)
-    permutation = torch.empty(n, dtype=torch.long)
-    permutation[order] = order.roll(1)
-    return permutation
 
 
 def _synthetic_sequences(n: int = 30, length: int = 16, dim: int = 24):
@@ -40,33 +30,25 @@ def _synthetic_sequences(n: int = 30, length: int = 16, dim: int = 24):
         actions = torch.randn(length - 1, 6, generator=generator)
         z = [torch.randn(dim, generator=generator)]
         for action in actions:
-            z.append(
-                z[-1] + action @ mapping + torch.randn(dim, generator=generator) * 0.01
-            )
-        sequences.append(
-            PhysicalSequence(
-                sequence_id=f"synthetic-{i}",
-                dataset="synthetic",
-                latents=torch.stack(z),
-                actions=actions,
-            )
-        )
+            z.append(z[-1] + action @ mapping + torch.randn(dim, generator=generator) * 0.01)
+        sequences.append(PhysicalSequence(
+            sequence_id=f"synthetic-{i}",
+            dataset="synthetic",
+            latents=torch.stack(z),
+            actions=actions,
+        ))
     return sequences
 
 
 def _action_stats(sequences):
-    actions = torch.cat(
-        [
-            sequence.actions
-            for sequence in sequences
-            if video_split(
-                sequence.sequence_id,
-                case_id=sequence.case_id,
-                dataset=sequence.dataset,
-            )
-            == "train"
-        ]
-    )
+    actions = torch.cat([
+        sequence.actions for sequence in sequences
+        if video_split(
+            sequence.sequence_id,
+            case_id=sequence.case_id,
+            dataset=sequence.dataset,
+        ) == "train"
+    ])
     return actions.mean(0), actions.std(0).clamp_min(1e-6)
 
 
@@ -80,10 +62,8 @@ def evaluate(model, loader, device):
         history = batch["history"].to(device)
         actions = batch["actions"].to(device)
         future = batch["future"].to(device)
-        if actions.size(0) < 2:
-            continue
         prediction = model(history, actions)
-        perm = _derangement(actions.size(0), generator)
+        perm = torch.randperm(actions.size(0), generator=generator)
         shuffled = model(history, actions[perm.to(actions.device)])
         real = (prediction - future).square().mean(dim=(1, 2))
         random = (shuffled - future).square().mean(dim=(1, 2))
@@ -108,21 +88,17 @@ def evaluate(model, loader, device):
     }
 
 
-def _local_negative_actions(
-    batch,
-    dataset: PhysicalActionDataset,
-    radius: int,
-    device,
-    rng: np.random.Generator,
-):
+def _local_negative_actions(batch, dataset: PhysicalActionDataset, radius: int, device):
     """Same-sequence, temporally adjacent counterfactual actions (hard negatives)."""
+    rng = np.random.default_rng()
     indices = batch["index"].tolist()
     negative_indices = [
-        dataset.hard_negative_index(int(i), radius=radius, rng=rng) for i in indices
+        dataset.hard_negative_index(int(i), radius=radius, rng=rng)
+        for i in indices
     ]
-    negative_actions = torch.stack(
-        [dataset[int(j)]["actions"] for j in negative_indices]
-    )
+    negative_actions = torch.stack([
+        dataset[int(j)]["actions"] for j in negative_indices
+    ])
     return negative_actions.to(device)
 
 
@@ -134,7 +110,6 @@ def evaluate_fixed_bank(
     n_negatives: int = 10,
     radius: int = 64,
     seed: int = 0,
-    batch_size: int = 64,
 ):
     """Deterministic hard-negative evaluation independent of batch order.
 
@@ -147,96 +122,45 @@ def evaluate_fixed_bank(
     rng = np.random.default_rng(seed)
     pair_wins, window_all = [], []
     real_errors, negative_errors = [], []
-    actual_counts = []
-    windows_with_reduced_bank = 0
-    windows_without_candidates = 0
-    for start in range(0, len(dataset), batch_size):
-        batch_indices = list(range(start, min(start + batch_size, len(dataset))))
+    for start in range(0, len(dataset), 64):
+        batch_indices = list(range(start, min(start + 64, len(dataset))))
         history = torch.stack([dataset[i]["history"] for i in batch_indices]).to(device)
         actions = torch.stack([dataset[i]["actions"] for i in batch_indices]).to(device)
         future = torch.stack([dataset[i]["future"] for i in batch_indices]).to(device)
         real_error = (model(history, actions) - future).square().mean(dim=(1, 2)).cpu()
-        for local_index, dataset_index in enumerate(batch_indices):
-            sequence_index, window_start = dataset.windows[dataset_index]
-            same_sequence = dataset.sequence_windows()[sequence_index]
-            candidates = [
-                candidate
-                for candidate in same_sequence
-                if candidate != dataset_index
-                and abs(dataset.windows[candidate][1] - window_start) <= radius
+        wins_per_window = torch.zeros(len(batch_indices), n_negatives)
+        errors = torch.zeros(len(batch_indices), n_negatives)
+        for k in range(n_negatives):
+            negative_indices = [
+                dataset.hard_negative_index(int(i), radius=radius, rng=rng)
+                for i in batch_indices
             ]
-            if not candidates:
-                candidates = [
-                    candidate
-                    for candidate in same_sequence
-                    if candidate != dataset_index
-                ]
-            if not candidates:
-                actual_counts.append(0)
-                windows_with_reduced_bank += 1
-                windows_without_candidates += 1
-                continue
-            count = min(n_negatives, len(candidates))
-            chosen = rng.choice(candidates, size=count, replace=False).tolist()
-            actual_counts.append(count)
-            if count < n_negatives:
-                windows_with_reduced_bank += 1
-            negative_actions = torch.stack(
-                [dataset[int(candidate)]["actions"] for candidate in chosen]
-            ).to(device)
-            repeated_history = history[local_index : local_index + 1].expand(
-                count, -1, -1
-            )
-            repeated_future = future[local_index : local_index + 1].expand(
-                count, -1, -1
-            )
-            errors = (
-                (model(repeated_history, negative_actions) - repeated_future)
-                .square()
-                .mean(dim=(1, 2))
-                .cpu()
-            )
-            wins = real_error[local_index] < errors
-            pair_wins.extend(wins.tolist())
-            window_all.append(float(bool(wins.all())))
-            real_errors.append(float(real_error[local_index]))
-            negative_errors.extend(errors.tolist())
-    count_summary = {
-        "minimum": min(actual_counts) if actual_counts else 0,
-        "maximum": max(actual_counts) if actual_counts else 0,
-        "mean": float(np.mean(actual_counts)) if actual_counts else 0.0,
-        "total_pairs": int(sum(actual_counts)),
-    }
+            negative_actions = torch.stack([
+                dataset[int(j)]["actions"] for j in negative_indices
+            ]).to(device)
+            negative_error = (
+                model(history, negative_actions) - future
+            ).square().mean(dim=(1, 2)).cpu()
+            wins_per_window[:, k] = real_error < negative_error
+            errors[:, k] = negative_error
+        pair_wins.extend(wins_per_window.flatten().tolist())
+        window_all.extend((wins_per_window.mean(dim=1) == 1.0).float().tolist())
+        real_errors.extend(real_error.tolist())
+        negative_errors.extend(errors.flatten().tolist())
     return {
         "n": len(dataset),
         "n_negatives": n_negatives,
-        "requested_negatives_per_window": n_negatives,
-        "actual_unique_negative_counts": actual_counts,
-        "actual_unique_negatives_per_window": count_summary,
-        "windows_with_reduced_bank": windows_with_reduced_bank,
-        "windows_without_candidates": windows_without_candidates,
-        "negative_sampling_strategy": (
-            "sample eligible same-sequence local candidates without replacement; "
-            "when fewer than requested exist, use every eligible distinct candidate; "
-            "when the local radius is empty, fall back to all other same-sequence windows"
-        ),
-        "radius": radius,
-        "batch_size": batch_size,
-        "mse_real_actions": float(np.mean(real_errors)) if real_errors else None,
-        "mse_negative_actions": (
-            float(np.mean(negative_errors)) if negative_errors else None
-        ),
-        "pair_win_fraction": float(np.mean(pair_wins)) if pair_wins else None,
-        "all_negative_win_fraction": (
-            float(np.mean(window_all)) if window_all else None
-        ),
+        "mse_real_actions": float(np.mean(real_errors)),
+        "mse_negative_actions": float(np.mean(negative_errors)),
+        "pair_win_fraction": float(np.mean(pair_wins)),
+        "all_negative_win_fraction": float(np.mean(window_all)),
     }
 
 
 def _scared_cases(sequences) -> list[str]:
-    cases = sorted(
-        {s.case_id for s in sequences if s.dataset == "SCARED" and s.case_id}
-    )
+    cases = sorted({
+        s.case_id for s in sequences if s.dataset == "SCARED" and s.case_id
+    })
     return cases
 
 
@@ -244,13 +168,14 @@ def train(args):
     torch.manual_seed(args.seed)
     device = "cuda" if torch.cuda.is_available() and not args.cpu else "cpu"
     sequences = _synthetic_sequences() if args.smoke else load_sequences(args.data)
-    train_data = PhysicalActionDataset(sequences, args.history, args.horizon, "train")
-    val_data = PhysicalActionDataset(sequences, args.history, args.horizon, "val")
-    test_data = PhysicalActionDataset(sequences, args.history, args.horizon, "test")
+    train_data = PhysicalActionDataset(
+        sequences, args.history, args.horizon, "train")
+    val_data = PhysicalActionDataset(
+        sequences, args.history, args.horizon, "val")
+    test_data = PhysicalActionDataset(
+        sequences, args.history, args.horizon, "test")
     if not train_data or not val_data:
-        raise RuntimeError(
-            "physical cache needs non-empty video-level train and val splits"
-        )
+        raise RuntimeError("physical cache needs non-empty video-level train and val splits")
     cfg = ContinuousDynamicsConfig(
         latent_dim=sequences[0].latents.size(-1),
         hidden_dim=args.hidden,
@@ -263,11 +188,11 @@ def train(args):
     model = ContinuousActionDynamics(cfg).to(device)
     mean, std = _action_stats(sequences)
     model.set_action_stats(mean.to(device), std.to(device))
-    train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
+    train_loader = DataLoader(
+        train_data, batch_size=args.batch_size, shuffle=True)
     val_loader = DataLoader(val_data, batch_size=args.batch_size)
     test_loader = DataLoader(test_data, batch_size=args.batch_size)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
-    negative_rng = np.random.default_rng(args.seed)
     best = float("inf")
     best_state = None
     for epoch in range(args.epochs):
@@ -280,12 +205,7 @@ def train(args):
             negative_actions = None
             if args.negatives == "local" and args.counterfactual_weight > 0:
                 negative_actions = _local_negative_actions(
-                    batch,
-                    train_data,
-                    radius=args.negative_radius,
-                    device=device,
-                    rng=negative_rng,
-                )
+                    batch, train_data, radius=args.negative_radius, device=device)
             losses = model.losses(
                 history,
                 actions,
@@ -305,12 +225,11 @@ def train(args):
         metrics = evaluate(model, val_loader, device)
         if metrics["mse_real_actions"] < best:
             best = metrics["mse_real_actions"]
-            best_state = {k: v.detach().cpu() for k, v in model.state_dict().items()}
+            best_state = clone_state_dict(model)
         print(
-            f"[epoch {epoch + 1}] loss={running / max(seen, 1):.5f} "
+            f"[epoch {epoch + 1}] loss={running/max(seen, 1):.5f} "
             f"val_real={metrics['mse_real_actions']:.5f} "
-            f"val_shuffle={metrics['mse_shuffled_actions']:.5f}"
-        )
+            f"val_shuffle={metrics['mse_shuffled_actions']:.5f}")
     if best_state is not None:
         model.load_state_dict(best_state)
     report = {
@@ -318,32 +237,19 @@ def train(args):
         "pose_convention": "c2w_local_log_se3_v_then_w",
         "data": str(args.data),
         "negatives": args.negatives,
-        "seed": args.seed,
-        "training_negative_sampling": (
-            "same-sequence local candidates drawn from one NumPy generator "
-            "initialised by seed and advanced deterministically across batches"
-            if args.negatives == "local"
-            else "batch permutation generated by PyTorch"
-        ),
         "validation": evaluate(model, val_loader, device),
         "test": (
-            {"skipped": "contacted audit partition withheld during development"}
-            if args.skip_test
-            else evaluate(model, test_loader, device)
+            {"skipped": "frozen test set withheld during development"}
+            if args.skip_test else evaluate(model, test_loader, device)
         ),
         "validation_fixed_bank": evaluate_fixed_bank(
-            model, val_data, device, n_negatives=args.bank_negatives, seed=args.seed
-        ),
+            model, val_data, device,
+            n_negatives=args.bank_negatives, seed=args.seed),
         "test_fixed_bank": (
-            {"skipped": "contacted audit partition withheld during development"}
-            if args.skip_test
-            else evaluate_fixed_bank(
-                model,
-                test_data,
-                device,
-                n_negatives=args.bank_negatives,
-                seed=args.seed,
-            )
+            {"skipped": "frozen test set withheld during development"}
+            if args.skip_test else evaluate_fixed_bank(
+                model, test_data, device,
+                n_negatives=args.bank_negatives, seed=args.seed)
         ),
         "success_thresholds": {
             "real_action_win_fraction": 0.8,
@@ -362,25 +268,21 @@ def train(args):
             val_bank.get("pair_win_fraction", 0) >= 0.8
             and report["validation"].get("inverse_action_r2", -1) > 0.3
         )
-        report["audit_gate_evaluated"] = False
-        report["passed"] = None
+        report["passed"] = False
     else:
-        report["audit_gate_evaluated"] = True
         report["passed"] = bool(
             report["test"].get("real_action_win_fraction", 0) > 0.8
             and report["test"].get("inverse_action_r2", -1) > 0.3
         )
     output = Path(args.out)
     output.mkdir(parents=True, exist_ok=True)
-    torch.save(
-        {
-            "model": model.state_dict(),
-            "config": cfg.__dict__,
-            "report": report,
-        },
-        output / "continuous_dynamics.pt",
-    )
-    (output / "metrics.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    torch.save({
+        "model": model.state_dict(),
+        "config": cfg.__dict__,
+        "report": report,
+    }, output / "continuous_dynamics.pt")
+    (output / "metrics.json").write_text(
+        json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(report, indent=2))
     return report
 
@@ -403,22 +305,17 @@ def build_parser():
     parser.add_argument("--counterfactual-weight", type=float, default=0.5)
     parser.add_argument("--counterfactual-margin", type=float, default=0.02)
     parser.add_argument(
-        "--negatives",
-        choices=["global", "local"],
-        default="global",
+        "--negatives", choices=["global", "local"], default="global",
         help="counterfactual distribution; 'local' matches evaluation batches "
-        "(same-sequence, temporally adjacent hard negatives)",
-    )
+             "(same-sequence, temporally adjacent hard negatives)")
     parser.add_argument("--negative-radius", type=int, default=64)
     parser.add_argument("--bank-negatives", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--cpu", action="store_true")
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument(
-        "--skip-test",
-        action="store_true",
-        help="withhold the contacted audit split (development runs only)",
-    )
+        "--skip-test", action="store_true",
+        help="withhold the frozen test split (development runs only)")
     return parser
 
 

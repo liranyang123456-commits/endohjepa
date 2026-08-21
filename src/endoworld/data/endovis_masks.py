@@ -1,5 +1,4 @@
 """EndoVis 2017/2018 instrument masks paired with RGB frames."""
-
 from __future__ import annotations
 
 import json
@@ -33,9 +32,7 @@ def load_class_map(root: str | Path) -> dict[int, str]:
     return out or dict(DEFAULT_CLASSES)
 
 
-def list_endovis_pairs(
-    root: str | Path, split: str = "train"
-) -> list[tuple[Path, Path]]:
+def list_endovis_pairs(root: str | Path, split: str = "train") -> list[tuple[Path, Path]]:
     """(rgb, mask) pairs with identical basenames under image/ and label/."""
     root = Path(root)
     img_dir = root / split / "image"
@@ -52,7 +49,6 @@ def list_endovis_pairs(
 
 def load_mask(path: str | Path) -> np.ndarray:
     from PIL import Image
-
     arr = np.asarray(Image.open(path))
     if arr.ndim == 3:
         arr = arr[..., 0]
@@ -82,7 +78,6 @@ def load_endovis_clip(pairs: list[tuple[Path, Path]], image_size: int):
     """pairs: (rgb, mask) → clip (T,C,H,W) and binary instrument mask (T,H,W)."""
     from PIL import Image
     import torch
-
     frames, masks = [], []
     for img, lab in pairs:
         im = Image.open(img).convert("RGB").resize((image_size, image_size))
@@ -95,11 +90,9 @@ def load_endovis_clip(pairs: list[tuple[Path, Path]], image_size: int):
     return clip, inst
 
 
-def iter_endovis_clips(
-    root: str | Path, split: str, clip_len: int, image_size: int, limit: int = 64
-):
+def iter_endovis_clips(root: str | Path, split: str, clip_len: int, image_size: int,
+                       limit: int = 64):
     from collections import defaultdict
-
     pairs = list_endovis_pairs(root, split)
     by_seq: dict[str, list] = defaultdict(list)
     for img, lab in pairs:
@@ -108,7 +101,7 @@ def iter_endovis_clips(
     for seq, items in by_seq.items():
         items = sorted(items, key=lambda x: x[0].name)
         for start in range(0, len(items) - clip_len + 1, clip_len):
-            clip, inst = load_endovis_clip(items[start : start + clip_len], image_size)
+            clip, inst = load_endovis_clip(items[start:start + clip_len], image_size)
             yield seq, clip, inst
             n += 1
             if n >= limit:

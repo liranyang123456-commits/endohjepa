@@ -1,5 +1,4 @@
 """Align discrete latent actions with physical SE(3) camera deltas (SCARED / C3VD)."""
-
 from __future__ import annotations
 
 import numpy as np
@@ -49,11 +48,7 @@ def action_pose_nmi(action_ids: np.ndarray, pose_ids: np.ndarray) -> float:
 def residual_to_delta_loss(residual: torch.Tensor, delta: torch.Tensor) -> torch.Tensor:
     """Supervise z_{t+1}-z_t to predict physical 6D delta (linear probe inside eval)."""
     # residual (B, D), delta (B, 6) — closed-form is done outside; here SmoothL1 if a head is passed
-    return (
-        F.smooth_l1_loss(residual[:, :6], delta)
-        if residual.size(-1) >= 6
-        else residual.new_zeros(())
-    )
+    return F.smooth_l1_loss(residual[:, :6], delta) if residual.size(-1) >= 6 else residual.new_zeros(())
 
 
 def residual_delta_probe(residuals: np.ndarray, deltas: np.ndarray) -> dict:
@@ -70,11 +65,10 @@ def residual_delta_probe(residuals: np.ndarray, deltas: np.ndarray) -> dict:
     w, *_ = np.linalg.lstsq(xb[:n_tr], y[:n_tr], rcond=None)
     pred = xb @ w
     err = pred[n_tr:] - y[n_tr:]
-    mse = float((err**2).mean())
+    mse = float((err ** 2).mean())
     var = float(y[n_tr:].var() + 1e-8)
     return {
-        "n": int(n),
-        "n_test": int(n - n_tr),
+        "n": int(n), "n_test": int(n - n_tr),
         "r2": 1.0 - mse / var,
         "mae": float(np.abs(err).mean()),
         "trans_mae": float(np.abs(err[:, :3]).mean()),

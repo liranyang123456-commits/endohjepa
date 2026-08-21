@@ -8,7 +8,6 @@ Examples:
     python -m endoworld.understanding.pretrain \
         --manifest manifests/sequences.csv --epochs 100 --batch-size 16
 """
-
 from __future__ import annotations
 
 import argparse
@@ -39,61 +38,37 @@ def train(args):
     print(f"[device] {device}")
 
     cfg = VJEPAConfig(
-        image_size=args.image_size,
-        clip_len=args.clip_len,
-        embed_dim=args.embed_dim,
-        depth=args.depth,
-        num_heads=args.heads,
+        image_size=args.image_size, clip_len=args.clip_len,
+        embed_dim=args.embed_dim, depth=args.depth, num_heads=args.heads,
         mask_ratio=args.mask_ratio,
     )
     if args.smoke:
-        cfg = VJEPAConfig(
-            image_size=64,
-            clip_len=8,
-            embed_dim=128,
-            depth=2,
-            num_heads=4,
-            predictor_dim=96,
-            predictor_depth=2,
-        )
+        cfg = VJEPAConfig(image_size=64, clip_len=8, embed_dim=128, depth=2,
+                          num_heads=4, predictor_dim=96, predictor_depth=2)
 
-    ds = EndoClipDataset(
-        args.manifest,
-        clip_len=cfg.clip_len,
-        stride=args.stride,
-        image_size=cfg.image_size,
-        exclude=["EndoVis2019_ROBUST-MIS"],
-        split=None if args.smoke else args.split,
-    )
+    ds = EndoClipDataset(args.manifest, clip_len=cfg.clip_len,
+                         stride=args.stride, image_size=cfg.image_size,
+                         exclude=["EndoVis2019_ROBUST-MIS"],
+                         split=None if args.smoke else args.split)
     print(f"[data] {len(ds)} clips  split={getattr(args, 'split', None)}")
     if args.smoke:
         ds.clips = ds.clips[: args.smoke_clips]
         print(f"[smoke] using {len(ds.clips)} clips")
     elif args.max_clips and len(ds.clips) > args.max_clips:
         import random as _r
-
         _r.seed(0)
         ds.clips = _r.sample(ds.clips, args.max_clips)
         print(f"[data] subsampled to {len(ds.clips)} clips")
 
-    dl = DataLoader(
-        ds,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=args.workers,
-        collate_fn=collate,
-        drop_last=True,
-    )
+    dl = DataLoader(ds, batch_size=args.batch_size, shuffle=True,
+                    num_workers=args.workers, collate_fn=collate, drop_last=True)
 
     model = VJEPA(cfg).to(device)
     n_params = sum(p.numel() for p in model.parameters()) / 1e6
     print(f"[model] VJEPA {n_params:.1f}M params, tokens/clip={cfg.n_tokens}")
 
-    opt = torch.optim.AdamW(
-        [p for p in model.parameters() if p.requires_grad],
-        lr=args.lr,
-        weight_decay=0.05,
-    )
+    opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad],
+                            lr=args.lr, weight_decay=0.05)
     total_steps = args.epochs * max(len(dl), 1)
     warmup = max(int(0.05 * total_steps), 1)
     os.makedirs(args.out, exist_ok=True)
@@ -110,10 +85,7 @@ def train(args):
             weights = None
             if args.endo_mask:
                 from endoworld.understanding.endo_mask import token_loss_weights
-
-                weights = token_loss_weights(clip, cfg.tubelet_size, cfg.patch_size).to(
-                    clip.device
-                )
+                weights = token_loss_weights(clip, cfg.tubelet_size, cfg.patch_size).to(clip.device)
             loss = model(clip, token_weights=weights)
             opt.zero_grad(set_to_none=True)
             loss.backward()
@@ -123,15 +95,13 @@ def train(args):
             run += loss.item()
             step += 1
             if step % args.log_every == 0:
-                print(
-                    f"  epoch {epoch} step {step} loss {loss.item():.4f} "
-                    f"lr {opt.param_groups[0]['lr']:.2e}"
-                )
+                print(f"  epoch {epoch} step {step} loss {loss.item():.4f} "
+                      f"lr {opt.param_groups[0]['lr']:.2e}")
         avg = run / max(len(dl), 1)
-        print(f"[epoch {epoch}] avg_loss={avg:.4f} time={time.time() - t0:.1f}s")
+        print(f"[epoch {epoch}] avg_loss={avg:.4f} time={time.time()-t0:.1f}s")
 
         if (epoch + 1) % args.save_every == 0 or epoch == args.epochs - 1:
-            ckpt = os.path.join(args.out, f"vjepa_epoch{epoch + 1}.pt")
+            ckpt = os.path.join(args.out, f"vjepa_epoch{epoch+1}.pt")
             torch.save({"model": model.state_dict(), "cfg": cfg.__dict__}, ckpt)
             print(f"[ckpt] {ckpt}")
 
@@ -156,12 +126,8 @@ def build_argparser():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--log-every", type=int, default=20)
     ap.add_argument("--save-every", type=int, default=10)
-    ap.add_argument(
-        "--max-clips",
-        type=int,
-        default=None,
-        help="subsample the clip index to at most this many clips",
-    )
+    ap.add_argument("--max-clips", type=int, default=None,
+                    help="subsample the clip index to at most this many clips")
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--smoke-clips", type=int, default=8)
     ap.add_argument("--split", default="train")

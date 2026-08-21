@@ -1,5 +1,4 @@
 """SCARED per-frame camera poses from frame_data.tar.gz → SE(3) deltas."""
-
 from __future__ import annotations
 
 import json
@@ -36,11 +35,7 @@ def load_scared_poses(keyframe_dir: str | Path) -> np.ndarray:
         raise FileNotFoundError(f"no frame_data.tar.gz under {root}")
     poses = []
     with tarfile.open(tar_path, "r:gz") as tar:
-        names = sorted(
-            n
-            for n in tar.getnames()
-            if n.endswith(".json") and "frame_data" in n.replace("\\", "/")
-        )
+        names = sorted(n for n in tar.getnames() if n.endswith(".json") and "frame_data" in n.replace("\\", "/"))
         for name in names:
             fh = tar.extractfile(name)
             if fh is None:
@@ -70,13 +65,11 @@ def scared_pose_deltas(keyframe_dir: str | Path) -> np.ndarray:
 
 
 def align_scared_latents(
-    latents,
-    poses: np.ndarray,
-    sampled_frame_indices: np.ndarray,
-    tubelet: int,
+    latents, poses: np.ndarray, sampled_frame_indices: np.ndarray, tubelet: int,
 ):
     """Align encoder tubelets to native SCARED pose rows without interpolation."""
-    return align_latents_and_poses(latents, poses, sampled_frame_indices, tubelet)
+    return align_latents_and_poses(
+        latents, poses, sampled_frame_indices, tubelet)
 
 
 def find_scared_rgb(keyframe_dir: str | Path) -> tuple[Path | None, list[Path]]:
@@ -90,9 +83,7 @@ def find_scared_rgb(keyframe_dir: str | Path) -> tuple[Path | None, list[Path]]:
     frames: list[Path] = []
     for d in (data / "rgb_frames", data / "rgb.mp4_frames"):
         if d.is_dir():
-            frames = sorted(
-                p for p in d.iterdir() if p.suffix.lower() in {".jpg", ".png", ".jpeg"}
-            )
+            frames = sorted(p for p in d.iterdir() if p.suffix.lower() in {".jpg", ".png", ".jpeg"})
             if frames:
                 break
     return (video if video and video.is_file() else None), frames
@@ -107,7 +98,6 @@ def pose_index_for_frames(n_frames: int, n_poses: int) -> np.ndarray:
 
 def sample_video_indices(video_path: str | Path, n: int) -> tuple[np.ndarray, int]:
     import cv2
-
     cap = cv2.VideoCapture(str(video_path))
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
     cap.release()
@@ -132,9 +122,7 @@ def crop_stereo_half(rgb: np.ndarray, eye: str = "top") -> np.ndarray:
 
 
 def read_video_frames(
-    video_path: str | Path,
-    indices: np.ndarray,
-    image_size: int,
+    video_path: str | Path, indices: np.ndarray, image_size: int,
     stereo_eye: str | None = None,
 ):
     """Read selected frames from rgb.mp4 as (T, C, H, W) float32 in [0, 1].
@@ -145,7 +133,6 @@ def read_video_frames(
     import cv2
     from PIL import Image
     import torch
-
     indices = np.asarray(indices, dtype=np.int64)
     frames = []
     cap = cv2.VideoCapture(str(video_path))

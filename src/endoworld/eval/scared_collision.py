@@ -8,7 +8,6 @@ self-evaluation).
 
     python -m endoworld.eval.scared_collision --ckpt outputs/p2000_full_causal/endohjepa.pt
 """
-
 from __future__ import annotations
 
 import argparse
@@ -25,7 +24,6 @@ from endoworld.world.scared_actions import find_scared_keyframes, find_scared_rg
 def _depth_proximities(keyframe_dir: Path, pct: float = 5.0) -> dict[int, float]:
     """Read the scene_points tar ONCE and return frame_idx -> low-percentile depth (mm)."""
     import cv2
-
     tar = keyframe_dir / "data" / "scene_points.tar.gz"
     out: dict[int, float] = {}
     if not tar.is_file():
@@ -39,9 +37,7 @@ def _depth_proximities(keyframe_dir: Path, pct: float = 5.0) -> dict[int, float]
             if fh is None:
                 continue
             try:
-                img = cv2.imdecode(
-                    np.frombuffer(fh.read(), np.uint8), cv2.IMREAD_UNCHANGED
-                )
+                img = cv2.imdecode(np.frombuffer(fh.read(), np.uint8), cv2.IMREAD_UNCHANGED)
             except Exception:
                 continue
             if img is None or img.ndim != 3:
@@ -55,7 +51,6 @@ def _depth_proximities(keyframe_dir: Path, pct: float = 5.0) -> dict[int, float]
 
 def _load_rgb_frame(path):
     import cv2
-
     img = cv2.imread(str(path))
     if img is None:
         return None
@@ -69,19 +64,14 @@ def main():
     ap.add_argument("--vjepa2-id", default="facebook/vjepa2-vitl-fpc64-256")
     ap.add_argument("--max-kf", type=int, default=3)
     ap.add_argument("--max-frames", type=int, default=120)
-    ap.add_argument(
-        "--near-wall-mm",
-        type=float,
-        default=20.0,
-        help="depth percentile threshold below which a frame is 'near wall'",
-    )
+    ap.add_argument("--near-wall-mm", type=float, default=20.0,
+                    help="depth percentile threshold below which a frame is 'near wall'")
     ap.add_argument("--out", default="outputs/p2000_full_causal/scared_collision.json")
     args = ap.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     from endoworld.understanding.vjepa2_hf import VJEPA2Encoder
     from endoworld.eval.world_benchmark import load_predictor
-
     enc = VJEPA2Encoder(args.vjepa2_id, device=device)
     blob = torch.load(args.ckpt, map_location=device, weights_only=False)
     model, kind, _, _, _ = load_predictor(blob, device)
@@ -106,38 +96,26 @@ def main():
             if im is None or p is None:
                 continue
             from PIL import Image
-
-            imgs.append(
-                np.asarray(
-                    Image.fromarray(im).resize((enc.image_size, enc.image_size)),
-                    np.float32,
-                )
-                / 255.0
-            )
+            imgs.append(np.asarray(Image.fromarray(im).resize((enc.image_size, enc.image_size)), np.float32) / 255.0)
             prox.append(p)
         if len(imgs) < 9:
             continue
         # encode in sliding windows to get per-frame latents
+        import torch.nn.functional as F
         zs = []
         clip_len, stride = 8, 1
         for s in range(0, len(imgs) - clip_len, stride):
-            clip = np.stack(imgs[s : s + clip_len]).transpose(0, 3, 1, 2)
-            zt = enc.encode_temporal(
-                torch.from_numpy(clip).unsqueeze(0).to(device).float()
-            )[0]
+            clip = np.stack(imgs[s:s + clip_len]).transpose(0, 3, 1, 2)
+            zt = enc.encode_temporal(torch.from_numpy(clip).unsqueeze(0).to(device).float())[0]
             zs.append(zt[-1].cpu().numpy())  # last-token latent ~ current frame
         if len(zs) < 3:
             continue
         z = torch.from_numpy(np.stack(zs)).to(device).float()  # (M, D)
         with torch.no_grad():
             ids, _, _ = model.actions(z[:-1], z[1:])
-            e = (
-                model.energy(z[:-1], ids, z[1:]).cpu().numpy()
-            )  # energy of each transition
+            e = model.energy(z[:-1], ids, z[1:]).cpu().numpy()  # energy of each transition
         # align: energy[i] predicts transition into frame (i+1); proximity of frame i+1
-        p_next = np.array(
-            prox[clip_len : clip_len + len(e)]
-        )  # proximity of the "next" frame
+        p_next = np.array(prox[clip_len:clip_len + len(e)])  # proximity of the "next" frame
         m = min(len(e), len(p_next))
         energies.extend(e[:m].tolist())
         proximities.extend(p_next[:m].tolist())
@@ -157,24 +135,14 @@ def main():
     near_wall = (p < thr).astype(int)
     # AUC: energy as a ranking score for near-wall transitions (Mann-Whitney)
     from scipy.stats import spearmanr, rankdata
-
     r = rankdata(e)
-    n1 = int(near_wall.sum())
-    n0 = len(near_wall) - n1
-    auc = (
-        float((r[near_wall == 1].sum() - n1 * (n1 + 1) / 2) / max(n1 * n0, 1))
-        if n1 and n0
-        else float("nan")
-    )
-    sp = spearmanr(
-        e, p
-    ).correlation  # expect negative: high energy ~ low depth (near wall)
+    n1 = int(near_wall.sum()); n0 = len(near_wall) - n1
+    auc = float((r[near_wall == 1].sum() - n1 * (n1 + 1) / 2) / max(n1 * n0, 1)) if n1 and n0 else float("nan")
+    sp = spearmanr(e, p).correlation  # expect negative: high energy ~ low depth (near wall)
     report = {
-        "paper": "Endo-HJEPA",
-        "not_ablation_planning": True,
+        "paper": "Endo-HJEPA", "not_ablation_planning": True,
         "task": "SCARED wall-proximity energy proxy",
-        "n_transitions": int(len(e)),
-        "n_keyframes": kf_used,
+        "n_transitions": int(len(e)), "n_keyframes": kf_used,
         "near_wall_threshold_mm": float(thr),
         "near_wall_frac": float(near_wall.mean()),
         "depth_mm_median": float(np.median(p)),

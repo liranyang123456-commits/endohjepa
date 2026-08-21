@@ -3,7 +3,6 @@
     python -m endoworld.eval.aux_experiments
 These are Endo-HJEPA world-model experiments, not CT ablation planning.
 """
-
 from __future__ import annotations
 
 import argparse
@@ -15,29 +14,25 @@ import numpy as np
 
 def run_stir(root: str) -> dict:
     from endoworld.data.stir_tracks import find_stir_sequences, load_stir_clip
-
     seqs = find_stir_sequences(root)
     rows = []
     for seq in seqs[:32]:
         clip = load_stir_clip(seq)
         if clip is None:
             continue
-        rows.append(
-            {
-                "seq": str(clip.seq_dir),
-                "n_start": int(len(clip.points_start)),
-                "n_end": int(len(clip.points_end)),
-                "n_frames": len(clip.frames),
-                "dt_ms": int(clip.t_end_ms - clip.t_start_ms),
-            }
-        )
+        rows.append({
+            "seq": str(clip.seq_dir),
+            "n_start": int(len(clip.points_start)),
+            "n_end": int(len(clip.points_end)),
+            "n_frames": len(clip.frames),
+            "dt_ms": int(clip.t_end_ms - clip.t_start_ms),
+        })
     return {"n_sequences": len(seqs), "loaded": rows}
 
 
 def run_scared(root: str, n_actions: int = 16) -> dict:
     from endoworld.world.pose_align import action_pose_nmi, quantise_deltas
     from endoworld.world.scared_actions import find_scared_keyframes, scared_pose_deltas
-
     kfs = find_scared_keyframes(root)
     out = []
     for kf in kfs:
@@ -50,52 +45,38 @@ def run_scared(root: str, n_actions: int = 16) -> dict:
         # surrogate latent actions = random permutation baseline + identity
         rng = np.random.default_rng(0)
         rand = rng.integers(0, n_actions, size=len(pose_ids))
-        out.append(
-            {
-                "keyframe": str(kf),
-                "n_deltas": int(len(d)),
-                "trans_rms": float((d[:, :3] ** 2).mean() ** 0.5),
-                "rot_rms": float((d[:, 3:] ** 2).mean() ** 0.5),
-                "nmi_identity": action_pose_nmi(pose_ids, pose_ids),
-                "nmi_random": action_pose_nmi(rand, pose_ids),
-            }
-        )
+        out.append({
+            "keyframe": str(kf),
+            "n_deltas": int(len(d)),
+            "trans_rms": float((d[:, :3] ** 2).mean() ** 0.5),
+            "rot_rms": float((d[:, 3:] ** 2).mean() ** 0.5),
+            "nmi_identity": action_pose_nmi(pose_ids, pose_ids),
+            "nmi_random": action_pose_nmi(rand, pose_ids),
+        })
     return {"n_keyframes": len(kfs), "rows": out}
 
 
 def run_c3vd(root: str, n_actions: int = 16) -> dict:
-    from endoworld.world.c3vd_actions import (
-        find_c3vd_pose_files,
-        load_pose_txt,
-        pose_deltas,
-    )
+    from endoworld.world.c3vd_actions import find_c3vd_pose_files, load_pose_txt, pose_deltas
     from endoworld.world.pose_align import action_pose_nmi, quantise_deltas
-
     files = find_c3vd_pose_files(root)
     rows = []
     for p in files:
         d = pose_deltas(load_pose_txt(p))
         ids = quantise_deltas(d, n_actions)
-        rows.append(
-            {
-                "pose_file": str(p),
-                "n_deltas": int(len(d)),
-                "trans_rms": float((d[:, :3] ** 2).mean() ** 0.5),
-                "nmi_identity": action_pose_nmi(ids, ids),
-            }
-        )
+        rows.append({
+            "pose_file": str(p),
+            "n_deltas": int(len(d)),
+            "trans_rms": float((d[:, :3] ** 2).mean() ** 0.5),
+            "nmi_identity": action_pose_nmi(ids, ids),
+        })
     return {"n_files": len(files), "rows": rows}
 
 
 def run_endovis(root: str, limit: int = 200) -> dict:
     from endoworld.data.endovis_masks import (
-        instrument_binary,
-        list_endovis_pairs,
-        load_class_map,
-        load_mask,
-        presence_vector,
+        instrument_binary, list_endovis_pairs, load_class_map, load_mask, presence_vector,
     )
-
     root_p = Path(root)
     # 2017 lives under endovis2017/ subfolder
     cand = [root_p, root_p / "endovis2017", root_p / "endovis2018"]

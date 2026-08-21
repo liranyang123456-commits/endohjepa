@@ -5,7 +5,6 @@ planning track (outputs/ablation_*, docs/paper) — those are a different manusc
 
     python -m endoworld.eval.consolidate_results --out-dir docs/endohjepa
 """
-
 from __future__ import annotations
 
 import argparse
@@ -36,11 +35,8 @@ def main():
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    R = {
-        "paper": "Endo-HJEPA",
-        "isolated_from": "outputs/ablation_* (CT planning, different paper)",
-        "sections": {},
-    }
+    R = {"paper": "Endo-HJEPA", "isolated_from": "outputs/ablation_* (CT planning, different paper)",
+         "sections": {}}
 
     # 1. Forecast (6000-clip consistent set, all baselines) + ablations
     ev = _load("outputs/p2000_full_causal/eval_ckpt.json") or {}
@@ -51,33 +47,24 @@ def main():
     stats = _load("outputs/scale_6000_causal/stats_vs_gru.json") or {}
     R["sections"]["forecast"] = {
         "note": "video-level val; causal L1 beats GRU and persistence",
-        "causal_l1": {
-            "cos": _f(t16c.get("cos_model")),
-            "mse": _f(t16c.get("mse_model")),
-        },
+        "causal_l1": {"cos": _f(t16c.get("cos_model")), "mse": _f(t16c.get("mse_model"))},
         "query_l1": {"cos": _f(t16q.get("cos_model"))},
         "gru": {"cos": _f(t16g.get("cos_model"))},
         "mamba_ssm": {"cos": _f(t16m.get("cos_model"))},
         "persistence": {"cos": _f(t16c.get("cos_persist"))},
         "stats_vs_gru": [
-            {
-                "horizon": r.get("horizon"),
-                "cos_A": _f(r.get("cos_A"), 4),
-                "cos_B": _f(r.get("cos_B"), 4),
-                "wilcoxon_p": r.get("wilcoxon_p"),
-                "holm_p": r.get("holm_p"),
-                "significant": r.get("significant_005"),
-            }
+            {"horizon": r.get("horizon"), "cos_A": _f(r.get("cos_A"), 4),
+             "cos_B": _f(r.get("cos_B"), 4), "wilcoxon_p": r.get("wilcoxon_p"),
+             "holm_p": r.get("holm_p"), "significant": r.get("significant_005")}
             for r in stats.get("rows", [])
         ],
     }
 
     # 2. Planning (energy-guided latent MPC)
-    plan = ev.get("planning") or {}
+    plan = (ev.get("planning") or {})
     R["sections"]["planning"] = {
         "plan_better_than_persist": _f(plan.get("plan_better_than_persist"), 3),
-        "cos_plan": _f(plan.get("cos_plan")),
-        "cos_persist": _f(plan.get("cos_persist")),
+        "cos_plan": _f(plan.get("cos_plan")), "cos_persist": _f(plan.get("cos_persist")),
         "energy_plan_lower_frac": _f(plan.get("energy_plan_lower_frac")),
         "note": "H-JEPA only; GRU/persistence cannot plan",
     }
@@ -86,28 +73,16 @@ def main():
     tr = _load("outputs/t16_transfer_laparo/eval_ckpt.json") or {}
     R["sections"]["cross_domain_zero_shot"] = {
         "note": "train laparo only -> test GI/bronch; below persistence = transfer fails, motivates multi-domain training",
-        "rows": [
-            {
-                "domain": r.get("domain"),
-                "cos_model": _f(r.get("cos_model")),
-                "cos_persist": _f(r.get("cos_persist")),
-            }
-            for r in tr.get("cross_domain", [])
-        ],
+        "rows": [{"domain": r.get("domain"), "cos_model": _f(r.get("cos_model")),
+                  "cos_persist": _f(r.get("cos_persist"))} for r in tr.get("cross_domain", [])],
     }
 
     # 4. Action grounding (physical + semantic)
     pose = _load("outputs/p2000_full_causal/pose_latent_align.json") or {}
     trip = _load("outputs/p2000_full_causal/action_triplet_align.json") or {}
-    scared_nmi = [
-        r.get("nmi_latent_pose")
-        for r in (pose.get("scared", {}) or {}).get("rows", [])
-        if r.get("nmi_latent_pose")
-    ]
+    scared_nmi = [r.get("nmi_latent_pose") for r in (pose.get("scared", {}) or {}).get("rows", []) if r.get("nmi_latent_pose")]
     R["sections"]["action_grounding"] = {
-        "physical_scared_nmi_range": [_f(min(scared_nmi), 2), _f(max(scared_nmi), 2)]
-        if scared_nmi
-        else None,
+        "physical_scared_nmi_range": [_f(min(scared_nmi), 2), _f(max(scared_nmi), 2)] if scared_nmi else None,
         "semantic_verb_nmi": _f(trip.get("nmi_action_verb"), 3),
         "semantic_verb_nmi_random": _f(trip.get("nmi_random"), 3),
         "semantic_verb_probe_acc": _f(trip.get("verb_probe_acc"), 3),
@@ -122,30 +97,22 @@ def main():
     evprobe = _load("outputs/vjepa2_adapted/instrument_probe_compare.json") or {}
 
     def _c50(d):
-        r = d.get("results", {}) or {}
+        r = (d.get("results", {}) or {})
         fr = r.get("vjepa2-frozen", {})
         ad = r.get("vjepa2-adapted", {})
-        return {
-            "phase_acc_frozen": _f((fr.get("phase") or {}).get("acc")),
-            "phase_acc_adapted": _f((ad.get("phase") or {}).get("acc")),
-            "instrument_mAP_frozen": _f((fr.get("instrument") or {}).get("mAP")),
-            "instrument_mAP_adapted": _f((ad.get("instrument") or {}).get("mAP")),
-        }
+        return {"phase_acc_frozen": _f((fr.get("phase") or {}).get("acc")),
+                "phase_acc_adapted": _f((ad.get("phase") or {}).get("acc")),
+                "instrument_mAP_frozen": _f((fr.get("instrument") or {}).get("mAP")),
+                "instrument_mAP_adapted": _f((ad.get("instrument") or {}).get("mAP"))}
 
     R["sections"]["downstream_recognition"] = {
         "cholect50_random_split": _c50(c50),
-        "cholect50_official_split": dict(
-            _c50(c50o), test_videos=(c50o.get("test_videos") or None)
-        ),
+        "cholect50_official_split": dict(_c50(c50o), test_videos=(c50o.get("test_videos") or None)),
         "cholect50_finetune_phase_acc": _f(c50ft.get("finetune_test_acc")),
         "cholect50_linear_probe_phase_acc": _f(c50ft.get("linear_probe_frozen_acc")),
         "endovis_instrument_mAP": {
-            "frozen": _f(
-                (evprobe.get("results", {}).get("vjepa2-frozen", {}) or {}).get("mAP")
-            ),
-            "adapted": _f(
-                (evprobe.get("results", {}).get("vjepa2-adapted", {}) or {}).get("mAP")
-            ),
+            "frozen": _f((evprobe.get("results", {}).get("vjepa2-frozen", {}) or {}).get("mAP")),
+            "adapted": _f((evprobe.get("results", {}).get("vjepa2-adapted", {}) or {}).get("mAP")),
         },
         "note": "random split: no gain; official challenge split: adaptation HELPS (phase +1.3%, instrument +9.0%). Use official split for headline.",
     }
@@ -156,12 +123,8 @@ def main():
     for name, r in (sota.get("results", {}) or {}).items():
         ph = r.get("phase") or {}
         inst = r.get("instrument") or {}
-        ext[name] = {
-            "phase_acc": _f(ph.get("acc")),
-            "phase_std": _f(ph.get("acc_std"), 3),
-            "instrument_mAP": _f(inst.get("mAP")),
-            "instrument_std": _f(inst.get("mAP_std"), 3),
-        }
+        ext[name] = {"phase_acc": _f(ph.get("acc")), "phase_std": _f(ph.get("acc_std"), 3),
+                     "instrument_mAP": _f(inst.get("mAP")), "instrument_std": _f(inst.get("mAP_std"), 3)}
     R["sections"]["external_baselines"] = ext
 
     # 5c. Data-scale curve
@@ -169,13 +132,7 @@ def main():
     for n in (500, 1000, 2000, 4000, 6000):
         vm = _load(f"outputs/scale_{n}/val_metrics.json") or {}
         if vm:
-            scale.append(
-                {
-                    "clips": n,
-                    "cos": _f(vm.get("cos_model")),
-                    "mse": _f(vm.get("mse_model")),
-                }
-            )
+            scale.append({"clips": n, "cos": _f(vm.get("cos_model")), "mse": _f(vm.get("mse_model"))})
     R["sections"]["data_scale_curve"] = scale
 
     # 5d. SCARED collision / energy physical grounding
@@ -192,12 +149,10 @@ def main():
     for t in ("gi", "bronch"):
         d = _load(f"outputs/t16_transfer_laparo/fewshot_{t}.json") or {}
         if d:
-            fs[t] = {
-                "zero_shot": _f((d.get("zero_shot") or {}).get("cos_model")),
-                "few_shot": _f((d.get("few_shot") or {}).get("cos_model")),
-                "persistence": _f((d.get("zero_shot") or {}).get("cos_persist")),
-                "recovery": _f(d.get("recovery"), 3),
-            }
+            fs[t] = {"zero_shot": _f((d.get("zero_shot") or {}).get("cos_model")),
+                     "few_shot": _f((d.get("few_shot") or {}).get("cos_model")),
+                     "persistence": _f((d.get("zero_shot") or {}).get("cos_persist")),
+                     "recovery": _f(d.get("recovery"), 3)}
     R["sections"]["fewshot_domain_adaptation"] = fs
 
     # 5f. Supervised action grounding attempt (negative)
@@ -229,21 +184,16 @@ def main():
     eag = _load("outputs/vjepa2_adapted/encoder_action_grounding.json") or {}
     R["sections"]["encoder_action_grounding"] = {
         "before_nmi": _f((eag.get("before_frozen") or {}).get("nmi_residual_verb"), 3),
-        "after_nmi": _f(
-            (eag.get("after_encoder_supervised") or {}).get("nmi_residual_verb"), 3
-        ),
+        "after_nmi": _f((eag.get("after_encoder_supervised") or {}).get("nmi_residual_verb"), 3),
         "note": "encoder-level action supervision lifts grounding above chance (~2x random), still weak",
     }
 
     # 6. Census
     cen = _load("manifests/domain_census.json") or {}
     R["sections"]["census"] = {
-        "n_sequences": cen.get("n_sequences"),
-        "n_frames": cen.get("n_frames"),
-        "by_domain": {
-            k: {"seq": v.get("sequences"), "frames": v.get("frames")}
-            for k, v in (cen.get("by_domain", {}) or {}).items()
-        },
+        "n_sequences": cen.get("n_sequences"), "n_frames": cen.get("n_frames"),
+        "by_domain": {k: {"seq": v.get("sequences"), "frames": v.get("frames")}
+                      for k, v in (cen.get("by_domain", {}) or {}).items()},
     }
 
     # write JSON
@@ -260,9 +210,7 @@ def main():
         "",
         "## Data",
         f"- {S['census']['n_sequences']} sequences / {S['census']['n_frames']:,} frames, "
-        + ", ".join(
-            f"{k}: {v['frames']:,}" for k, v in S["census"].get("by_domain", {}).items()
-        ),
+        + ", ".join(f"{k}: {v['frames']:,}" for k, v in S["census"].get("by_domain", {}).items()),
         "",
         "## Forecast (video-level val)",
         "| Model | cos | MSE |",
@@ -279,10 +227,8 @@ def main():
         "| --- | ---: | ---: | ---: | :-: |",
     ]
     for r in fc["stats_vs_gru"]:
-        lines.append(
-            f"| h={r['horizon']} | {r['cos_A']} | {r['cos_B']} | {r['holm_p']:.2e} | "
-            f"{'yes' if r['significant'] else 'no'} |"
-        )
+        lines.append(f"| h={r['horizon']} | {r['cos_A']} | {r['cos_B']} | {r['holm_p']:.2e} | "
+                     f"{'yes' if r['significant'] else 'no'} |")
     pl = S["planning"]
     dr = S["downstream_recognition"]
     ag = S["action_grounding"]
@@ -302,16 +248,11 @@ def main():
         lines.append(f"| {r['domain']} | {r['cos_model']} | {r['cos_persist']} |")
     fs = S.get("fewshot_domain_adaptation", {})
     if fs:
-        lines += [
-            "",
-            "## Few-shot domain adaptation (zero-shot fails, 32-shot domain-token recovers)",
-            "| Target | zero-shot | few-shot | persistence | recovery |",
-            "| --- | ---: | ---: | ---: | ---: |",
-        ]
+        lines += ["", "## Few-shot domain adaptation (zero-shot fails, 32-shot domain-token recovers)",
+                  "| Target | zero-shot | few-shot | persistence | recovery |",
+                  "| --- | ---: | ---: | ---: | ---: |"]
         for t, r in fs.items():
-            lines.append(
-                f"| {t} | {r['zero_shot']} | {r['few_shot']} | {r['persistence']} | +{r['recovery']} |"
-            )
+            lines.append(f"| {t} | {r['zero_shot']} | {r['few_shot']} | {r['persistence']} | +{r['recovery']} |")
     lines += [
         "",
         "## Action grounding (honest: weak without supervision)",
@@ -356,7 +297,7 @@ def main():
         "",
     ]
     (out_dir / "RESULTS.md").write_text("\n".join(lines), encoding="utf-8")
-    print(f"[consolidate] wrote {out_dir / 'RESULTS.json'} and RESULTS.md")
+    print(f"[consolidate] wrote {out_dir/'RESULTS.json'} and RESULTS.md")
     print("\n".join(lines))
 
 
