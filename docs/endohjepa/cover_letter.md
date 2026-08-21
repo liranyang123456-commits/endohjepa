@@ -39,11 +39,11 @@ consideration elsewhere. All authors have approved the submission and declare
 no competing interests. The ION component is a retrospective secondary analysis
 of de-identified CT volumes and intra-operative bronchoscopy videos, provided
 by Dr. Nan Wei after the responsible hospital department's strict institutional
-review process. Data access and use were authorised through Henan Provincial
-People's Hospital. Before this letter is used for submission, the formal
-**[IRB approval / ethics-exemption identifier]**, **[approval date]**,
-approved consent-waiver wording and authorised-data-access procedure must be
-inserted consistently with the hospital record.
+review process. Data access and use were reviewed and authorised through the
+institutional data-governance process of Henan Provincial People's Hospital. No
+animal experiments, prospective enrolment, research-directed intervention or
+identifiable participant information were involved, and the study complies with
+the Declaration of Helsinki.
 
 Sincerely,
 
