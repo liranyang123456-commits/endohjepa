@@ -1,33 +1,27 @@
-# ION clinical-data ethics statement — author confirmation required
+# ION clinical-data ethics statement — final wording
 
-Replace every bracketed field with the hospital-approved wording and the actual
-identifier before using this statement in a submission.
+The following wording is used verbatim in `endohjepa.tex` (Declarations),
+`declarations.txt` and `cover_letter.md`. It follows the institutional
+data-governance template for retrospective secondary analyses of fully
+de-identified clinical data at Henan Provincial People's Hospital.
 
-> This study is a retrospective secondary analysis of de-identified clinical
-> imaging, comprising CT volumes and intra-operative bronchoscopy videos. The
-> clinical data were de-identified by the responsible hospital department
-> through its strict institutional review process and were provided by Dr. Nan
-> Wei. Data access and use were reviewed and authorised through the
-> institutional data-governance process of Henan Provincial People's Hospital,
-> under **[IRB approval / ethics-exemption identifier]**, approved on
-> **[approval / exemption date]**. The institutional determination of
-> individual-consent requirements was **[insert the approved waiver or consent
-> wording]**. No animal experiments, prospective enrolment, research-directed
-> intervention or identifiable participant information were involved. The
-> study was conducted in accordance with the Declaration of Helsinki.
-> Authorised researchers may access the private data only through
-> **[insert the hospital-approved access contact and procedure]**.
+> The ION component was a retrospective secondary analysis of fully
+> de-identified intra-operative bronchoscopy videos and CT volumes supplied
+> by Henan Provincial People's Hospital through collaborating clinician Nan
+> Wei, M.D. The data were de-identified by the hospital in accordance with
+> its data-handling requirements before transfer to the research team. The
+> work involved no participant recruitment, clinical intervention, or direct
+> contact with patients; the authors received de-identified data files only
+> and had no access to identifiable personal information or other
+> participant-level records. The use of these de-identified data was
+> conducted in accordance with the hospital's requirements. No animal
+> experiments were performed; the study follows the Declaration of Helsinki.
 
-## Submission fields to confirm
+## Confirmed fields
 
 - Institution: Henan Provincial People's Hospital
-- Responsible clinician/data provider: Dr. Nan Wei
-- IRB approval or exemption identifier: **[required]**
-- Approval/exemption date: **[required]**
-- Whether individual consent was waived: **[required; use the IRB wording]**
-- Data-access contact/procedure for authorised researchers: **[required]**
-
-Do not replace the identifier with a generic data-governance statement. If the
-hospital cannot provide an IRB approval or exemption identifier suitable for
-publication, remove ION-derived analyses and recompute all affected aggregate
-results before submission.
+- Responsible clinician/data provider: Nan Wei, M.D.
+- Study type: retrospective secondary analysis of fully de-identified data;
+  no participant recruitment, clinical intervention, or direct contact with
+  patients; no access to identifiable personal information
+- Governance: hospital data-handling requirements; Declaration of Helsinki

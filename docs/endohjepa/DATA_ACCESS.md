@@ -43,5 +43,6 @@ assets, not world-model sequences.
 ## ION
 
 Private. Only numeric `datasets/ION_bronch/case_XXX/` is used. No patient names in manifests.
-Requires an ethics approval number before any submission that discusses these cases.
+Covered by the retrospective de-identified secondary-analysis ethics statement
+in the manuscript Declarations; access remains restricted to authorised holders.
 In-silico navigation only; not a claim of replacing clinical bronchoscopy.

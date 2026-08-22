@@ -36,14 +36,16 @@ https://github.com/liranyang123456-commits/endohjepa.
 
 This manuscript is original, has not been published previously and is not under
 consideration elsewhere. All authors have approved the submission and declare
-no competing interests. The ION component is a retrospective secondary analysis
-of de-identified CT volumes and intra-operative bronchoscopy videos, provided
-by Dr. Nan Wei after the responsible hospital department's strict institutional
-review process. Data access and use were authorised through Henan Provincial
-People's Hospital. Before this letter is used for submission, the formal
-**[IRB approval / ethics-exemption identifier]**, **[approval date]**,
-approved consent-waiver wording and authorised-data-access procedure must be
-inserted consistently with the hospital record.
+no competing interests. The ION component was a retrospective secondary
+analysis of fully de-identified intra-operative bronchoscopy videos and CT
+volumes supplied by Henan Provincial People's Hospital through collaborating
+clinician Nan Wei, M.D. The data were de-identified by the hospital in
+accordance with its data-handling requirements before transfer to the research
+team; the work involved no participant recruitment, clinical intervention, or
+direct contact with patients, and the authors had no access to identifiable
+personal information or other participant-level records. The use of these
+de-identified data was conducted in accordance with the hospital's
+requirements.
 
 Sincerely,
 

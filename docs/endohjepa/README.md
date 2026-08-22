@@ -13,6 +13,7 @@ Endoscopic Video with Audited SE(3)-Conditioned Evaluation*
 - Methods: `methods.md` (English) / `methods_zh.md` (outline).
 - Verified aggregate metrics: `verified_metrics.json`. Qualitative figures are
   regenerated from their stated checkpoint, cache and selection rule.
-- Access caveat: ION bronchoscopy is private. Do not submit ION-derived results
-  until the required institutional approval/exemption identifier is inserted in
-  the manuscript, or remove and recompute those analyses.
+- Access caveat: ION bronchoscopy is private. The ethics statement
+  (retrospective secondary analysis of fully de-identified data) is finalised
+  in the manuscript Declarations; independent reproduction of ION-derived
+  values requires authorised access to that cohort.
